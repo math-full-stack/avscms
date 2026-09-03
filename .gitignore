@@ -1,0 +1,80 @@
+# ============================================================
+# AVSCMS .gitignore
+# Anything listed here never enters the repo — and because the
+# GitHub Action deploys the repo contents, it also never reaches
+# the production VM. Videos and secrets stay out. Period.
+# ============================================================
+
+# ---------- macOS / editor junk ----------
+.DS_Store
+.AppleDouble
+._*
+Icon?
+*~
+*.swp
+.idea/
+.vscode/
+
+# ---------- Backups & debug leftovers ----------
+*.bak
+*.debug*
+*.orig
+*.rej
+
+# ---------- Runtime / generated (never version) ----------
+tmp/
+cache/
+logs/
+*.log
+templates_c/
+smarty_compile/
+
+# ---------- User content & media uploads ----------
+# Videos live ONLY on the VM — never in the repo.
+media/videos/vid/
+media/videos/tmb/
+media/videos/h264/
+media/videos/iphone/
+media/videos/hd/
+media/videos/flv/
+media/photos/
+media/users/
+media/albums/
+media/categories/
+media/csv/
+
+# ---------- Media binaries (safety net: never commit video/audio) ----------
+*.mp4
+*.webm
+*.flv
+*.mov
+*.avi
+*.mkv
+*.m4v
+*.wmv
+*.mpg
+*.mpeg
+*.3gp
+*.ts
+*.mp3
+
+# ---------- Secrets & machine-specific config (never version) ----------
+# include/config.local.php holds the admin password + tool paths;
+# the VM keeps its own copy (preserved by deploy.sh).
+include/config.local.php
+# Session cookies used by the grabber (xfree, etc.)
+cookies.txt
+cookies2.txt
+cookies3.txt
+scripts/cookies.txt
+*.pem
+*.key
+
+# ---------- Third-party tool / nested repo / node ----------
+# bgutil-pot-provider is a separate upstream repo (has its own .git + node_modules).
+scripts/bgutil-pot-provider/
+node_modules/
+
+# ---------- Local env files ----------
+.env
+.env.*

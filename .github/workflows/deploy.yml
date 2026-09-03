@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -12,15 +15,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
         with:
-          host: ${{ secrets.GCP_HOST }}
-          username: ${{ secrets.GCP_USER }}
-          key: ${{ secrets.GCP_SSH_KEY }}
-          port: ${{ secrets.GCP_PORT || 22 }}
-          script: |
-            sudo sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/{s/AllowOverride None/AllowOverride All/}' /etc/apache2/apache2.conf
-            sudo cp .htaccess /var/www/html/avscms/.htaccess
-            sudo apache2ctl restart
-            echo "Deployment complete"
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy AVSCMS to GCP VM
+        run: bash ./deploy.sh
+        env:
+          GCLOUD_ZONE: southamerica-east1-c
+          GCLOUD_INSTANCE: xbrasil
+          GCLOUD_PROJECT: flashentrega
+          GCLOUD_SSH_USER: matheussturiao
+          GCLOUD_REMOTE_DIR: /var/www/html/avscms
+          GCLOUD_SITE_URL: https://novinhasbr.net
