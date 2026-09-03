@@ -32,6 +32,15 @@ require_once $basedir . '/classes/grabbers/mass/MassGrabberManager.php';
 $startTime = time();
 $pid = getmypid();
 
+// Single-instance guard: concurrent runs (web "Process Now" clicks, cron
+// overlap) must never claim/reset the same jobs at the same time.
+$lockFile = $config['LOG_DIR'] . '/grabber_cron.lock';
+$lockH = @fopen($lockFile, 'c');
+if ($lockH && !flock($lockH, LOCK_EX | LOCK_NB)) {
+    echo "[" . date('Y-m-d H:i:s') . "] Another grabber_cron instance is already running - skipping.\n";
+    exit(0);
+}
+
 echo "[" . date('Y-m-d H:i:s') . "] Mass Grabber Cron started (PID: $pid)\n";
 
 // ============================================================

@@ -377,18 +377,30 @@ class XfreeGrabber implements GrabberInterface {
 
             foreach ($read as $stream) {
                 $chunk = @fread($stream, 8192);
-                if ($chunk === false || $chunk === '') {
-                    continue;
+                if ($chunk !== false && $chunk !== '') {
+                    $output .= $chunk;
                 }
-                $output .= $chunk;
             }
 
+            // Command finished (all streams at EOF): stop instead of spinning
+            // until the timeout. EOF on stdout usually means the process exited.
             $status = proc_get_status($process);
             if (!$status['running']) {
-                break;
+                // Drain whatever is still buffered, then stop.
+                foreach (array($pipes[1], $pipes[2]) as $stream) {
+                    $chunk = @stream_get_contents($stream);
+                    if ($chunk !== false && $chunk !== '') {
+                        $output .= $chunk;
+                    }
+                    @fclose($stream);
+                }
+                proc_close($process);
+                return $output;
             }
         }
 
+        // Loop ended without the process exiting (select error) - fall through
+        // with whatever output was captured.
         fclose($pipes[1]);
         fclose($pipes[2]);
         proc_close($process);

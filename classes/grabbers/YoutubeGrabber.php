@@ -114,15 +114,17 @@ class YoutubeGrabber implements GrabberInterface {
 
         $this->ensurePotProvider();
 
+        // NOTE: no --accept-language here - this yt-dlp build does not support
+        // that flag (it errors out), which made every YouTube grab fail.
         $cmd = sprintf(
-            '%s %s --dump-single-json --no-warnings --skip-download --socket-timeout 30 --accept-language pt-BR,pt,en%s %s 2>&1',
+            '%s %s --dump-single-json --no-warnings --skip-download --socket-timeout 30%s %s 2>&1',
             escapeshellarg($this->pythonBinary),
             escapeshellarg($this->ytdlpScript),
             $this->getAuthArgs(),
             escapeshellarg($url)
         );
 
-        $output = shell_exec($cmd);
+        $output = $this->runWithTimeout($cmd, 120);
         if (!$output) {
             return array(
                 'status' => false,
@@ -410,5 +412,73 @@ class YoutubeGrabber implements GrabberInterface {
         } else {
             return sprintf('%02d:%02d', $mins, $secs);
         }
+    }
+
+    /**
+     * Run a command with a hard timeout and return its combined output.
+     * Returns false on timeout/spawn error (same semantics as XfreeGrabber).
+     */
+    private function runWithTimeout($cmd, $timeoutSeconds = 300) {
+        $descriptors = array(
+            0 => array('pipe', 'r'),
+            1 => array('pipe', 'w'),
+            2 => array('pipe', 'w'),
+        );
+
+        $process = proc_open($cmd, $descriptors, $pipes);
+        if (!is_resource($process)) {
+            return false;
+        }
+
+        fclose($pipes[0]);
+
+        $output = '';
+        $start = time();
+
+        while (true) {
+            $read = array($pipes[1], $pipes[2]);
+            $write = null;
+            $except = null;
+            $ready = @stream_select($read, $write, $except, 1);
+
+            if ($ready === false) {
+                break;
+            }
+
+            if (time() - $start >= $timeoutSeconds) {
+                proc_terminate($process, 9);
+                proc_close($process);
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                return false;
+            }
+
+            foreach ($read as $stream) {
+                $chunk = @fread($stream, 8192);
+                if ($chunk !== false && $chunk !== '') {
+                    $output .= $chunk;
+                }
+            }
+
+            // Stop as soon as the command exits instead of spinning to timeout.
+            $status = proc_get_status($process);
+            if (!$status['running']) {
+                foreach (array($pipes[1], $pipes[2]) as $stream) {
+                    $chunk = @stream_get_contents($stream);
+                    if ($chunk !== false && $chunk !== '') {
+                        $output .= $chunk;
+                    }
+                    @fclose($stream);
+                }
+                proc_close($process);
+                return $output;
+            }
+        }
+
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        proc_close($process);
+
+        return $output;
     }
 }

@@ -270,14 +270,39 @@ class JobManager {
      */
     public function resetStaleJobs($timeoutSeconds = 1800) {
         $cutoff = time() - $timeoutSeconds;
+        // Attempts are reset so a job whose PROCESSING run crashed on its last
+        // attempt (attempts == max_attempts) can be claimed again - otherwise
+        // it would sit PENDING forever and block the queue.
         $this->safeExec("UPDATE grabber_jobs SET
                             status = 'PENDING',
+                            attempts = 0,
+                            started_at = 0,
                             worker_pid = 0,
+                            scheduled_at = " . time() . ",
+                            error_code = '',
+                            error_message = '',
                             updated_at = " . time() . "
                             WHERE status = 'PROCESSING'
                             AND started_at < " . intval($cutoff));
 
-        return $this->db->Affected_Rows();
+        $reset = $this->db->Affected_Rows();
+
+        // Also revive zombie PENDING jobs: a PENDING job whose attempts hit
+        // max_attempts can never be claimed again (claimNext requires
+        // attempts < max_attempts). Such jobs only exist when a PROCESSING run
+        // was reset without clearing attempts - give them a fresh shot.
+        $this->safeExec("UPDATE grabber_jobs SET
+                            attempts = 0,
+                            error_code = '',
+                            error_message = '',
+                            scheduled_at = " . time() . ",
+                            updated_at = " . time() . "
+                            WHERE status = 'PENDING'
+                            AND attempts >= max_attempts
+                            AND scheduled_at <= " . time());
+        $reset += $this->db->Affected_Rows();
+
+        return $reset;
     }
 
     /**

@@ -398,6 +398,13 @@ if ($action === 'get_jobs') {
     if ($status) $filters['status'] = $status;
 
     $jobMgr = new JobManager();
+
+    // Lazy watchdog: a PROCESSING job whose worker crashed (e.g. the previous
+    // processor died mid-grab) is returned to the queue here so it can be
+    // retried, even when no cron is configured. The grabber cron guards
+    // against double downloads via the video.active=2/3 dedup.
+    $jobMgr->resetStaleJobs(1800);
+
     $result = $jobMgr->getJobs($filters, $limit, $offset);
     echo json_encode(array('status' => true, 'jobs' => $result['jobs'], 'total' => $result['total'], 'page' => $page));
     exit();
@@ -451,9 +458,13 @@ if ($action === 'process_now') {
     header('Content-Type: application/json; charset=utf-8');
     global $config;
     $cronScript = $config['BASE_DIR'] . '/scripts/grabber_cron.php';
-    $cmd = sprintf('%s %s > /dev/null 2>&1 &',
+    $logFile = (isset($config['LOG_DIR']) ? $config['LOG_DIR'] : $config['BASE_DIR'] . '/tmp/logs') . '/grabber_cron_web.log';
+    // Fully detach from the web request (nohup) so Apache can never kill the
+    // processor mid-job, and keep its output for diagnosis.
+    $cmd = sprintf('nohup %s %s >> %s 2>&1 < /dev/null &',
         escapeshellarg($config['phppath']),
-        escapeshellarg($cronScript)
+        escapeshellarg($cronScript),
+        escapeshellarg($logFile)
     );
     @shell_exec($cmd);
     echo json_encode(array('status' => true, 'message' => 'Queue processing started'));
