@@ -35,7 +35,7 @@ PROJECT="${GCLOUD_PROJECT:-flashentrega}"
 SSH_USER="${GCLOUD_SSH_USER:-}"
 REMOTE_DIR="${GCLOUD_REMOTE_DIR:-/var/www/html/avscms}"
 SITE_URL="${GCLOUD_SITE_URL:-https://novinhasbr.net}"
-TARBALL="/tmp/avscms-code.tar.gz"
+TARBALL="/tmp/avscms-code.$$.tar.gz"   # unique per run so a stale file from a failed run can never block scp
 
 # "user@instance" when SSH_USER is set, otherwise just the instance name
 # (gcloud then logs in with the local OS user, like the old manual workflow).
@@ -75,13 +75,13 @@ ls -lh "$TARBALL"
 # ---------------------------------------------------------------------------
 step "Uploading to ${TARGET}..."
 gcloud compute scp --quiet --strict-host-key-checking=no \
-    "$TARBALL" "${TARGET}:/tmp/avscms-code.tar.gz" \
+    "$TARBALL" "${TARGET}:${TARBALL}" \
     --zone "$ZONE" --project "$PROJECT"
 
 step "Extracting on the VM and re-applying VM-specific config..."
 gcloud compute ssh --quiet --strict-host-key-checking=no \
     --zone "$ZONE" "$TARGET" --project "$PROJECT" \
-    --command "SITE_URL='${SITE_URL}' REMOTE_DIR='${REMOTE_DIR}' sudo -E bash -s" <<'REMOTE'
+    --command "SITE_URL='${SITE_URL}' REMOTE_DIR='${REMOTE_DIR}' TARBALL='${TARBALL}' sudo -E bash -s" <<'REMOTE'
 set -euo pipefail
 
 cd "${REMOTE_DIR%/*}"   # e.g. /var/www/html
@@ -104,7 +104,7 @@ fi
 
 # Extract shipped code over the existing deployment (media/tmp/cache untouched)
 mkdir -p "${REMOTE_DIR}"
-tar --warning=no-unknown-keyword -xzf /tmp/avscms-code.tar.gz -C "${REMOTE_DIR}"
+tar --warning=no-unknown-keyword -xzf "${TARBALL}" -C "${REMOTE_DIR}"
 
 # Restore the VM's own files
 if [ -f /tmp/config.local.php.prev ]; then
@@ -159,7 +159,7 @@ mkdir -p "${REMOTE_DIR}/tmp/sessions" "${REMOTE_DIR}/tmp/thumbs" "${REMOTE_DIR}/
 chown -R www-data:www-data "${REMOTE_DIR}"
 chmod -R 0775 "${REMOTE_DIR}/media" "${REMOTE_DIR}/tmp" "${REMOTE_DIR}/cache" "${REMOTE_DIR}/scripts"
 
-rm -f /tmp/avscms-code.tar.gz
+rm -f "${TARBALL}"
 echo "VM deploy OK"
 REMOTE
 
