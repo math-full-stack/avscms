@@ -312,8 +312,8 @@ def scrape_profile(url, page=1, max_pages=1):
 
     # Enrich: fetch individual video pages for full metadata (title, tags, duration)
     for i, video in enumerate(videos):
-        if video.get('title') and video.get('tags'):
-            continue  # already has metadata
+        if video.get('duration'):
+            continue  # already has a real duration
         try:
             detail = scrape_video_page(video['source_url'])
             if 'error' not in detail:
@@ -333,6 +333,10 @@ def scrape_profile(url, page=1, max_pages=1):
             time.sleep(0.5)
         except Exception:
             pass
+
+    # Hard rule: a post we cannot extract a real duration from is premium /
+    # locked (member-only) content that can never be downloaded. Do not list it.
+    videos = [v for v in videos if int(v.get('duration') or 0) > 0]
 
     total = len(videos)
 
