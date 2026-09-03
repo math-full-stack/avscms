@@ -79,7 +79,11 @@ class DiscoveryManager {
         // Hard safety cap: a single scan should never crawl the entire
         // back-catalog forever. The frontier stop below ends re-scans as soon
         // as only already-known videos come back.
-        if ($maxPages > 250) $maxPages = 250;
+        // 'refresh' mode is an explicit full-catalog walk (metadata backfill)
+        // so it gets a much higher ceiling - it stops on its own once a page
+        // returns no items.
+        $refresh = !empty($options['refresh']);
+        if ($maxPages > ($refresh ? 600 : 250)) $maxPages = $refresh ? 600 : 250;
 
         $allVideos = array();
         $totalFound = 0;
@@ -170,7 +174,6 @@ class DiscoveryManager {
             // Stop instead of crawling thousands of pages again and again.
             // (Skipped in 'refresh' mode, used to walk the whole catalog once
             // and backfill metadata.)
-            $refresh = !empty($options['refresh']);
             if (!$refresh && $currentPage >= 2 && $newThisPage === 0 && $existingThisPage > 0) {
                 $logger->log($runId, 0, $sourceId, 'INFO', 'SCAN_FRONTIER',
                     'Page ' . $currentPage . ' had no new videos (' . $existingThisPage . ' already known) - stopping scan.');
