@@ -101,6 +101,18 @@ if ($action === 'scan_status') {
         echo json_encode(array('status' => false, 'error' => 'Run not found'));
         exit();
     }
+    // Lazy watchdog: a run stuck RUNNING for 30+ min (e.g. the background
+    // process crashed) is failed here so the UI never polls forever.
+    if ($run['status'] === 'RUNNING' && intval($run['started_at']) > 0 &&
+        (time() - intval($run['started_at'])) > 1800) {
+        $runMgr2->update($runId, array(
+            'status'        => 'FAILED',
+            'finished_at'   => time(),
+            'error_message' => 'Scan timed out after 30 minutes',
+        ));
+        $run['status'] = 'FAILED';
+    }
+
     $isRunning = ($run['status'] === 'RUNNING');
     $discMgr = new DiscoveryManager();
     $counts = $discMgr->getStatusCounts(intval($run['source_id']));

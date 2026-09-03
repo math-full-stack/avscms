@@ -139,6 +139,34 @@ class RunManager {
     }
 
     /**
+     * Check whether a source currently has an active (RUNNING) scan.
+     * @param int $sourceId
+     * @return bool
+     */
+    public function hasActiveRun($sourceId) {
+        $rs = $this->safeExec("SELECT id FROM grabber_runs
+                                  WHERE source_id = " . intval($sourceId) . "
+                                  AND status = 'RUNNING' LIMIT 1");
+        return ($rs && $rs->RecordCount() > 0);
+    }
+
+    /**
+     * Fail runs stuck in RUNNING for longer than $maxAge seconds
+     * (crashed/abandoned background processes).
+     * @param int $maxAge Seconds (default 1800 = 30 min)
+     * @return int  Number of runs failed
+     */
+    public function failStaleRuns($maxAge = 1800) {
+        $cutoff = time() - max(60, intval($maxAge));
+        $this->safeExec("UPDATE grabber_runs
+                            SET status = 'FAILED', finished_at = " . time() . ",
+                                error_message = 'Stale run timed out'
+                          WHERE status = 'RUNNING'
+                            AND started_at < " . intval($cutoff));
+        return intval($this->db->Affected_Rows());
+    }
+
+    /**
      * Cleanup old runs.
      * @param int $days  Default 90
      * @return int  Deleted count

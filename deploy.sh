@@ -54,7 +54,15 @@ cd "$SCRIPT_DIR"
 # 1. Package the code (runtime dirs, secrets and git metadata never ship)
 # ---------------------------------------------------------------------------
 step "Packaging code (excluding media/scripts/tmp/cache/.git/secrets)..."
-COPYFILE_DISABLE=1 tar --no-xattrs -czf "$TARBALL" \
+
+# bsdtar (macOS) silently ignores --no-xattrs, so we strip xattrs from a
+# temporary copy before tarring.  On Linux xattr is a no-op so this is safe
+# everywhere.
+STAGING="/tmp/avscms-staging.$$"
+rm -rf "$STAGING"
+mkdir -p "$STAGING"
+# rsync everything except excluded dirs/files
+rsync -a --delete \
     --exclude='./media' \
     --exclude='./scripts' \
     --exclude='./tmp' \
@@ -65,9 +73,15 @@ COPYFILE_DISABLE=1 tar --no-xattrs -czf "$TARBALL" \
     --exclude='./.gitignore' \
     --exclude='./include/config.local.php' \
     --exclude='./cookies*.txt' \
-    --exclude='*/._*' \
-    --exclude='*/.DS_Store' \
-    -C "$SCRIPT_DIR" .
+    "$SCRIPT_DIR/" "$STAGING/"
+# strip all macOS extended attributes + resource-fork files
+find "$STAGING" -name '._*' -delete 2>/dev/null || true
+find "$STAGING" -name '.DS_Store' -delete 2>/dev/null || true
+if command -v xattr &>/dev/null; then
+    find "$STAGING" -type f -exec xattr -c {} + 2>/dev/null || true
+fi
+COPYFILE_DISABLE=1 tar -czf "$TARBALL" -C "$STAGING" . 2>/dev/null
+rm -rf "$STAGING"
 ls -lh "$TARBALL"
 
 # ---------------------------------------------------------------------------
@@ -167,23 +181,33 @@ REMOTE
 # 3. Sync static media assets (media/player) — shipped in the repo
 # ---------------------------------------------------------------------------
 step "Syncing static media assets (media/player)..."
-( cd "$SCRIPT_DIR" && COPYFILE_DISABLE=1 tar --no-xattrs -cf - \
-        --exclude='*/._*' --exclude='*/.DS_Store' media/player ) \
-    | gcloud compute ssh --quiet --strict-host-key-checking=no \
-        --zone "$ZONE" "$TARGET" --project "$PROJECT" \
-        --command "sudo tar -xf - -C '${REMOTE_DIR}' && sudo chown -R www-data:www-data '${REMOTE_DIR}/media/player' && echo PLAYER_SYNC_OK"
+_tmpmedia="/tmp/avscms-player.$$.tar"
+( cd "$SCRIPT_DIR" && COPYFILE_DISABLE=1 tar -cf "$_tmpmedia" \
+        --exclude='*/._*' --exclude='*/.DS_Store' media/player ) 2>/dev/null
+gcloud compute scp --quiet --strict-host-key-checking=no \
+    "$_tmpmedia" "${TARGET}:${_tmpmedia}" \
+    --zone "$ZONE" --project "$PROJECT"
+gcloud compute ssh --quiet --strict-host-key-checking=no \
+    --zone "$ZONE" "$TARGET" --project "$PROJECT" \
+    --command "sudo tar -xf '${_tmpmedia}' -C '${REMOTE_DIR}' && sudo chown -R www-data:www-data '${REMOTE_DIR}/media/player' && rm -f '${_tmpmedia}' && echo PLAYER_SYNC_OK"
+rm -f "$_tmpmedia"
 
 # ---------------------------------------------------------------------------
 # 4. Sync runtime scripts/ (grabber helpers, yt-dlp, scrapers) — no cookies
 # ---------------------------------------------------------------------------
 step "Syncing runtime scripts/ (grabber helpers, yt-dlp)..."
-( cd "$SCRIPT_DIR" && COPYFILE_DISABLE=1 tar --no-xattrs -cf - \
+_tmrscript="/tmp/avscms-scripts.$$.tar"
+( cd "$SCRIPT_DIR" && COPYFILE_DISABLE=1 tar -cf "$_tmrscript" \
         --exclude='./scripts/bgutil-pot-provider' \
         --exclude='./scripts/cookies*.txt' \
-        --exclude='*/._*' --exclude='*/.DS_Store' ./scripts ) \
-    | gcloud compute ssh --quiet --strict-host-key-checking=no \
-        --zone "$ZONE" "$TARGET" --project "$PROJECT" \
-        --command "sudo tar -xf - -C '${REMOTE_DIR}' && sudo chown -R www-data:www-data '${REMOTE_DIR}/scripts' && sudo chmod +x '${REMOTE_DIR}/scripts/yt-dlp' '${REMOTE_DIR}/scripts'/*.php && echo SCRIPTS_SYNC_OK"
+        --exclude='*/._*' --exclude='*/.DS_Store' ./scripts ) 2>/dev/null
+gcloud compute scp --quiet --strict-host-key-checking=no \
+    "$_tmrscript" "${TARGET}:${_tmrscript}" \
+    --zone "$ZONE" --project "$PROJECT"
+gcloud compute ssh --quiet --strict-host-key-checking=no \
+    --zone "$ZONE" "$TARGET" --project "$PROJECT" \
+    --command "sudo tar -xf '${_tmrscript}' -C '${REMOTE_DIR}' && sudo chown -R www-data:www-data '${REMOTE_DIR}/scripts' && sudo chmod +x '${REMOTE_DIR}/scripts/yt-dlp' '${REMOTE_DIR}/scripts'/*.php && rm -f '${_tmrscript}' && echo SCRIPTS_SYNC_OK"
+rm -f "$_tmrscript"
 
 # ---------------------------------------------------------------------------
 # 5. Smoke test (from the VM itself; admin password read from the VM config)

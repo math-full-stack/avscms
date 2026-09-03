@@ -2,6 +2,7 @@
 defined('_VALID') or die('Restricted Access!');
 
 require_once dirname(__DIR__) . '/interfaces/DiscoveryProvider.php';
+require_once dirname(__DIR__) . '/MassGrabberManager.php';
 
 /**
  * SonovinhasbrProvider - Discovers videos from sonovinhasbr.com listing/category pages.
@@ -88,8 +89,8 @@ class SonovinhasbrProvider implements DiscoveryProvider {
             $maxPages
         );
 
-        $output = @shell_exec($cmd);
-        if (!$output) {
+        $output = MassGrabberManager::execWithTimeout($cmd, 60);
+        if ($output === false || trim($output) === '') {
             return array(
                 'status'   => false,
                 'error'    => 'Failed to execute scraper. Check that python3, requests and beautifulsoup4 are installed.',
@@ -101,7 +102,19 @@ class SonovinhasbrProvider implements DiscoveryProvider {
             );
         }
 
-        $data = json_decode(trim($output), true);
+        $output = trim($output);
+        if (stripos($output, '[EXEC_TIMEOUT') !== false) {
+            return array(
+                'status'   => false,
+                'error'    => 'Scraper timed out after 60 seconds. Try again later.',
+                'videos'   => array(),
+                'page'     => $page,
+                'has_more' => false,
+                'total'    => 0,
+            );
+        }
+
+        $data = json_decode($output, true);
         if (!$data) {
             return array(
                 'status'   => false,

@@ -37,10 +37,18 @@ def scrape_profile(url, page=1, max_pages=1):
     except Exception as e:
         return {"error": str(e), "videos": [], "total": 0, "has_more": False}
 
+    if r.status_code == 429:
+        return {"error": "Rate limit exceeded. Please try again later.", "videos": [], "total": 0, "has_more": False}
+
     if r.status_code != 200:
         return {"error": "HTTP %d" % r.status_code, "videos": [], "total": 0, "has_more": False}
 
     html = r.text
+
+    # xfree sometimes answers 200 with a rate-limit/block page
+    lowered = html.lower()
+    if 'rate limit exceeded' in lowered or 'too many requests' in lowered:
+        return {"error": "Rate limit exceeded. Please try again later.", "videos": [], "total": 0, "has_more": False}
 
     # Total count from page meta (e.g. "259 ... REELS" / "259 ... VIDEOS")
     total_from_meta = 0

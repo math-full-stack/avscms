@@ -59,6 +59,70 @@ class MassGrabberManager {
         }
     }
 
+    /**
+     * Run an external command with a hard timeout (stdout + stderr captured,
+     * like `shell_exec($cmd . ' 2>&1')` but guaranteed to terminate).
+     *
+     * @param string $cmd     Fully escaped command line.
+     * @param int    $timeout Seconds before the process is killed.
+     * @return string|false   Captured output (a "[EXEC_TIMEOUT...]" marker is
+     *                        appended when the process had to be killed).
+     */
+    public static function execWithTimeout($cmd, $timeout = 60) {
+        $descriptors = array(
+            1 => array('pipe', 'w'),
+            2 => array('pipe', 'w'),
+        );
+        $pipes = array();
+        $proc = @proc_open($cmd, $descriptors, $pipes);
+        if (!is_resource($proc)) {
+            return false;
+        }
+
+        foreach ($pipes as $p) {
+            stream_set_blocking($p, false);
+        }
+
+        $output = '';
+        $deadline = microtime(true) + max(1, intval($timeout));
+        $timedOut = false;
+
+        while (true) {
+            $status = proc_get_status($proc);
+            foreach ($pipes as $p) {
+                $chunk = stream_get_contents($p);
+                if ($chunk !== false && $chunk !== '') {
+                    $output .= $chunk;
+                }
+            }
+            if (!$status['running']) {
+                break;
+            }
+            if (microtime(true) >= $deadline) {
+                $timedOut = true;
+                @proc_terminate($proc, 9);
+                break;
+            }
+            usleep(100000);
+        }
+
+        // Drain remaining output after the process exited/was killed
+        foreach ($pipes as $p) {
+            $chunk = stream_get_contents($p);
+            if ($chunk !== false && $chunk !== '') {
+                $output .= $chunk;
+            }
+        }
+        @fclose($pipes[1]);
+        @fclose($pipes[2]);
+        @proc_close($proc);
+
+        if ($timedOut) {
+            $output .= "\n[EXEC_TIMEOUT after {$timeout}s]";
+        }
+        return $output;
+    }
+
     // -------------------------------------------------------
     // Provider registry
     // -------------------------------------------------------

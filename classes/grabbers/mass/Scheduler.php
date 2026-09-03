@@ -20,6 +20,14 @@ class Scheduler {
         $logger = new Logger();
         $jobMgr = new JobManager();
         $discMgr = new DiscoveryManager();
+        $runMgr = new RunManager();
+
+        // Fail runs stuck in RUNNING (crashed background processes) so they
+        // neither block new scans nor keep the dashboard on "Scanning..."
+        $staleRuns = $runMgr->failStaleRuns(1800);
+        if ($staleRuns > 0) {
+            $logger->info(0, 0, 0, 'STALE_RUN_FAILED', $staleRuns . ' stale runs failed');
+        }
 
         // 1. Find due sources
         $dueSources = $sourceMgr->getDueSources();
@@ -29,6 +37,19 @@ class Scheduler {
             $sourceId = intval($source['id']);
             $maxPerRun = intval($source['max_per_run']);
             if ($maxPerRun < 1) $maxPerRun = 5;
+
+            // Skip if a scan is already running for this source (manual or cron)
+            if ($runMgr->hasActiveRun($sourceId)) {
+                $logger->info(0, 0, $sourceId, 'SCAN_SKIPPED',
+                    'Automatic scan skipped: a scan is already running for: ' . $source['name']);
+                $results[] = array(
+                    'source_id' => $sourceId,
+                    'name'      => $source['name'],
+                    'skipped'   => 'already running',
+                );
+                $sourceMgr->updateNextRun($sourceId);
+                continue;
+            }
 
             // Run discovery
             $scanResult = MassGrabberManager::discovery()->scan($sourceId, array(

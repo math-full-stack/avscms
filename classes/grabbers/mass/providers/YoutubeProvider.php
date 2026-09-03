@@ -2,6 +2,7 @@
 defined('_VALID') or die('Restricted Access!');
 
 require_once dirname(__DIR__) . '/interfaces/DiscoveryProvider.php';
+require_once dirname(__DIR__) . '/MassGrabberManager.php';
 
 /**
  * YoutubeProvider - Discovers videos from YouTube channels, playlists, and search.
@@ -160,12 +161,18 @@ class YoutubeProvider implements DiscoveryProvider {
             escapeshellarg($fetchUrl)
         );
 
-        @set_time_limit(60);
-        $output = @shell_exec($cmd);
+        $output = MassGrabberManager::execWithTimeout($cmd, 120);
 
-        if (!$output) {
+        if ($output === false || trim($output) === '') {
             return array(
                 'status' => false, 'error' => 'Failed to execute yt-dlp',
+                'videos' => array(), 'page' => $page, 'has_more' => false, 'total' => 0,
+            );
+        }
+
+        if (stripos($output, '[EXEC_TIMEOUT') !== false) {
+            return array(
+                'status' => false, 'error' => 'yt-dlp timed out after 120 seconds',
                 'videos' => array(), 'page' => $page, 'has_more' => false, 'total' => 0,
             );
         }

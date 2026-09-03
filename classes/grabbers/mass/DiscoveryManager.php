@@ -38,10 +38,11 @@ class DiscoveryManager {
             return array('error' => 'No discovery URL configured');
         }
 
-        // Acquire source lock
-        if (!MassGrabberManager::acquireSourceLock($sourceId)) {
-            return array('error' => 'Another discovery is already running for this source');
-        }
+        // NOTE: lock acquisition is the CALLER's job (the manual scan action
+        // in mass_grabber.php acquires the lock before launching the background
+        // script; the Scheduler skips sources that already have an active run).
+        // scan() must NEVER call acquireSourceLock() here: it force-fails every
+        // RUNNING run for the source, including the run doing the work.
 
         // Get provider
         $provider = MassGrabberManager::getProviderByName($source['provider']);
@@ -78,7 +79,10 @@ class DiscoveryManager {
         $dedupMgr = new DedupManager();
         $newCount = 0;
         $existingCount = 0;
+        $fatalError = null;
+        $lastPageError = null;
 
+        try {
         while ($currentPage <= $maxPages && $hasMore) {
             $discoverOpts = array(
                 'page'     => $currentPage,
@@ -92,8 +96,12 @@ class DiscoveryManager {
             $result = $provider->discover($source['discovery_url'], $discoverOpts);
 
             if (!$result['status']) {
+                $lastPageError = isset($result['error']) ? $result['error'] : 'Unknown error';
+                if (!empty($result['hint'])) {
+                    $lastPageError .= ' (' . $result['hint'] . ')';
+                }
                 $logger->log($runId, 0, $sourceId, 'ERROR', 'PAGE_FAILED',
-                    'Page ' . $currentPage . ' failed: ' . (isset($result['error']) ? $result['error'] : 'Unknown'));
+                    'Page ' . $currentPage . ' failed: ' . $lastPageError);
                 break;
             }
 
@@ -137,10 +145,56 @@ class DiscoveryManager {
                 sleep(intval($source['delay_seconds']));
             }
         }
+        } catch (\Throwable $e) {
+            $fatalError = $e->getMessage();
+            $logger->log($runId, 0, $sourceId, 'ERROR', 'SCAN_ERROR',
+                'Scan crashed: ' . $fatalError);
+        }
 
         $totalProcessed = count($allVideos);
         $logger->log($runId, 0, $sourceId, 'INFO', 'SCAN_COMPLETE',
             "Processed $totalProcessed videos ($newCount new, $existingCount existing). Total available: $totalFound");
+
+        // Update run record — always end in a terminal state (FINISHED/FAILED)
+        // so the UI never stays stuck on "Scanning..."
+        if ($fatalError !== null) {
+            $msg = 'Scan crashed: ' . $fatalError;
+            $runMgr->update($runId, array(
+                'status'        => 'FAILED',
+                'finished_at'   => time(),
+                'error_message' => $msg,
+            ));
+            MassGrabberManager::releaseSourceLock($sourceId, 'FAILED');
+            $sourceMgr->recordError($sourceId, $msg);
+            return array(
+                'run_id'    => $runId,
+                'error'     => $msg,
+                'found'     => $totalProcessed,
+                'new'       => $newCount,
+                'existing'  => $existingCount,
+                'total'     => $totalFound,
+                'pages'     => $currentPage - 1,
+            );
+        }
+
+        if ($totalProcessed === 0 && $lastPageError !== null) {
+            $runMgr->update($runId, array(
+                'status'        => 'FAILED',
+                'finished_at'   => time(),
+                'error_message' => $lastPageError,
+            ));
+            MassGrabberManager::releaseSourceLock($sourceId, 'FAILED');
+            $sourceMgr->recordError($sourceId, $lastPageError);
+            return array(
+                'run_id'    => $runId,
+                'error'     => $lastPageError,
+                'found'     => 0,
+                'new'       => 0,
+                'existing'  => 0,
+                'total'     => $totalFound,
+                'pages'     => $currentPage - 1,
+            );
+        }
 
         // Update run record
         $runMgr->update($runId, array(

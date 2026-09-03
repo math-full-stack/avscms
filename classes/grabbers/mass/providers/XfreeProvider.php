@@ -2,6 +2,7 @@
 defined('_VALID') or die('Restricted Access!');
 
 require_once dirname(__DIR__) . '/interfaces/DiscoveryProvider.php';
+require_once dirname(__DIR__) . '/MassGrabberManager.php';
 
 /**
  * XfreeProvider - Discovers videos from xfree.com profile pages.
@@ -85,8 +86,8 @@ class XfreeProvider implements DiscoveryProvider {
             $maxPages
         );
 
-        $output = @shell_exec($cmd);
-        if (!$output) {
+        $output = MassGrabberManager::execWithTimeout($cmd, 60);
+        if ($output === false || trim($output) === '') {
             return array(
                 'status'   => false,
                 'error'    => 'Failed to execute scraper. Check that python3 and curl_cffi are installed.',
@@ -98,7 +99,19 @@ class XfreeProvider implements DiscoveryProvider {
             );
         }
 
-        $data = json_decode(trim($output), true);
+        $output = trim($output);
+        if (stripos($output, '[EXEC_TIMEOUT') !== false) {
+            return array(
+                'status'   => false,
+                'error'    => 'Scraper timed out after 60 seconds. Try again later.',
+                'videos'   => array(),
+                'page'     => $page,
+                'has_more' => false,
+                'total'    => 0,
+            );
+        }
+
+        $data = json_decode($output, true);
         if (!$data) {
             return array(
                 'status'   => false,

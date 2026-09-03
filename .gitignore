@@ -75,6 +75,10 @@ scripts/cookies.txt
 scripts/bgutil-pot-provider/
 node_modules/
 
+# ---------- Python bytecode cache ----------
+__pycache__/
+*.pyc
+
 # ---------- Local env files ----------
 .env
 .env.*
