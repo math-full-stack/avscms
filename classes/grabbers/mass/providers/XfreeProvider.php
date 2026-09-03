@@ -86,7 +86,7 @@ class XfreeProvider implements DiscoveryProvider {
             $maxPages
         );
 
-        $output = MassGrabberManager::execWithTimeout($cmd, 60);
+        $output = MassGrabberManager::execWithTimeout($cmd, 180);
         if ($output === false || trim($output) === '') {
             return array(
                 'status'   => false,
@@ -103,7 +103,7 @@ class XfreeProvider implements DiscoveryProvider {
         if (stripos($output, '[EXEC_TIMEOUT') !== false) {
             return array(
                 'status'   => false,
-                'error'    => 'Scraper timed out after 60 seconds. Try again later.',
+                'error'    => 'Scraper timed out after 180 seconds. Try again later.',
                 'videos'   => array(),
                 'page'     => $page,
                 'has_more' => false,

@@ -52,6 +52,8 @@ if ($sourceId <= 0) {
 $runId = isset($options['run_id']) ? intval($options['run_id']) : 0;
 $filter = isset($options['filter']) ? $options['filter'] : 'videos';
 $query = isset($options['query']) ? $options['query'] : '';
+$timeframe = isset($options['timeframe']) ? $options['timeframe'] : '';
+$sort = isset($options['sort']) ? $options['sort'] : 'newest';
 
 // Run the scan
 $result = MassGrabberManager::discovery()->scan($sourceId, array(
@@ -60,6 +62,9 @@ $result = MassGrabberManager::discovery()->scan($sourceId, array(
     'run_id'    => $runId,
     'filter'    => $filter,
     'query'     => $query,
+    'timeframe' => $timeframe,
+    'sort'      => $sort,
+    'refresh'   => isset($options['refresh']) ? intval($options['refresh']) : 0,
 ));
 
 echo json_encode($result) . "\n";

@@ -139,9 +139,22 @@ class DiscoveryManager {
                     $existingCount++;
                     $existingThisPage++;
                     if (!empty($dedupResult['discovered_id'])) {
+                        // Refresh stored metadata when the scraper now returns
+                        // richer data (titles/duration were empty before).
+                        $did = intval($dedupResult['discovered_id']);
+                        $sets = array('last_seen_at = ' . time());
+                        if ($video['title'] !== '') {
+                            $sets[] = 'title = ' . $this->db->qStr($video['title']);
+                        }
+                        if (intval($video['duration']) > 0) {
+                            $sets[] = 'duration = ' . intval($video['duration']);
+                        }
+                        if (!empty($video['thumbnail_url'])) {
+                            $sets[] = 'thumbnail_url = ' . $this->db->qStr($video['thumbnail_url']);
+                        }
                         $this->safeExec("UPDATE grabber_discovered_videos
-                                            SET last_seen_at = " . time() . "
-                                            WHERE id = " . intval($dedupResult['discovered_id']) . " LIMIT 1");
+                                            SET " . implode(', ', $sets) . "
+                                            WHERE id = " . $did . " LIMIT 1");
                     }
                 } else {
                     $this->insertDiscovered($sourceId, $video, $runId);
@@ -155,7 +168,10 @@ class DiscoveryManager {
             // Frontier stop: on newest-first listings, once a page returns only
             // already-known videos the rest of the back-catalog is old content.
             // Stop instead of crawling thousands of pages again and again.
-            if ($currentPage >= 2 && $newThisPage === 0 && $existingThisPage > 0) {
+            // (Skipped in 'refresh' mode, used to walk the whole catalog once
+            // and backfill metadata.)
+            $refresh = !empty($options['refresh']);
+            if (!$refresh && $currentPage >= 2 && $newThisPage === 0 && $existingThisPage > 0) {
                 $logger->log($runId, 0, $sourceId, 'INFO', 'SCAN_FRONTIER',
                     'Page ' . $currentPage . ' had no new videos (' . $existingThisPage . ' already known) - stopping scan.');
                 $hasMore = false;
@@ -444,12 +460,23 @@ class DiscoveryManager {
             'external_id'   => isset($video['external_id']) ? trim($video['external_id']) : '',
             'source_url'    => isset($video['source_url']) ? trim($video['source_url']) : '',
             'canonical_url' => isset($video['canonical_url']) ? trim($video['canonical_url']) : trim($video['source_url']),
-            'title'         => isset($video['title']) ? trim($video['title']) : '',
-            'description'   => isset($video['description']) ? trim($video['description']) : '',
-            'tags'          => isset($video['tags']) ? trim($video['tags']) : '',
+            // Strip 4-byte chars (emoji) so inserts survive utf8 (3-byte) tables
+            'title'         => $this->stripEmoji(isset($video['title']) ? trim($video['title']) : ''),
+            'description'   => $this->stripEmoji(isset($video['description']) ? trim($video['description']) : ''),
+            'tags'          => $this->stripEmoji(isset($video['tags']) ? trim($video['tags']) : ''),
             'duration'      => isset($video['duration']) ? intval($video['duration']) : 0,
             'thumbnail_url' => isset($video['thumbnail_url']) ? trim($video['thumbnail_url']) : '',
         );
+    }
+
+    /**
+     * Remove emojis and 4-byte unicode chars (unsafe for utf8 3-byte columns).
+     */
+    private function stripEmoji($text) {
+        $text = preg_replace('/[\x{1F000}-\x{1FFFF}]/u', '', $text);
+        $text = preg_replace('/[\x{20000}-\x{2FFFF}]/u', '', $text);
+        $text = preg_replace('/[\x{FE00}-\x{FE0F}\x{200D}\x{20E3}]/u', '', $text);
+        return trim($text);
     }
 
     private function formatDuration($seconds) {
