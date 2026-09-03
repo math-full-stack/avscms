@@ -39,9 +39,9 @@
 									<!-- <td>{$smarty.section.i.index}</td> -->
 									<td>{$directory[i].path} </td>
 									<td class="{if $directory[i].result != 'writable'}text-error{/if}">{$directory[i].result}</td>								
-									<td class="{if $directory[i].permission != '0777'}text-error{/if}">
+									<td class="{if $directory[i].result != 'writable'}text-error{/if}">
 										<div class="pull-left">{$directory[i].permission}</div>
-										<div class="pull-right">{if $directory[i].permission == '0777'}<i class="fa fa-check text-success"></i>{else}<i class="fa fa-exclamation-triangle text-error"></i>{/if}</div>
+										<div class="pull-right">{if $directory[i].result == 'writable'}<i class="fa fa-check text-success"></i>{else}<i class="fa fa-exclamation-triangle text-error"></i>{/if}</div>
 									</td>
 								</tr>															
 								{/section}						
@@ -69,9 +69,9 @@
 									<!-- <td>{$smarty.section.i.index}</td> -->
 									<td>{$file[i].path} </td>
 									<td class="{if $file[i].result != 'writable'}text-error{/if}">{$file[i].result}</td>								
-									<td class="{if $file[i].permission != '0777'}text-error{/if}">
+									<td class="{if $file[i].result != 'writable'}text-error{/if}">
 										<div class="pull-left">{$file[i].permission}</div>
-										<div class="pull-right">{if $file[i].permission == '0777'}<i class="fa fa-check text-success"></i>{else}<i class="fa fa-exclamation-triangle text-error"></i>{/if}</div>
+										<div class="pull-right">{if $file[i].result == 'writable'}<i class="fa fa-check text-success"></i>{else}<i class="fa fa-exclamation-triangle text-error"></i>{/if}</div>
 									</td>
 								</tr>															
 								{/section}						

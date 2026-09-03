@@ -124,7 +124,7 @@ foreach ($directory as $key => $value) {
 		$directory[$key]['result'] 	   = 'doesn\'t exist';
 		$directory[$key]['permission'] = 'n/a';
 	}
-	if ($directory[$key]['permission'] != '0777') {
+	if ($directory[$key]['result'] != 'writable') {
 		$err['directory'] = 1;
 	}
 }
@@ -155,7 +155,7 @@ foreach ($file as $key => $value) {
 		$file[$key]['result'] 	   = 'doesn\'t exist';
 		$file[$key]['permission'] = 'n/a';
 	}
-	if ($file[$key]['permission'] != '0777') {
+	if ($file[$key]['result'] != 'writable') {
 		$err['file'] = 1;
 	}
 }

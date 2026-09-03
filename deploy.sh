@@ -169,9 +169,22 @@ mkdir -p "${REMOTE_DIR}/media/videos/hd" "${REMOTE_DIR}/media/videos/iphone" "${
 mkdir -p "${REMOTE_DIR}/tmp/albums" "${REMOTE_DIR}/tmp/avatars" "${REMOTE_DIR}/tmp/downloads"
 mkdir -p "${REMOTE_DIR}/tmp/sessions" "${REMOTE_DIR}/tmp/thumbs" "${REMOTE_DIR}/tmp/uploader"
 
+# --- AppleDouble / macOS junk cleanup --------------------------------------
+# Never leave Finder metadata (._* sidecars, .DS_Store) behind: besides
+# doubling every file, those binary sidecars get executed/included by PHP
+# tooling and show up as "Mac OS X ATTR com.apple.provenance..." garbage.
+find "${REMOTE_DIR}" -name '._*' -delete 2>/dev/null || true
+find "${REMOTE_DIR}" -name '.DS_Store' -delete 2>/dev/null || true
+
 # --- Ownership / permissions -----------------------------------------------
+# Own the whole tree by the web server user (readable code, writable runtime
+# dirs - the owner has rwx on dirs). File/dir MODES are deliberately left
+# untouched: the admin check page now flags paths only when they are not
+# actually writable (siteadmin/modules/index/check.php), so permissions
+# configured on the VM survive deploys instead of being reset to 0777/0775
+# on every run.
 chown -R www-data:www-data "${REMOTE_DIR}"
-chmod -R 0775 "${REMOTE_DIR}/media" "${REMOTE_DIR}/tmp" "${REMOTE_DIR}/cache" "${REMOTE_DIR}/scripts"
+chmod +x "${REMOTE_DIR}/scripts/yt-dlp" "${REMOTE_DIR}"/scripts/*.sh 2>/dev/null || true
 
 rm -f "${TARBALL}"
 echo "VM deploy OK"
@@ -189,7 +202,7 @@ gcloud compute scp --quiet --strict-host-key-checking=no \
     --zone "$ZONE" --project "$PROJECT"
 gcloud compute ssh --quiet --strict-host-key-checking=no \
     --zone "$ZONE" "$TARGET" --project "$PROJECT" \
-    --command "sudo tar -xf '${_tmpmedia}' -C '${REMOTE_DIR}' && sudo chown -R www-data:www-data '${REMOTE_DIR}/media/player' && rm -f '${_tmpmedia}' && echo PLAYER_SYNC_OK"
+    --command "sudo tar -xf '${_tmpmedia}' -C '${REMOTE_DIR}' && sudo chown -R www-data:www-data '${REMOTE_DIR}/media/player' && sudo find '${REMOTE_DIR}/media/player' -name '._*' -delete 2>/dev/null; sudo find '${REMOTE_DIR}/media/player' -name '.DS_Store' -delete 2>/dev/null; rm -f '${_tmpmedia}' && echo PLAYER_SYNC_OK"
 rm -f "$_tmpmedia"
 
 # ---------------------------------------------------------------------------
@@ -206,7 +219,7 @@ gcloud compute scp --quiet --strict-host-key-checking=no \
     --zone "$ZONE" --project "$PROJECT"
 gcloud compute ssh --quiet --strict-host-key-checking=no \
     --zone "$ZONE" "$TARGET" --project "$PROJECT" \
-    --command "sudo tar -xf '${_tmrscript}' -C '${REMOTE_DIR}' && sudo chown -R www-data:www-data '${REMOTE_DIR}/scripts' && sudo chmod +x '${REMOTE_DIR}/scripts/yt-dlp' '${REMOTE_DIR}/scripts'/*.php && rm -f '${_tmrscript}' && echo SCRIPTS_SYNC_OK"
+    --command "sudo tar -xf '${_tmrscript}' -C '${REMOTE_DIR}' && sudo find '${REMOTE_DIR}/scripts' -name '._*' -delete 2>/dev/null; sudo find '${REMOTE_DIR}/scripts' -name '.DS_Store' -delete 2>/dev/null; sudo chown -R www-data:www-data '${REMOTE_DIR}/scripts' && sudo chmod +x '${REMOTE_DIR}/scripts/yt-dlp' '${REMOTE_DIR}'/scripts/*.sh 2>/dev/null; rm -f '${_tmrscript}' && echo SCRIPTS_SYNC_OK"
 rm -f "$_tmrscript"
 
 # ---------------------------------------------------------------------------
