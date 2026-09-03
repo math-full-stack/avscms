@@ -115,6 +115,30 @@ def external_key(href):
     return 'slug:' + (slug or href)
 
 
+# Posts marked with the VIP/"EXCLUSIVO" badge are paid member-only content
+# ("Conteúdo exclusivo para membros") and cannot be downloaded - skip them so
+# the Discover listing only shows free, grabbable videos.
+PREMIUM_RE = re.compile(
+    r'vip-post-badge-wrap|vip-badge-img|conte\xfa?do exclusivo para membros|EXCLUSIVO', re.I)
+
+
+def is_premium_post(html, href):
+    """Whether the post at $href carries the premium/VIP badge.
+
+    The badge markup sits in the same post's thumbnail anchor. Restrict the
+    search to this post's own segment (from the nearest opening
+    '<div class="post...' backwards from the href) so a premium badge from a
+    neighbouring post is never matched."""
+    idx = html.find(href)
+    if idx < 0:
+        return False
+    start = html.rfind('<div class="post', 0, idx)
+    if start < 0:
+        start = max(0, idx - 2000)
+    seg = html[start:idx + 1500]
+    return bool(PREMIUM_RE.search(seg))
+
+
 def scrape_listing_page(url):
     """Scrape a single listing page and return video entries."""
     try:
@@ -145,6 +169,9 @@ def scrape_listing_page(url):
             idx = html.find(href)
             context_before = html[max(0, idx - 300):idx] if idx >= 0 else ''
             if 'nofollow' in context_before.lower():
+                continue
+            # Skip premium (paid member-only) posts - they can't be downloaded.
+            if is_premium_post(html, href):
                 continue
 
             title_match = re.search(r'<h2[^>]*>(.*?)</h2>', block, re.S)
@@ -180,6 +207,9 @@ def scrape_listing_page(url):
             idx = html.find(href)
             context_before = html[max(0, idx - 200):idx] if idx >= 0 else ''
             if 'nofollow' in context_before.lower():
+                continue
+            # Skip premium (paid member-only) posts - they can't be downloaded.
+            if is_premium_post(html, href):
                 continue
             seen_urls.add(href)
             title = re.sub(r'<[^>]+>', '', title_raw).strip()
