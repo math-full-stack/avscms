@@ -430,9 +430,18 @@ class MassGrabberManager {
     public static function killSourceScans($sourceId) {
         $sourceId = intval($sourceId);
         if ($sourceId <= 0) return;
-        if (stripos(PHP_OS, 'WIN') === 0) return; // pkill is POSIX-only
-        // The [.] keeps pkill from matching our own shell command line.
+        if (stripos(PHP_OS, 'WIN') === 0) return; // pgrep/kill are POSIX-only
+        // The [.] keeps pgrep from matching our own shell command line.
         $pattern = 'grabber_scan[.]php ' . $sourceId;
-        @shell_exec('pkill -9 -f ' . escapeshellarg($pattern) . ' >/dev/null 2>&1');
+        $pids = array();
+        @exec('pgrep -f ' . escapeshellarg($pattern) . ' 2>/dev/null', $pids);
+        $self = function_exists('getmypid') ? getmypid() : 0;
+        foreach ($pids as $p) {
+            $p = intval($p);
+            // Never kill our own process (CLI/scheduler runs match the pattern).
+            if ($p > 0 && $p !== $self) {
+                @exec('kill -9 ' . $p . ' 2>/dev/null');
+            }
+        }
     }
 }
