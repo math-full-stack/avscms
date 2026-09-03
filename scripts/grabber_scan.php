@@ -65,6 +65,7 @@ $result = MassGrabberManager::discovery()->scan($sourceId, array(
     'timeframe' => $timeframe,
     'sort'      => $sort,
     'refresh'   => isset($options['refresh']) ? intval($options['refresh']) : 0,
+    'start_page'=> isset($options['start_page']) ? intval($options['start_page']) : 0,
 ));
 
 echo json_encode($result) . "\n";

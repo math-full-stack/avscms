@@ -166,6 +166,16 @@ def _fetch_video_meta(url):
     return {'error': True}
 
 
+def _profile_label(url):
+    """Human-readable model name from the profile URL (e.g. misha.stojkovic)."""
+    m = re.search(r'xfree\.com/([a-z0-9._-]+)', url or '', re.I)
+    if not m:
+        return 'XFree'
+    raw = m.group(1)
+    words = re.split(r'[._-]+', raw)
+    return ' '.join(w[:1].upper() + w[1:] for w in words if w) or 'XFree'
+
+
 def _synth_title(tags):
     """Build a readable title from the most descriptive tags (last resort)."""
     words = []
@@ -343,12 +353,18 @@ def scrape_profile(url, page=1, max_pages=1):
     # Duration is not on the wall - enrich video posts from their own pages.
     _enrich_page(page_videos)
 
+    profile_label = _profile_label(url)
     out_videos = []
     for v in page_videos:
         # Fill any remaining blank title from the tags (videos whose posts only
         # carry tags render a generic placeholder on their page too).
         if not v['title']:
             v['title'] = _synth_title(v['tags'])
+        # Last resort: a real video whose post carries no caption at all (xfree
+        # only renders a generic placeholder for those). Never leave a blank
+        # title in the Discover listing.
+        if not v['title']:
+            v['title'] = profile_label + ' Reel'
         v['duration'] = int(v['duration'])
         v['duration_formatted'] = _fmt_duration(v['duration'])
         v.pop('_wall_has_title', None)

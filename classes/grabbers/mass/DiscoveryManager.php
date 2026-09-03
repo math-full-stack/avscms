@@ -85,10 +85,15 @@ class DiscoveryManager {
         $refresh = !empty($options['refresh']);
         if ($maxPages > ($refresh ? 600 : 250)) $maxPages = $refresh ? 600 : 250;
 
+        // Optional resume point: walk pages [start_page .. start_page+max_pages-1]
+        // so an interrupted full-catalog refresh can continue where it stopped.
+        $startPage = isset($options['start_page']) ? max(1, intval($options['start_page'])) : 1;
+        $endPage = $startPage + $maxPages - 1;
+
         $allVideos = array();
         $totalFound = 0;
         $hasMore = true;
-        $currentPage = 1;
+        $currentPage = $startPage;
         $dedupMgr = new DedupManager();
         $newCount = 0;
         $existingCount = 0;
@@ -96,10 +101,10 @@ class DiscoveryManager {
         $lastPageError = null;
 
         try {
-        while ($currentPage <= $maxPages && $hasMore) {
+        while ($currentPage <= $endPage && $hasMore) {
             $discoverOpts = array(
                 'page'     => $currentPage,
-                'max_pages' => $maxPages - $currentPage + 1,
+                'max_pages' => $endPage - $currentPage + 1,
             );
             if (isset($options['filter'])) $discoverOpts['filter'] = $options['filter'];
             if (isset($options['query'])) $discoverOpts['query'] = $options['query'];

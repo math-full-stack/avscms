@@ -8,7 +8,8 @@ require_once dirname(__DIR__) . '/MassGrabberManager.php';
  * SonovinhasbrProvider - Discovers videos from sonovinhasbr.com listing/category pages.
  *
  * sonovinhasbr.com is a WordPress site with standard HTML listings.
- * We use a Python script with requests + BeautifulSoup to parse pages.
+ * We use a Python script with curl_cffi (stdlib parsing) - the same native
+ * toolchain as the XFree provider.
  */
 class SonovinhasbrProvider implements DiscoveryProvider {
 
@@ -22,6 +23,9 @@ class SonovinhasbrProvider implements DiscoveryProvider {
     }
 
     private function detectPython() {
+        // Same native toolchain as the XFree provider: curl_cffi lives in the
+        // machine-wide (brew/system) python site-packages, so any Python 3
+        // found here can run the scraper - no per-user pip installs needed.
         $candidates = array(
             '/opt/homebrew/bin/python3',
             '/usr/local/bin/python3',
@@ -31,12 +35,8 @@ class SonovinhasbrProvider implements DiscoveryProvider {
         foreach ($candidates as $bin) {
             $check = @shell_exec("$bin --version 2>&1");
             if ($check && stripos($check, 'Python 3') !== false) {
-                // Verify requests module is available
-                $test = @shell_exec("$bin -c 'import requests' 2>&1");
-                if ($test === null || stripos($test, 'ModuleNotFoundError') === false) {
-                    $this->pythonBinary = $bin;
-                    break;
-                }
+                $this->pythonBinary = $bin;
+                break;
             }
         }
         if (!$this->pythonBinary) {
@@ -93,8 +93,8 @@ class SonovinhasbrProvider implements DiscoveryProvider {
         if ($output === false || trim($output) === '') {
             return array(
                 'status'   => false,
-                'error'    => 'Failed to execute scraper. Check that python3, requests and beautifulsoup4 are installed.',
-                'hint'     => 'Install dependencies: pip3 install requests beautifulsoup4',
+                'error'    => 'Failed to execute scraper. Check that python3 and curl_cffi are installed.',
+                'hint'     => 'Install curl_cffi: pip3 install curl_cffi',
                 'videos'   => array(),
                 'page'     => $page,
                 'has_more' => false,

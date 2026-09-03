@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """
-sonovinhasbr_scrape.py - Scrapes video listings from sonovinhasbr.com
+sonovinhasbr_scrape.py - Discovers videos from sonovinhasbr.com listings.
 
 Usage:
     python3 sonovinhasbr_scrape.py <url> [page] [max_pages]
 
 Output: JSON with video list.
+
+sonovinhasbr.com is a WordPress site with standard HTML listings, parsed with
+pure stdlib (regex/JSON-LD) - same native approach as the XFree scraper. The
+only external dependency is curl_cffi (browser impersonation), installed
+machine-wide for this project's other scrapers.
 """
 import sys
 import json
@@ -15,15 +20,10 @@ import warnings
 warnings.filterwarnings('ignore')
 
 try:
-    import requests
+    from curl_cffi import requests
 except ImportError:
-    print(json.dumps({"error": "requests not installed. Run: pip3 install requests"}))
+    print(json.dumps({"error": "curl_cffi not installed. Run: pip3 install curl_cffi"}))
     sys.exit(1)
-
-try:
-    from bs4 import BeautifulSoup
-except ImportError:
-    BeautifulSoup = None
 
 
 HEADERS = {
@@ -91,8 +91,8 @@ def format_duration(seconds):
     mins = (seconds % 3600) // 60
     secs = seconds % 60
     if hours > 0:
-        return f'{hours:02d}:{mins:02d}:{secs:02d}'
-    return f'{mins:02d}:{secs:02d}'
+        return '%02d:%02d:%02d' % (hours, mins, secs)
+    return '%02d:%02d' % (mins, secs)
 
 
 def extract_post_id(url):
@@ -111,57 +111,77 @@ def scrape_listing_page(url):
         return {'error': str(e), 'videos': [], 'has_more': False}
 
     if r.status_code != 200:
-        return {'error': f'HTTP {r.status_code}', 'videos': [], 'has_more': False}
+        return {'error': 'HTTP %d' % r.status_code, 'videos': [], 'has_more': False}
 
     html = r.text
     videos = []
 
-    if BeautifulSoup:
-        soup = BeautifulSoup(html, 'html.parser')
-        posts = soup.select('.post')
-        for post in posts:
-            thumb_link = post.select_one('.post-thumb a[href]')
-            if not thumb_link:
+    # Strategy 1: split on .post blocks (post-conteudo holds the title/h2).
+    post_pattern = re.compile(
+        r'<div class="post">\s*<div class="post-conteudo">(.*?)</div>\s*</div>', re.S)
+    post_blocks = post_pattern.findall(html)
+
+    if post_blocks:
+        for block in post_blocks:
+            href_match = re.search(
+                r'<a[^>]+href="(https?://(?:www\.)?sonovinhasbr\.com/[^"]+/)"[^>]*>', block)
+            if not href_match:
                 continue
-            href = thumb_link.get('href', '')
-            if not href or 'sonovinhasbr.com' not in href:
-                continue
+            href = href_match.group(1)
 
             # Skip ad posts (nofollow external links)
-            if thumb_link.get('rel') and 'nofollow' in thumb_link.get('rel', []):
+            idx = html.find(href)
+            context_before = html[max(0, idx - 300):idx] if idx >= 0 else ''
+            if 'nofollow' in context_before.lower():
                 continue
 
-            title_el = post.select_one('.post-conteudo h2') or post.select_one('a h2')
-            title = title_el.get_text(strip=True) if title_el else ''
+            title_match = re.search(r'<h2[^>]*>(.*?)</h2>', block, re.S)
+            title = re.sub(r'<[^>]+>', '', title_match.group(1)).strip() if title_match else ''
 
-            img_el = post.select_one('.post-thumb img')
-            thumbnail = ''
-            if img_el:
-                thumbnail = img_el.get('src', '') or img_el.get('data-src', '')
-                # Try srcset for higher quality
-                srcset = img_el.get('srcset', '')
-                if srcset:
-                    parts = srcset.split(',')
-                    best_url = ''
-                    best_w = 0
-                    for part in parts:
-                        part = part.strip()
-                        tokens = part.split()
-                        if len(tokens) >= 2:
-                            try:
-                                w = int(tokens[1].replace('w', ''))
-                            except ValueError:
-                                w = 0
-                            if w > best_w:
-                                best_w = w
-                                best_url = tokens[0]
-                    if best_url:
-                        thumbnail = best_url
-
-            post_id = extract_post_id(href)
+            img_match = re.search(
+                r'<img[^>]+src="([^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"', block)
+            thumbnail = img_match.group(1) if img_match else ''
 
             videos.append({
-                'external_id': post_id or '',
+                'external_id': extract_post_id(href) or '',
+                'source_url': href,
+                'canonical_url': href.rstrip('/'),
+                'title': title,
+                'description': '',
+                'tags': '',
+                'duration': 0,
+                'duration_formatted': '',
+                'thumbnail_url': thumbnail,
+            })
+    else:
+        # Strategy 2 (flexible): every internal anchor followed by an h2.
+        link_pattern = re.compile(
+            r'<a\s+href="(https?://(?:www\.)?sonovinhasbr\.com/[a-z0-9\-]+/)"[^>]*>\s*'
+            r'(?:<[^>]+>)*\s*<h2[^>]*>(.*?)</h2>',
+            re.S | re.I
+        )
+        seen_urls = set()
+        for href, title_raw in link_pattern.findall(html):
+            if href in seen_urls:
+                continue
+            # Skip if this looks like an ad (nofollow in surrounding context)
+            idx = html.find(href)
+            context_before = html[max(0, idx - 200):idx] if idx >= 0 else ''
+            if 'nofollow' in context_before.lower():
+                continue
+            seen_urls.add(href)
+            title = re.sub(r'<[^>]+>', '', title_raw).strip()
+
+            # Look for thumbnail near this link
+            thumbnail = ''
+            context_after = html[idx:idx + 2000] if idx >= 0 else ''
+            img_match = re.search(
+                r'<img[^>]+src="([^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"', context_after)
+            if img_match:
+                thumbnail = img_match.group(1)
+
+            videos.append({
+                'external_id': extract_post_id(href) or '',
                 'source_url': href,
                 'canonical_url': href.rstrip('/'),
                 'title': title,
@@ -172,86 +192,7 @@ def scrape_listing_page(url):
                 'thumbnail_url': thumbnail,
             })
 
-        # Check for next page
-        has_more = False
-        next_link = soup.select_one('a.next, .nav-next a, a[rel="next"]')
-        if next_link:
-            has_more = True
-    else:
-        # Fallback: regex-based parsing
-        # Find all post link blocks: <div class="post"> ... <a href="URL"> ... <h2>TITLE</h2>
-        # Strategy: find all .post blocks by splitting on them
-        post_pattern = re.compile(r'<div class="post">\s*<div class="post-conteudo">(.*?)</div>\s*</div>', re.S)
-        post_blocks = post_pattern.findall(html)
-
-        # If that fails, try a more flexible approach: find all internal links with h2
-        if not post_blocks:
-            # Find all anchor tags linking to internal posts (not ads/external)
-            link_pattern = re.compile(
-                r'<a\s+href="(https?://www\.sonovinhasbr\.com/[a-z0-9\-]+/)"[^>]*>\s*'
-                r'(?:<[^>]+>)*\s*<h2[^>]*>(.*?)</h2>',
-                re.S | re.I
-            )
-            matches = link_pattern.findall(html)
-            seen_urls = set()
-            for href, title_raw in matches:
-                if href in seen_urls:
-                    continue
-                # Skip if this looks like an ad (check for nofollow in parent context)
-                idx = html.find(href)
-                context_before = html[max(0, idx - 200):idx] if idx >= 0 else ''
-                if 'nofollow' in context_before.lower():
-                    continue
-                seen_urls.add(href)
-                title = re.sub(r'<[^>]+>', '', title_raw).strip()
-
-                # Look for thumbnail near this link
-                thumbnail = ''
-                context_after = html[idx:idx + 2000] if idx >= 0 else ''
-                img_match = re.search(r'<img[^>]+src="([^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"', context_after)
-                if img_match:
-                    thumbnail = img_match.group(1)
-
-                post_id = extract_post_id(href)
-                videos.append({
-                    'external_id': post_id or '',
-                    'source_url': href,
-                    'canonical_url': href.rstrip('/'),
-                    'title': title,
-                    'description': '',
-                    'tags': '',
-                    'duration': 0,
-                    'duration_formatted': '',
-                    'thumbnail_url': thumbnail,
-                })
-        else:
-            for block in post_blocks:
-                href_match = re.search(r'<a[^>]+href="(https?://www\.sonovinhasbr\.com/[^"]+/)"[^>]*>', block)
-                if not href_match:
-                    continue
-                href = href_match.group(1)
-
-                title_match = re.search(r'<h2[^>]*>(.*?)</h2>', block, re.S)
-                title = re.sub(r'<[^>]+>', '', title_match.group(1)).strip() if title_match else ''
-
-                img_match = re.search(r'<img[^>]+src="([^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"', block)
-                thumbnail = img_match.group(1) if img_match else ''
-
-                post_id = extract_post_id(href)
-
-                videos.append({
-                    'external_id': post_id or '',
-                    'source_url': href,
-                    'canonical_url': href.rstrip('/'),
-                    'title': title,
-                    'description': '',
-                    'tags': '',
-                    'duration': 0,
-                    'duration_formatted': '',
-                    'thumbnail_url': thumbnail,
-                })
-
-        has_more = bool(re.search(r'rel="next"', html))
+    has_more = bool(re.search(r'rel="next"|class="[^"]*next[^"]*"|/page/\d+/', html))
 
     return {'videos': videos, 'has_more': has_more}
 
@@ -264,7 +205,7 @@ def scrape_video_page(url):
         return {'error': str(e)}
 
     if r.status_code != 200:
-        return {'error': f'HTTP {r.status_code}'}
+        return {'error': 'HTTP %d' % r.status_code}
 
     html = r.text
     result = {}
@@ -300,17 +241,8 @@ def scrape_video_page(url):
             result['thumbnail_url'] = m.group(1).strip()
 
     # Tags
-    tags = []
-    if BeautifulSoup:
-        soup = BeautifulSoup(html, 'html.parser')
-        tag_links = soup.select('.post-tags a[rel="tag"]')
-        for t in tag_links:
-            tags.append(t.get_text(strip=True))
-    else:
-        tag_matches = re.findall(r'<a[^>]+rel="tag"[^>]*>([^<]+)</a>', html)
-        tags = [t.strip() for t in tag_matches]
-
-    result['tags'] = ', '.join(tags)
+    tag_matches = re.findall(r'<a[^>]+rel="tag"[^>]*>([^<]+)</a>', html)
+    result['tags'] = ', '.join(t.strip() for t in tag_matches)
 
     return result
 
