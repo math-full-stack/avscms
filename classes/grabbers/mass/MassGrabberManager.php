@@ -417,4 +417,22 @@ class MassGrabberManager {
                       WHERE source_id = " . intval($sourceId) . "
                       AND status = 'RUNNING'");
     }
+
+    /**
+     * Kill any still-alive background scan processes for a source.
+     *
+     * Marking a run FAILED in the DB never stops the actual background PHP
+     * process, so repeated scans used to pile up orphaned processes that kept
+     * scraping the source forever. This kills them by command-line pattern.
+     *
+     * @param int $sourceId
+     */
+    public static function killSourceScans($sourceId) {
+        $sourceId = intval($sourceId);
+        if ($sourceId <= 0) return;
+        if (stripos(PHP_OS, 'WIN') === 0) return; // pkill is POSIX-only
+        // The [.] keeps pkill from matching our own shell command line.
+        $pattern = 'grabber_scan[.]php ' . $sourceId;
+        @shell_exec('pkill -9 -f ' . escapeshellarg($pattern) . ' >/dev/null 2>&1');
+    }
 }

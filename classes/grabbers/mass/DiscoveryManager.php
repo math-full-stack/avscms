@@ -59,6 +59,12 @@ class DiscoveryManager {
         $runMgr = new RunManager();
         $runId = isset($options['run_id']) ? intval($options['run_id']) : 0;
         if ($runId <= 0) {
+            // Starting a brand new scan (scheduler/CLI). If no run is active in
+            // the DB but an orphaned background process from a FAILED run is
+            // still scraping this source, stop it before starting fresh.
+            if (!$runMgr->hasActiveRun($sourceId)) {
+                MassGrabberManager::killSourceScans($sourceId);
+            }
             $runId = $runMgr->create($sourceId, isset($options['manual']) && $options['manual'] ? 'MANUAL' : 'AUTOMATIC');
         } else {
             $runMgr->update($runId, array('status' => 'RUNNING'));
@@ -70,7 +76,10 @@ class DiscoveryManager {
         // Fetch pages in batches of 10
         $maxPages = isset($options['max_pages']) ? intval($options['max_pages']) : 10;
         if ($maxPages < 1) $maxPages = 1;
-        if ($maxPages > 9999) $maxPages = 9999;
+        // Hard safety cap: a single scan should never crawl the entire
+        // back-catalog forever. The frontier stop below ends re-scans as soon
+        // as only already-known videos come back.
+        if ($maxPages > 250) $maxPages = 250;
 
         $allVideos = array();
         $totalFound = 0;
@@ -120,12 +129,15 @@ class DiscoveryManager {
                 'Page ' . $currentPage . ': found ' . count($pageVideos) . ' videos');
 
             // Process and deduplicate each page immediately
+            $newThisPage = 0;
+            $existingThisPage = 0;
             foreach ($pageVideos as $video) {
                 $video = $this->normalizeVideo($video);
                 $dedupResult = $dedupMgr->check($sourceId, $video);
 
                 if ($dedupResult['is_duplicate']) {
                     $existingCount++;
+                    $existingThisPage++;
                     if (!empty($dedupResult['discovered_id'])) {
                         $this->safeExec("UPDATE grabber_discovered_videos
                                             SET last_seen_at = " . time() . "
@@ -134,10 +146,29 @@ class DiscoveryManager {
                 } else {
                     $this->insertDiscovered($sourceId, $video, $runId);
                     $newCount++;
+                    $newThisPage++;
                 }
             }
 
             $hasMore = !empty($result['has_more']);
+
+            // Frontier stop: on newest-first listings, once a page returns only
+            // already-known videos the rest of the back-catalog is old content.
+            // Stop instead of crawling thousands of pages again and again.
+            if ($currentPage >= 2 && $newThisPage === 0 && $existingThisPage > 0) {
+                $logger->log($runId, 0, $sourceId, 'INFO', 'SCAN_FRONTIER',
+                    'Page ' . $currentPage . ' had no new videos (' . $existingThisPage . ' already known) - stopping scan.');
+                $hasMore = false;
+                break;
+            }
+
+            // Report live progress so the dashboard shows counts while scanning
+            $runMgr->update($runId, array(
+                'found_count'    => count($allVideos),
+                'new_count'      => $newCount,
+                'existing_count' => $existingCount,
+            ));
+
             $currentPage++;
 
             // Small delay between pages to be polite

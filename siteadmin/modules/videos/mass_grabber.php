@@ -56,12 +56,24 @@ if ($action === 'scan') {
         exit();
     }
 
+    // Kill any orphaned background scan processes for this source BEFORE
+    // starting a new one (their DB run may already be FAILED, but the process
+    // would otherwise keep scraping the source forever).
+    MassGrabberManager::killSourceScans($sourceId);
+
     // Release any stale lock for this source
     MassGrabberManager::acquireSourceLock($sourceId);
 
     // Create a run record (status=RUNNING)
     $runMgr = new RunManager();
     $runId = $runMgr->create($sourceId, 'MANUAL');
+
+    // Bound the scan by the source's configured max_pages (fallback 20); the
+    // frontier stop in DiscoveryManager ends re-scans as soon as only known
+    // videos come back, so scans of large catalogs stay short.
+    $src = MassGrabberManager::sources()->getById($sourceId);
+    $maxPages = ($src && intval($src['max_pages']) > 0) ? intval($src['max_pages']) : 20;
+    if ($maxPages > 250) $maxPages = 250;
 
     // Launch scan in background
     global $config;
@@ -73,7 +85,7 @@ if ($action === 'scan') {
         'query'     => $query,
         'timeframe' => $timeframe,
         'sort'      => $sort,
-        'max_pages' => 9999,
+        'max_pages' => $maxPages,
     ));
     $cmd = sprintf('%s %s %s %s > /dev/null 2>&1 &',
         escapeshellarg($config['phppath']),
@@ -117,9 +129,10 @@ if ($action === 'scan_status') {
     $discMgr = new DiscoveryManager();
     $counts = $discMgr->getStatusCounts(intval($run['source_id']));
     echo json_encode(array(
-        'status'     => true,
-        'run_status' => $run['status'],
-        'running'    => $isRunning,
+        'status'        => true,
+        'run_status'    => $run['status'],
+        'error_message' => isset($run['error_message']) ? $run['error_message'] : '',
+        'running'       => $isRunning,
         'found'      => intval($run['found_count']),
         'new'        => intval($run['new_count']),
         'existing'   => intval($run['existing_count']),

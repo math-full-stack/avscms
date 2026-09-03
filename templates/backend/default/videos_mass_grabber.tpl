@@ -499,7 +499,7 @@ function mgGoToDiscover(sourceId) { window.location.href = 'videos.php?m=mass_gr
 
 // DISCOVER
 var mgCurrentFilter = 'videos';
-(function() { var p = new URLSearchParams(window.location.search); var sid = p.get('source_id'); if (sid) { var s = document.getElementById('mg_disc_source'); if (s) { s.value = sid; } mgCurrentSourceId = parseInt(sid); setTimeout(function(){ mgStartScan(); }, 300); } })();
+(function() { var p = new URLSearchParams(window.location.search); var sid = p.get('source_id'); if (sid) { var s = document.getElementById('mg_disc_source'); if (s) { s.value = sid; } mgCurrentSourceId = parseInt(sid); setTimeout(function(){ mgLoadDiscovered(''); }, 300); } })();
 if (document.getElementById('mg_disc_source')) {
     document.getElementById('mg_disc_source').addEventListener('change', function() {
         mgCurrentSourceId = parseInt(this.value);
@@ -564,8 +564,13 @@ function mgPollScanStatus(runId, btn, st) {
             if (!data.running) {
                 clearInterval(mgScanTimer); mgScanTimer = null;
                 btn.disabled = false; btn.innerHTML = '<i class="fa fa-search"></i> Scan';
-                st.className='alert alert-success';
-                st.innerHTML='<i class="fa fa-check"></i> Found: <strong>'+data.found+'</strong> videos &mdash; New: <strong>'+data.new+'</strong>, Existing: <strong>'+data.existing+'</strong>';
+                if (data.run_status === 'FAILED') {
+                    st.className='alert alert-danger';
+                    st.innerHTML='<i class="fa fa-exclamation-triangle"></i> Scan failed: '+(data.error_message||'unknown error');
+                } else {
+                    st.className='alert alert-success';
+                    st.innerHTML='<i class="fa fa-check"></i> Found: <strong>'+data.found+'</strong> videos &mdash; New: <strong>'+data.new+'</strong>, Existing: <strong>'+data.existing+'</strong>';
+                }
                 st.style.display='block';
                 mgLoadDiscovered('');
             }
@@ -680,6 +685,11 @@ function mgPollAutoScan(runId, nextPage) {
             if (!data.running) {
                 clearInterval(timer);
                 mgAutoScanning = false;
+                if (data.run_status === 'FAILED') {
+                    showToast('Scan failed: '+(data.error_message||'unknown error'), 'error');
+                    mgLoadDiscovered('', mgDiscPage);
+                    return;
+                }
                 var newTotal = (data.counts && data.counts.NEW !== undefined) ? Object.values(data.counts).reduce(function(a,b){return a+b;},0) : mgDiscTotal;
                 if (data.found > 0 || data.new > 0) {
                     mgDiscTotal = newTotal;
