@@ -225,6 +225,23 @@ if ($available > 0) {
 }
 
 // ============================================================
+// 2b. PUMP CONVERSION QUEUE (honors the panel's Max Simultaneous Conversions)
+// ============================================================
+// Grabbed videos are handed to the AVS conversion queue (conversion_queue_fp)
+// by the workers. Stock check_q() only starts ONE queued conversion per call,
+// so a batch of grabs would otherwise drain slowly. Start up to the free
+// slots of the configured q_limit (Max Simultaneous Conversions) here, so the
+// mass-grabber conversions run in parallel - capped by the same setting used
+// by Settings > Video Conversion.
+$convStarted = 0;
+if (function_exists('pump_conversion_queue')) {
+    $convStarted = pump_conversion_queue();
+}
+if ($convStarted > 0) {
+    echo "[" . date('Y-m-d H:i:s') . "] Conversion queue: started " . $convStarted . " conversion(s) (max simultaneous: " . intval(isset($config['q_limit']) ? $config['q_limit'] : 1) . ")\n";
+}
+
+// ============================================================
 // 3. CLEANUP
 // ============================================================
 $deletedJobs = $jobMgr->cleanup(90);
