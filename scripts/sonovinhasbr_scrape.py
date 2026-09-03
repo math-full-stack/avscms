@@ -103,6 +103,18 @@ def extract_post_id(url):
     return None
 
 
+def external_key(href):
+    """Stable unique identity for a post. Prefer the numeric post ID (from the
+    embedded player URL); otherwise use the permalink slug. Never return an
+    empty string - the DB treats external_id='' as one shared row, which would
+    silently drop posts without a numeric ID."""
+    pid = extract_post_id(href)
+    if pid:
+        return pid
+    slug = href.rstrip('/').rsplit('/', 1)[-1]
+    return 'slug:' + (slug or href)
+
+
 def scrape_listing_page(url):
     """Scrape a single listing page and return video entries."""
     try:
@@ -143,7 +155,7 @@ def scrape_listing_page(url):
             thumbnail = img_match.group(1) if img_match else ''
 
             videos.append({
-                'external_id': extract_post_id(href) or '',
+                'external_id': external_key(href),
                 'source_url': href,
                 'canonical_url': href.rstrip('/'),
                 'title': title,
@@ -181,7 +193,7 @@ def scrape_listing_page(url):
                 thumbnail = img_match.group(1)
 
             videos.append({
-                'external_id': extract_post_id(href) or '',
+                'external_id': external_key(href),
                 'source_url': href,
                 'canonical_url': href.rstrip('/'),
                 'title': title,
