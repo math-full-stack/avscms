@@ -137,10 +137,14 @@ class JobManager {
      */
     public function complete($jobId, $videoId = 0) {
         $now = time();
+        // Clear leftover error fields from earlier failed attempts (e.g. an
+        // ALREADY_PROCESSING retry) so completed jobs look clean in the UI.
         $this->safeExec("UPDATE grabber_jobs SET
                             status = 'COMPLETED',
                             finished_at = " . $now . ",
                             video_id = " . intval($videoId) . ",
+                            error_code = '',
+                            error_message = '',
                             updated_at = " . $now . "
                             WHERE id = " . intval($jobId) . " LIMIT 1");
 
