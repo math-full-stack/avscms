@@ -188,6 +188,17 @@ class DiscoveryManager {
                 'existing_count' => $existingCount,
             ));
 
+            // If this run was superseded while scanning (stale watchdog or a
+            // newer scan took over), stop immediately instead of keeping the
+            // background process alive writing to a dead run.
+            $curRun = $runMgr->getById($runId);
+            if ($curRun && $curRun['status'] !== 'RUNNING') {
+                $logger->log($runId, 0, $sourceId, 'INFO', 'SCAN_SUPERSEDED',
+                    'Run status changed to ' . $curRun['status'] . ' - stopping scan.');
+                $hasMore = false;
+                break;
+            }
+
             $currentPage++;
 
             // Small delay between pages to be polite
@@ -204,6 +215,24 @@ class DiscoveryManager {
         $totalProcessed = count($allVideos);
         $logger->log($runId, 0, $sourceId, 'INFO', 'SCAN_COMPLETE',
             "Processed $totalProcessed videos ($newCount new, $existingCount existing). Total available: $totalFound");
+
+        // If the run was superseded while scanning (stale watchdog or a newer
+        // scan took over), leave its status alone - never resurrect a FAILED
+        // run or touch the lock a newer run may now hold.
+        $curRun = $runMgr->getById($runId);
+        if ($curRun && $curRun['status'] !== 'RUNNING') {
+            $logger->log($runId, 0, $sourceId, 'INFO', 'SCAN_SUPERSEDED',
+                'Run left as ' . $curRun['status'] . ' (superseded while scanning).');
+            return array(
+                'run_id'      => $runId,
+                'superseded'  => true,
+                'found'       => $totalProcessed,
+                'new'         => $newCount,
+                'existing'    => $existingCount,
+                'total'       => $totalFound,
+                'pages'       => $currentPage - 1,
+            );
+        }
 
         // Update run record — always end in a terminal state (FINISHED/FAILED)
         // so the UI never stays stuck on "Scanning..."

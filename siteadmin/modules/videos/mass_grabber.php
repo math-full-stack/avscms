@@ -113,10 +113,13 @@ if ($action === 'scan_status') {
         echo json_encode(array('status' => false, 'error' => 'Run not found'));
         exit();
     }
-    // Lazy watchdog: a run stuck RUNNING for 30+ min (e.g. the background
-    // process crashed) is failed here so the UI never polls forever.
+    // Lazy watchdog: a run stuck RUNNING for 30+ min with NO recent log
+    // activity (the background process crashed) is failed here so the UI never
+    // polls forever. Runs whose process is still alive and working (long
+    // full-catalog refresh scans) are never failed by age alone.
     if ($run['status'] === 'RUNNING' && intval($run['started_at']) > 0 &&
-        (time() - intval($run['started_at'])) > 1800) {
+        (time() - intval($run['started_at'])) > 1800 &&
+        !$runMgr2->isAlive($runId)) {
         $runMgr2->update($runId, array(
             'status'        => 'FAILED',
             'finished_at'   => time(),

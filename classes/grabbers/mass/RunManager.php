@@ -151,18 +151,42 @@ class RunManager {
     }
 
     /**
-     * Fail runs stuck in RUNNING for longer than $maxAge seconds
-     * (crashed/abandoned background processes).
+     * Whether a run has recent heartbeat activity (grabber_logs written while
+     * the background scan is actually working, page by page).
+     * @param int $runId
+     * @param int $window Seconds (default 600 = 10 min)
+     * @return bool
+     */
+    public function isAlive($runId, $window = 600) {
+        $rs = $this->safeExec("SELECT id FROM grabber_logs
+                                  WHERE run_id = " . intval($runId) . "
+                                  AND created_at > " . (time() - intval($window)) . "
+                                  LIMIT 1");
+        return ($rs && $rs->RecordCount() > 0);
+    }
+
+    /**
+     * Fail runs stuck in RUNNING for longer than $maxAge seconds with NO
+     * recent activity (crashed/abandoned background processes). A run whose
+     * process is still alive and logging (long full-catalog refresh scans can
+     * legitimately run for over an hour) is never failed here.
      * @param int $maxAge Seconds (default 1800 = 30 min)
+     * @param int $heartbeat Seconds without a log entry that means dead (default 600)
      * @return int  Number of runs failed
      */
-    public function failStaleRuns($maxAge = 1800) {
+    public function failStaleRuns($maxAge = 1800, $heartbeat = 600) {
         $cutoff = time() - max(60, intval($maxAge));
-        $this->safeExec("UPDATE grabber_runs
-                            SET status = 'FAILED', finished_at = " . time() . ",
-                                error_message = 'Stale run timed out'
-                          WHERE status = 'RUNNING'
-                            AND started_at < " . intval($cutoff));
+        $beatCutoff = time() - max(60, intval($heartbeat));
+        $this->safeExec("UPDATE grabber_runs r
+                            LEFT JOIN (
+                                SELECT run_id, MAX(created_at) AS last_log
+                                FROM grabber_logs WHERE run_id > 0 GROUP BY run_id
+                            ) l ON l.run_id = r.id
+                            SET r.status = 'FAILED', r.finished_at = " . time() . ",
+                                r.error_message = 'Stale run timed out'
+                          WHERE r.status = 'RUNNING'
+                            AND r.started_at < " . intval($cutoff) . "
+                            AND (l.last_log IS NULL OR l.last_log < " . intval($beatCutoff) . ")");
         return intval($this->db->Affected_Rows());
     }
 
