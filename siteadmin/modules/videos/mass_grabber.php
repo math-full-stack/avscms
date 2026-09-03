@@ -273,10 +273,12 @@ if ($action === 'bulk_grab') {
     $result = $jobMgr->createBulk(array_map('intval', $ids), $sourceId, $runId);
 
     echo json_encode(array(
-        'status'  => true,
-        'created' => $result['created'],
-        'skipped' => $result['skipped'],
-        'message' => $result['created'] . ' jobs queued' . ($result['skipped'] > 0 ? ', ' . $result['skipped'] . ' skipped' : ''),
+        'status'      => true,
+        'created'     => $result['created'],
+        'skipped'     => $result['skipped'],
+        'ids_created' => isset($result['ids_created']) ? $result['ids_created'] : array(),
+        'ids_skipped' => isset($result['ids_skipped']) ? $result['ids_skipped'] : array(),
+        'message'     => $result['created'] . ' jobs queued' . ($result['skipped'] > 0 ? ', ' . $result['skipped'] . ' skipped' : ''),
     ));
     exit();
 }

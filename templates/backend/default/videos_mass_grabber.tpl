@@ -69,6 +69,10 @@
 .mg-job-completed{background:#e8f5e9;color:#2e7d32}
 .mg-job-failed{background:#fce4ec;color:#c62828}
 .mg-job-cancelled{background:#f5f5f5;color:#757575}
+.mg-sel-chip{display:inline-block;background:#eef4fb;border:1px solid #cfddee;border-radius:12px;padding:1px 9px;font-size:11px;color:#33475b;margin:2px 5px 2px 0;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+.mg-sel-chip a.mg-sel-x{color:#8fa6bd;font-weight:700;margin-left:5px;text-decoration:none;cursor:pointer}
+.mg-sel-chip a.mg-sel-x:hover{color:#d9534f}
+.mg-sel-chip small{color:#8fa6bd;margin-left:3px}
 .mg-loading{display:none;text-align:center;padding:40px;font-size:14px;color:#888}
 .mg-loading i{font-size:24px;display:block;margin-bottom:10px}
 .mg-cap-yes{color:#8cc152}
@@ -285,10 +289,18 @@
             <div class="grid-body no-border">
                 <div id="mg_disc_bulk_actions" style="display:none;margin-bottom:10px">
                     <div class="row">
-                        <div class="col-sm-8"><button class="btn btn-success" onclick="mgSelectAllNew()"><i class="fa fa-check-square-o"></i> Select All New</button> <span class="m-l-10"><strong id="mg_selected_count">0</strong> selected</span></div>
-                        <div class="col-sm-4 text-right"><button class="btn btn-primary" id="btn_bulk_grab" onclick="mgBulkGrab()"><i class="fa fa-cloud-download"></i> GRAB SELECTED</button></div>
+                        <div class="col-sm-12">
+                            <button class="btn btn-default btn-xs" onclick="mgSelSelectPage()" title="Select every grabbable video on this page"><i class="fa fa-check-square-o"></i> Select this page</button>
+                            <button class="btn btn-success btn-xs" onclick="mgSelSelectAllNew()" title="Select all NEW videos found for this source (current time period)"><i class="fa fa-check-square-o"></i> Select All New</button>
+                            <button class="btn btn-link btn-xs" id="btn_mg_clear_sel" onclick="mgSelClearAll()" style="display:none;padding-left:4px"><i class="fa fa-times"></i> Clear selection</button>
+                            <span class="pull-right" style="line-height:28px">
+                                <span class="m-r-10"><strong id="mg_selected_count" style="color:#333">0</strong> <span class="text-muted">selected</span></span>
+                                <button class="btn btn-primary" id="btn_bulk_grab" onclick="mgBulkGrab()" disabled><i class="fa fa-cloud-download"></i> GRAB SELECTED</button>
+                            </span>
+                        </div>
                     </div>
-                    <hr style="margin:10px 0">
+                    <div id="mg_selected_chips" style="display:none;max-height:104px;overflow-y:auto;margin:4px 0 0"></div>
+                    <hr style="margin:8px 0 2px">
                 </div>
                 <div id="mg_disc_video_list"><p class="text-muted">No videos discovered yet. Run a scan above.</p></div>
                 <div id="mg_disc_pagination" style="display:none;text-align:center;margin-top:15px">
@@ -398,9 +410,181 @@ var mgCurrentView = '{/literal}{$view}{literal}';
 var mgCurrentSourceId = 0;
 var mgDiscRunId = 0;
 var mgDiscoveredVideos = [];
-var mgSelectedIds = [];
 var mgCurrentTimeframe = '';
 var mgCurrentSort = 'newest';
+
+// =========================================================================
+// Persistent multi-page selection
+// -------------------------------------------------------------------------
+// Selection lives in mgSel (id -> entry) and is decoupled from whatever page
+// of checkboxes is visible. It survives pagination, status/timeframe/sort
+// changes, rescans, and is persisted to localStorage so an accidental refresh
+// or tab switch keeps it. The DOM checkboxes only mirror this state.
+// =========================================================================
+var mgSel = {};                 // id -> {id, source_id, title, duration_formatted, status, ts}
+var mgSelStorageKey = 'mg_disc_sel_v1';
+var mgSelCap = 2000;            // safety cap for Select All New (protects the server)
+var mgSelBusy = false;          // guard against double Select All New
+var mgUngrabbable = {'QUEUED':1,'PROCESSING':1,'IMPORTED':1,'SKIPPED':1};
+
+function mgEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function mgSelIsGrabbable(st) { return !mgUngrabbable[st]; }
+function mgSelEntries() {
+    var out = [];
+    for (var k in mgSel) { if (mgSel[k] && mgSel[k].source_id === mgCurrentSourceId) out.push(mgSel[k]); }
+    out.sort(function(a,b){ return a.ts - b.ts; });
+    return out;
+}
+function mgSelHas(id) { return !!mgSel[id] && mgSel[id].source_id === mgCurrentSourceId; }
+function mgSelCount() { return mgSelEntries().length; }
+
+function mgSelSave() { try { localStorage.setItem(mgSelStorageKey, JSON.stringify(mgSel)); } catch(e) {} }
+function mgSelLoad() {
+    mgSel = {};
+    try { var raw = localStorage.getItem(mgSelStorageKey); if (raw) mgSel = JSON.parse(raw) || {}; } catch(e) { mgSel = {}; }
+    mgSelSyncUI();
+}
+function mgSelSyncUI() {
+    var entries = mgSelEntries();
+    var n = entries.length;
+    var cnt = document.getElementById('mg_selected_count');
+    if (cnt) cnt.textContent = n;
+    var btn = document.getElementById('btn_bulk_grab');
+    if (btn) {
+        btn.disabled = n === 0;
+        btn.innerHTML = n > 0 ? '<i class="fa fa-cloud-download"></i> GRAB SELECTED (' + n + ')' : '<i class="fa fa-cloud-download"></i> GRAB SELECTED';
+    }
+    var clr = document.getElementById('btn_mg_clear_sel');
+    if (clr) clr.style.display = n > 0 ? 'inline-block' : 'none';
+    var chips = document.getElementById('mg_selected_chips');
+    if (chips) {
+        if (n === 0) {
+            chips.style.display = 'none';
+            chips.innerHTML = '';
+        } else {
+            var shown = Math.min(entries.length, 50);
+            var html = '';
+            for (var i = 0; i < shown; i++) {
+                var e = entries[i];
+                var t = e.title || ('#' + e.id);
+                html += '<span class="mg-sel-chip" title="' + mgEsc(t) + '">' + mgEsc(t) +
+                    (e.duration_formatted ? '<small>' + mgEsc(e.duration_formatted) + '</small>' : '') +
+                    ' <a class="mg-sel-x" href="javascript:void(0)" onclick="mgSelRemove(' + e.id + ')" title="Remove">&times;</a></span>';
+            }
+            if (entries.length > shown) html += '<span class="text-muted" style="font-size:11px">&hellip; +' + (entries.length - shown) + ' more</span>';
+            chips.innerHTML = html;
+            chips.style.display = 'block';
+        }
+    }
+    mgSyncPageChecks();
+    mgSelSave();
+}
+function mgSyncPageChecks() {
+    var c = document.querySelectorAll('.mg-disc-check');
+    for (var i = 0; i < c.length; i++) {
+        var id = parseInt(c[i].value);
+        var st = c[i].getAttribute('data-status') || 'NEW';
+        var disable = !mgSelIsGrabbable(st);
+        c[i].disabled = disable;
+        c[i].checked = !disable && mgSelHas(id);
+    }
+}
+function mgSelAdd(id, st) {
+    if (mgSelHas(id)) return;
+    var e = null;
+    for (var i = 0; i < mgDiscoveredVideos.length; i++) { if (mgDiscoveredVideos[i].id === id) { e = mgDiscoveredVideos[i]; break; } }
+    mgSel[id] = {
+        id: id,
+        source_id: mgCurrentSourceId,
+        title: e && e.title ? e.title : '',
+        duration_formatted: e && e.duration_formatted ? e.duration_formatted : '',
+        status: st || (e && e.status ? e.status : 'NEW'),
+        ts: Date.now()
+    };
+    mgSelSyncUI();
+}
+function mgSelRemove(id) { delete mgSel[id]; mgSelSyncUI(); }
+function mgSelRemoveBulk(ids) {
+    if (!ids || !ids.length) return;
+    for (var i = 0; i < ids.length; i++) delete mgSel[ids[i]];
+    mgSelSyncUI();
+}
+function mgSelClearAll() { mgSel = {}; mgSelSyncUI(); }
+function mgSelToggleFromRow(id, cb) {
+    if (cb && cb.checked) mgSelAdd(id, cb.getAttribute('data-status'));
+    else if (cb && !cb.checked) mgSelRemove(id);
+}
+function mgSelPrunePageRows(rows) {
+    var changed = false;
+    for (var i = 0; i < rows.length; i++) {
+        var v = rows[i];
+        var e = mgSel[v.id];
+        if (e && e.source_id === mgCurrentSourceId) {
+            if (!mgSelIsGrabbable(v.status || '')) { delete mgSel[v.id]; changed = true; }
+            else if (v.status && e.status !== v.status) { e.status = v.status; changed = true; }
+        }
+    }
+    return changed;
+}
+function mgSelSelectPage() {
+    var added = 0;
+    var c = document.querySelectorAll('.mg-disc-check');
+    for (var i = 0; i < c.length; i++) {
+        if (!c[i].disabled && !mgSelHas(parseInt(c[i].value))) { mgSelAdd(parseInt(c[i].value), c[i].getAttribute('data-status')); added++; }
+    }
+    if (added > 0) showToast(added + ' video(s) selected from this page', 'info');
+}
+function mgSelSelectAllNew() {
+    if (!mgCurrentSourceId) return;
+    if (mgSelBusy) return;
+    var tf = mgCurrentTimeframe ? '&timeframe=' + encodeURIComponent(mgCurrentTimeframe) : '';
+    var base = 'videos.php?m=mass_grabber&a=get_discovered&source_id=' + mgCurrentSourceId + '&status=NEW&sort=newest&limit=500&offset=';
+    showToast('Reading all new videos for this source...', 'info');
+    mgSelBusy = true;
+    mgSelCollectNew(base, 0, { added: 0, total: null }, function(acc) {
+        mgSelBusy = false;
+        if (acc.added > 0) showToast(acc.added + ' new video(s) selected', 'success');
+        else showToast('No new videos to select', 'info');
+    });
+}
+function mgSelCollectNew(base, offset, acc, done) {
+    mgAjaxGet(base + offset, function(err, data) {
+        if (err || !data || !data.status) {
+            acc.total = acc.total === null ? 0 : acc.total;
+            showToast('Could not read the full list of new videos', 'error');
+            done(acc);
+            return;
+        }
+        acc.total = data.total;
+        var rows = data.videos || [];
+        var capped = false;
+        for (var i = 0; i < rows.length; i++) {
+            var v = rows[i];
+            if (acc.added >= mgSelCap) { capped = true; break; }
+            if (!mgSelHas(v.id)) {
+                mgSel[v.id] = {
+                    id: v.id,
+                    source_id: mgCurrentSourceId,
+                    title: v.title || '',
+                    duration_formatted: v.duration_formatted || '',
+                    status: v.status || 'NEW',
+                    ts: Date.now()
+                };
+                acc.added++;
+            }
+        }
+        mgSelSyncUI();
+        var next = offset + rows.length;
+        if (capped) {
+            showToast('Selection capped at ' + mgSelCap + ' videos - grab in smaller batches', 'info');
+            done(acc);
+        } else if (rows.length > 0 && next < acc.total) {
+            mgSelCollectNew(base, next, acc, done);
+        } else {
+            done(acc);
+        }
+    });
+}
 
 function mgAjax(url, data, callback, timeout) {
     var xhr = new XMLHttpRequest();
@@ -499,7 +683,7 @@ function mgGoToDiscover(sourceId) { window.location.href = 'videos.php?m=mass_gr
 
 // DISCOVER
 var mgCurrentFilter = 'videos';
-(function() { var p = new URLSearchParams(window.location.search); var sid = p.get('source_id'); if (sid) { var s = document.getElementById('mg_disc_source'); if (s) { s.value = sid; } mgCurrentSourceId = parseInt(sid); setTimeout(function(){ mgLoadDiscovered(''); }, 300); } })();
+(function() { var p = new URLSearchParams(window.location.search); var sid = p.get('source_id'); if (sid) { var s = document.getElementById('mg_disc_source'); if (s) { s.value = sid; } mgCurrentSourceId = parseInt(sid); mgSelLoad(); setTimeout(function(){ mgLoadDiscovered(''); }, 300); } })();
 if (document.getElementById('mg_disc_source')) {
     document.getElementById('mg_disc_source').addEventListener('change', function() {
         mgCurrentSourceId = parseInt(this.value);
@@ -507,7 +691,7 @@ if (document.getElementById('mg_disc_source')) {
     });
     // Set initial value from dropdown
     var initVal = document.getElementById('mg_disc_source').value;
-    if (initVal && parseInt(initVal) > 0) mgCurrentSourceId = parseInt(initVal);
+    if (initVal && parseInt(initVal) > 0) { mgCurrentSourceId = parseInt(initVal); mgSelLoad(); }
 }
 function mgSetFilter(f) {
     mgCurrentFilter = f;
@@ -591,8 +775,16 @@ function mgLoadDiscovered(status, page) {
     document.getElementById('mg_disc_results').style.display = 'block';
 mgAjaxGet(url, function(err, data) {
         if (err || !data || !data.status) { list.innerHTML='<p class="text-muted">Failed to load results</p>'; return; }
+        // If the result set shrank (e.g. after a grab) and we are past the last
+        // page, fall back to the last existing page instead of an empty list.
+        if (data.videos.length === 0 && page > 1 && data.total > 0) {
+            var lastPage = Math.ceil(data.total / mgDiscPerPage);
+            if (lastPage >= 1 && lastPage !== page) { mgLoadDiscovered(status || '', lastPage); return; }
+        }
         mgDiscoveredVideos = data.videos;
         mgDiscTotal = data.total || 0;
+        mgSelPrunePageRows(data.videos);
+        mgSelSyncUI();
         var showing = offset + data.videos.length;
         document.getElementById('mg_disc_summary').textContent = 'Showing ' + showing + ' of ' + mgDiscTotal;
         document.getElementById('mg_disc_bulk_actions').style.display = data.videos.length > 0 ? 'block' : 'none';
@@ -626,11 +818,14 @@ mgAjaxGet(url, function(err, data) {
         if (data.videos.length === 0) { list.innerHTML='<p class="text-muted">No videos found</p>'; return; }
         var html = '<table class="table mg-table"><thead><tr><th style="width:30px"></th><th style="width:70px"></th><th>Title</th><th>Duration</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
         for (var i=0;i<data.videos.length;i++) { var v=data.videos[i];
-            var isChecked = mgSelectedIds.indexOf(parseInt(v.id)) !== -1 ? 'checked' : '';
+            var vStatus = v.status || 'NEW';
+            var isChecked = mgSelHas(v.id) ? 'checked' : '';
+            var cbDisabled = mgSelIsGrabbable(vStatus) ? '' : ' disabled';
+            var cbTitle = cbDisabled ? ' title="Already ' + vStatus.toLowerCase() + ' - not grabbable"' : '';
             var thumbHtml = '<div class="mg-mini-player" id="mg_mini_'+v.id+'">';
             if(v.thumbnail_url) thumbHtml+='<img src="'+v.thumbnail_url.replace(/"/g,'"')+'" onerror="this.style.display=\'none\'">';
             thumbHtml+='<div class="mg-mini-overlay" onclick="mgToggleMiniPlayer('+v.id+',event)"><span class="mg-mini-play"><i class="fa fa-play"></i></span></div></div>';
-            html+='<tr><td><input type="checkbox" class="mg-disc-check" value="'+v.id+'" data-status="'+v.status+'" onchange="mgUpdateSelected()" '+isChecked+'></td><td>'+thumbHtml+'</td><td><a class="mg-title-link" onclick="mgPreviewVideo('+v.id+',event)"><strong>'+(v.title||'Untitled').substring(0,80)+'</strong></a>';
+            html+='<tr><td><input type="checkbox" class="mg-disc-check" value="'+v.id+'" data-status="'+vStatus+'" onchange="mgSelToggleFromRow('+v.id+',this)" '+isChecked+cbDisabled+cbTitle+'></td><td>'+thumbHtml+'</td><td><a class="mg-title-link" onclick="mgPreviewVideo('+v.id+',event)"><strong>'+(v.title||'Untitled').substring(0,80)+'</strong></a>';
             if(v.source_url) html+='<br><small class="text-muted">'+v.source_url.substring(0,60)+'</small>'; html+='</td><td>'+(v.duration_formatted||v.duration+'s')+'</td><td><span class="mg-status mg-status-'+v.status.toLowerCase()+'">'+v.status+'</span></td><td>';
             html+='<button class="btn btn-xs btn-success" onclick="return mgGrabSingle('+v.id+',event)"><i class="fa fa-download"></i> Grab</button> ';
             if(v.video_id>0) html+='<a href="videos.php?m=view&VID='+v.video_id+'" class="btn btn-xs btn-default" target="_blank"><i class="fa fa-eye"></i></a>';
@@ -721,10 +916,27 @@ function mgSetSort(s) {
     mgLoadDiscovered(mgCurrentDiscStatus || '');
 }
 var mgCurrentDiscStatus = '';
-function mgSelectAllNew() { var c=document.querySelectorAll('.mg-disc-check[data-status="NEW"]'); for(var i=0;i<c.length;i++) c[i].checked=true; mgUpdateSelected(); }
-function mgUpdateSelected() { var c=document.querySelectorAll('.mg-disc-check:checked'); mgSelectedIds=[]; for(var i=0;i<c.length;i++) mgSelectedIds.push(parseInt(c[i].value)); document.getElementById('mg_selected_count').textContent=mgSelectedIds.length; document.getElementById('btn_bulk_grab').disabled=mgSelectedIds.length===0; }
-function mgGrabSingle(id, evt) { if(evt) evt.preventDefault(); var fd=new FormData(); fd.append('ids[]',id); fd.append('source_id',mgCurrentSourceId); fd.append('run_id',mgDiscRunId); mgAjax('videos.php?m=mass_grabber&a=bulk_grab',fd,function(e,d){ if(e||!d||!d.status){ showToast('Grab failed: '+(d&&d.error?d.error:'Unknown error'), 'error'); return; } showToast(d.message, 'success'); mgLoadDiscovered(''); }); return false; }
-function mgBulkGrab() { if(mgSelectedIds.length===0) return; var btn=document.getElementById('btn_bulk_grab'); btn.disabled=true; btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> Queuing...'; var fd=new FormData(); for(var i=0;i<mgSelectedIds.length;i++) fd.append('ids[]',mgSelectedIds[i]); fd.append('source_id',mgCurrentSourceId); fd.append('run_id',mgDiscRunId); mgAjax('videos.php?m=mass_grabber&a=bulk_grab',fd,function(e,d){ btn.disabled=false; btn.innerHTML='<i class="fa fa-cloud-download"></i> GRAB SELECTED'; if(!e&&d&&d.status){mgSelectedIds=[];document.getElementById('mg_selected_count').textContent='0';btn.disabled=true;showToast(d.message, 'success');mgLoadDiscovered('');} }); }
+// Selection actions now live in the mgSel* module declared above (persistent across pages).
+function mgGrabSingle(id, evt) { if(evt) evt.preventDefault(); var fd=new FormData(); fd.append('ids[]',id); fd.append('source_id',mgCurrentSourceId); fd.append('run_id',mgDiscRunId); mgAjax('videos.php?m=mass_grabber&a=bulk_grab',fd,function(e,d){ if(e||!d||!d.status){ showToast('Grab failed: '+(d&&d.error?d.error:'Unknown error'), 'error'); return; } showToast(d.message, 'success'); mgSelRemoveBulk(d.ids_created||[]); mgSelRemoveBulk(d.ids_skipped||[]); mgLoadDiscovered(mgCurrentDiscStatus||'', mgDiscPage); }); return false; }
+function mgBulkGrab() {
+    var ids = []; var entries = mgSelEntries(); for (var i=0;i<entries.length;i++) ids.push(entries[i].id);
+    if (ids.length === 0) return;
+    var btn = document.getElementById('btn_bulk_grab');
+    var orig = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Queuing ' + ids.length + '...';
+    var fd = new FormData();
+    for (var j=0;j<ids.length;j++) fd.append('ids[]', ids[j]);
+    fd.append('source_id', mgCurrentSourceId); fd.append('run_id', mgDiscRunId);
+    mgAjax('videos.php?m=mass_grabber&a=bulk_grab', fd, function(e, d) {
+        btn.disabled = false; btn.innerHTML = orig;
+        if (e || !d || !d.status) { showToast('Grab failed: ' + (d && d.error ? d.error : (e ? e.message : 'Unknown error')), 'error'); return; }
+        var msg = '<i class="fa fa-check"></i> ' + d.created + ' job(s) queued' + (d.skipped > 0 ? ' &middot; ' + d.skipped + ' skipped (already queued/imported)' : '');
+        showToast(msg, 'success');
+        mgSelRemoveBulk(d.ids_created || []);
+        mgSelRemoveBulk(d.ids_skipped || []);
+        mgLoadDiscovered(mgCurrentDiscStatus || '', mgDiscPage);
+    });
+}
 
 function mgGetEmbedUrl(sourceUrl) {
     if (!sourceUrl) return '';

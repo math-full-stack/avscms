@@ -73,17 +73,30 @@ class JobManager {
     public function createBulk($discoveredVideoIds, $sourceId, $runId = 0) {
         $created = 0;
         $skipped = 0;
+        $createdIds = array();
+        $skippedIds = array();
 
         foreach ($discoveredVideoIds as $dvId) {
+            $dvId = intval($dvId);
+            if ($dvId <= 0) {
+                continue;
+            }
             $jobId = $this->create($dvId, $sourceId, $runId);
             if ($jobId > 0) {
                 $created++;
+                $createdIds[] = $dvId;
             } else {
                 $skipped++;
+                $skippedIds[] = $dvId;
             }
         }
 
-        return array('created' => $created, 'skipped' => $skipped);
+        return array(
+            'created'     => $created,
+            'skipped'     => $skipped,
+            'ids_created' => $createdIds,
+            'ids_skipped' => $skippedIds,
+        );
     }
 
     /**
