@@ -311,6 +311,8 @@ def scrape_profile(url, page=1, max_pages=1):
             wall_titles[vid] = title
             wall_has_title[vid] = True
 
+    n_wall_items = len(chunks)
+
     page_videos = []
     for vid in video_ids:
         alt_text = alts.get(vid, '')
@@ -318,9 +320,11 @@ def scrape_profile(url, page=1, max_pages=1):
 
         title = wall_titles.get(vid, '')
         img_post = is_image.get(vid, False)
-        if img_post and not wall_has_title.get(vid):
-            # Photo album without any real title text: don't fabricate.
-            title = ''
+        if img_post:
+            # Photo albums / image sets are NOT videos: they have no real
+            # title and no playable duration, and they can't be grabbed.
+            # Skip them so the Discover listing only holds real videos.
+            continue
 
         page_videos.append({
             'external_id': vid,
@@ -332,7 +336,7 @@ def scrape_profile(url, page=1, max_pages=1):
             'duration': 0,
             'duration_formatted': '',
             'thumbnail_url': thumbs.get(vid, ''),
-            'media_type': 'image' if img_post else 'video',
+            'media_type': 'video',
             '_wall_has_title': bool(wall_has_title.get(vid)),
         })
 
@@ -343,7 +347,7 @@ def scrape_profile(url, page=1, max_pages=1):
     for v in page_videos:
         # Fill any remaining blank title from the tags (videos whose posts only
         # carry tags render a generic placeholder on their page too).
-        if not v['title'] and v.get('media_type') == 'video':
+        if not v['title']:
             v['title'] = _synth_title(v['tags'])
         v['duration'] = int(v['duration'])
         v['duration_formatted'] = _fmt_duration(v['duration'])
@@ -351,7 +355,9 @@ def scrape_profile(url, page=1, max_pages=1):
         out_videos.append(v)
 
     total = total_from_meta if total_from_meta > 0 else len(page_videos)
-    has_more = len(page_videos) > 0
+    # Keep scanning while the wall page itself returned items (even when they
+    # were all photo albums - real videos may sit on later pages).
+    has_more = n_wall_items > 0
 
     return {
         'videos': out_videos,
