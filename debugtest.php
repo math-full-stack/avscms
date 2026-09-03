@@ -1,0 +1,1 @@
+<?php echo $_SERVER["REQUEST_URI"]." | ".$_SERVER["SCRIPT_FILENAME"]." | ".$_SERVER["SCRIPT_NAME"]." | PATH_INFO=".(isset($_SERVER["PATH_INFO"])?$_SERVER["PATH_INFO"]:"none"); ?>
