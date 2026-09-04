@@ -64,9 +64,9 @@
 										<td class="v-align-middle text-center">
 											<span id="status_{$servers[i].server_id}">
 												{if $servers[i].status == '1'}
-													<a href="javascript:;" onclick="toggleServerStatus({$servers[i].server_id}, 0)" class="badge badge-success" title="Clique para desativar"><i class="fa fa-check"></i> Ativo</a>
+													<a href="javascript:;" onclick="toggleServerStatus({$servers[i].server_id}, 1)" class="badge badge-success" title="Clique para desativar"><i class="fa fa-check"></i> Ativo</a>
 												{else}
-													<a href="javascript:;" onclick="toggleServerStatus({$servers[i].server_id}, 1)" class="badge badge-important" title="Clique para ativar"><i class="fa fa-times"></i> Inativo</a>
+													<a href="javascript:;" onclick="toggleServerStatus({$servers[i].server_id}, 0)" class="badge badge-important" title="Clique para ativar"><i class="fa fa-times"></i> Inativo</a>
 												{/if}
 											</span>
 										</td>
@@ -132,19 +132,21 @@
 	</div>
 
 	<script type="text/javascript">
-	function toggleServerStatus(sid, newStatus) {
+	function toggleServerStatus(sid, currentStatus) {
 		$.ajax({
-			url: 'ajax.php/admin_status_server',
+			url: base_url + '/ajax.php?module=admin_status_server',
 			type: 'POST',
 			dataType: 'json',
-			data: { server_id: sid },
+			data: { server_id: sid, server_status: currentStatus },
 			success: function(response) {
 				if (response && response.status == 1) {
 					var badge = '';
-					if (newStatus == 1) {
-						badge = '<a href="javascript:;" onclick="toggleServerStatus(' + sid + ', 0)" class="badge badge-success" title="Clique para desativar"><i class="fa fa-check"></i> Ativo</a>';
+					if (currentStatus == 1) {
+						// estava ativo → agora inativo
+						badge = '<a href="javascript:;" onclick="toggleServerStatus(' + sid + ', 0)" class="badge badge-important" title="Clique para ativar"><i class="fa fa-times"></i> Inativo</a>';
 					} else {
-						badge = '<a href="javascript:;" onclick="toggleServerStatus(' + sid + ', 1)" class="badge badge-important" title="Clique para ativar"><i class="fa fa-times"></i> Inativo</a>';
+						// estava inativo → agora ativo
+						badge = '<a href="javascript:;" onclick="toggleServerStatus(' + sid + ', 1)" class="badge badge-success" title="Clique para desativar"><i class="fa fa-check"></i> Ativo</a>';
 					}
 					$('#status_' + sid).html(badge);
 				} else {
@@ -164,7 +166,7 @@
 
 		// Use server_id to fetch password securely from database
 		$.ajax({
-			url: 'ajax.php/admin_test_server',
+			url: base_url + '/ajax.php?module=admin_test_server',
 			type: 'POST',
 			dataType: 'json',
 			data: { server_id: sid },
@@ -187,14 +189,14 @@
 		$('#modal_test_ftp_body').html('<div class="text-center p-t-20 p-b-20"><i class="fa fa-spinner fa-spin fa-2x text-info"></i><p class="m-t-10">Conectando ao bucket <b>gs://' + bucket + '</b>...</p></div>');
 
 		$.ajax({
-			url: 'ajax.php/admin_get_server',
+			url: base_url + '/ajax.php?module=admin_get_server',
 			type: 'POST',
 			dataType: 'json',
 			data: { server_id: sid },
 			success: function(srv) {
 				if (srv && srv.gcs_bucket) {
 					$.ajax({
-						url: 'ajax.php/admin_test_gcs',
+						url: base_url + '/ajax.php?module=admin_test_gcs',
 						type: 'POST',
 						dataType: 'json',
 						data: {

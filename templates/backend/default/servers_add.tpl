@@ -242,7 +242,7 @@
 						.slideDown();
 
 					$.ajax({
-						url: 'ajax.php/admin_test_gcs',
+						url: base_url + '/ajax.php?module=admin_test_gcs',
 						type: 'POST',
 						dataType: 'json',
 						data: {
@@ -295,7 +295,7 @@
 						.slideDown();
 
 					$.ajax({
-						url: 'ajax.php/admin_test_server',
+						url: base_url + '/ajax.php?module=admin_test_server',
 						type: 'POST',
 						dataType: 'json',
 						data: {
