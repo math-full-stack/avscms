@@ -196,7 +196,7 @@ if ( $total_related > 32 ) {
 }
 $pagination     = new Pagination(8, 'p_related_videos_' .$video['VID']. '_');
 $limit          = $pagination->getLimit($total_related);
-$sql            = "SELECT v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.hd, v.keyword, u.username FROM video AS v, signup AS u
+$sql            = "SELECT v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.vthumbs, v.hd, v.keyword, u.username FROM video AS v, signup AS u
                    WHERE v.UID = u.UID AND v.active = '1' AND v.channel = '" .$video['channel']. "' AND v.VID != " .$vid. "
                    AND ( v.title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")
                    ORDER BY v.addtime DESC LIMIT " .$limit;
@@ -256,7 +256,7 @@ if ($new_permisions['watch_normal_videos'] == 0) {
 $video['total_subscribers'] = get_user_total_subscribers($video['UID']);	
 
 // ---- Carousels estilo Netflix (seções abaixo do player) ----
-$caro_select = "v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.hd, u.username";
+$caro_select = "v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.vthumbs, v.hd, u.username";
 $caro_from   = " FROM video AS v, signup AS u WHERE v.UID = u.UID AND v.active = '1' AND v.type = 'public' AND v.VID != " .$vid. " ";
 
 // Em alta (mais vistos)

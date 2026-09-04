@@ -391,7 +391,7 @@ a:hover .thumb-overlay img {
 	transform: scale(1.06);
 }
 
-/* Scrim + play no hover (cards comuns) — 100% CSS, vale para todos os grids */
+/* Hover nos cards: scrim + play circle (100% CSS) + preview em vídeo quando disponível */
 .thumb-overlay::after {
 	content: "";
 	position: absolute;
@@ -400,10 +400,53 @@ a:hover .thumb-overlay img {
 	opacity: 0;
 	transition: opacity .25s ease;
 	pointer-events: none;
+	z-index: 1;
 }
 
-a:hover .thumb-overlay::after {
+.thumb-overlay::before {
+	content: "\f04b";
+	font-family: "Font Awesome 5 Free";
+	font-weight: 900;
+	position: absolute;
+	top: 50%; left: 50%;
+	transform: translate(-50%, -50%) scale(.85);
+	width: 44px; height: 44px;
+	border-radius: 50%;
+	background: rgba(255, 20, 147, .9);
+	color: #fff;
+	font-size: 14px;
+	line-height: 44px;
+	text-align: center;
+	padding-left: 3px;
+	box-shadow: 0 4px 16px rgba(255, 20, 147, .45);
+	opacity: 0;
+	transition: opacity .25s ease, transform .25s ease;
+	pointer-events: none;
+	z-index: 2;
+}
+
+a:hover .thumb-overlay::after,
+a:hover .thumb-overlay::before {
 	opacity: 1;
+}
+
+a:hover .thumb-overlay::before {
+	transform: translate(-50%, -50%) scale(1);
+}
+
+/* Mini-clip (preview) injetado pelo jquery.rotator.js: cobre img/play ao tocar */
+.thumb-overlay video {
+	position: absolute;
+	top: 0; left: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	z-index: 3;
+	background: #000;
+}
+
+a:hover .thumb-overlay video {
+	transform: none;
 }
 
 .duration {
@@ -427,7 +470,7 @@ a:hover .thumb-overlay::after {
 	background-image: none !important;
 	filter: none !important;
 	border: none !important;
-	z-index: 3;
+	z-index: 4;
 }
 
 .hd-text-icon {
