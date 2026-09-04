@@ -464,11 +464,6 @@ a:hover .thumb-overlay::after {
 	transition: background .2s ease, border-color .2s ease;
 }
 
-a:hover .xb-thumb-meta {
-	background: rgba(10, 10, 10, .75);
-	border-color: rgba(255, 20, 147, .35);
-}
-
 .xb-thumb-views {
 	display: inline-flex;
 	align-items: center;
@@ -499,6 +494,52 @@ a:hover .xb-thumb-meta {
 	margin: 0 5px 2px 0;
 }
 
+/* Título em marquee (hover) — troca views/autor pelo título rodando da direita p/ esquerda */
+.xb-thumb-title {
+	display: none;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.xb-thumb-title-inner {
+	display: inline-block;
+	white-space: nowrap;
+	animation: xb-marquee 10s linear infinite;
+	will-change: transform;
+}
+
+.xb-tt {
+	display: inline-block;
+	padding-right: 40px;
+}
+
+a:hover .xb-thumb-meta .xb-thumb-views,
+a:hover .xb-thumb-meta .xb-thumb-user {
+	display: none;
+}a:hover .xb-thumb-meta .xb-thumb-title {
+	display: block;
+}
+a:hover .xb-thumb-meta {
+	min-width: 0;
+	max-width: calc(100% - 110px);
+}
+
+@keyframes xb-marquee {
+	0% {
+		transform: translateX(0);
+	}
+	100% {
+		transform: translateX(-50%);
+	}
+}
+
+/* Pausa o marquee no hover do próprio chip */
+.xb-thumb-meta:hover .xb-thumb-title-inner {
+	animation-play-state: paused;
+}
+
 .label-private {
 	background: rgba(0, 0, 0, .65);
 	color: #fff;
@@ -519,6 +560,15 @@ a:hover .xb-thumb-meta {
 /* Título oculto nos grids — visual limpo, só imagem + meta */
 .content-row .content-title {
 	display: none !important;
+}
+
+/* Espaçamento vertical consistente entre as linhas de thumbs */
+.content-row > [class*="col-"] {
+	padding-bottom: 16px;
+}
+
+.content-row {
+	margin-bottom: -16px;
 }
 
 .content-details {
@@ -943,38 +993,43 @@ a:hover .xb-thumb-meta {
 	text-decoration: none;
 }
 
+/* Relacionados — mesmo card da home (thumb vertical + chip) */
 .related-video {
-	background: var(--xb-card);
-	border: 1px solid var(--xb-border);
-	border-radius: var(--xb-radius);
-	padding: 8px;
-	margin-bottom: 10px;
-	transition: border-color .15s ease, transform .15s ease;
+	background: transparent;
+	border: none;
+	border-radius: 0;
+	padding: 0;
+	margin-bottom: 16px;
+	transition: transform .18s ease;
 }
 
 .related-video:hover {
-	border-color: rgba(255, 20, 147, .5);
-	transform: translateX(2px);
+	transform: translateY(-2px);
 }
 
 .related-video .thumb-overlay {
-	border-radius: var(--xb-radius-sm);
+	width: 100%;
+	float: none;
+	border-radius: var(--xb-radius);
 }
 
 .related-video .content-info {
 	height: auto;
-	padding: 0 0 0 10px;
+	float: none;
+	width: 100%;
+	padding: 0;
 }
 
 .related-video .content-title {
-	min-height: 0;
-	font-size: 12.5px;
-	line-height: 1.3;
-	-webkit-line-clamp: 2;
+	display: none !important;
 }
 
 .related-video .content-details {
 	margin-top: 4px;
+}
+
+.related-video .xb-tags {
+	margin-top: 8px;
 }
 
 /* Autoplay card (próximo vídeo) */

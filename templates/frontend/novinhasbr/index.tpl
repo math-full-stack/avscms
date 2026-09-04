@@ -54,6 +54,11 @@
 							{if isset($viewed_videos[i].username)}
 							<span class="xb-thumb-user">@{$viewed_videos[i].username}</span>
 							{/if}
+							<span class="xb-thumb-title">
+								<span class="xb-thumb-title-inner">
+									<span class="xb-tt">{$viewed_videos[i].title|escape:'html'}</span><span class="xb-tt">{$viewed_videos[i].title|escape:'html'}</span>
+								</span>
+							</span>
 						</span>
 					<div class="duration">
 						{if $viewed_videos[i].hd==1}<span class="hd-text-icon">HD</span>{/if}
@@ -102,6 +107,11 @@
 							{if isset($recent_videos[i].username)}
 							<span class="xb-thumb-user">@{$recent_videos[i].username}</span>
 							{/if}
+							<span class="xb-thumb-title">
+								<span class="xb-thumb-title-inner">
+									<span class="xb-tt">{$recent_videos[i].title|escape:'html'}</span><span class="xb-tt">{$recent_videos[i].title|escape:'html'}</span>
+								</span>
+							</span>
 						</span>
 					<div class="duration">
 						{if $recent_videos[i].hd==1}<span class="hd-text-icon">HD</span>{/if}

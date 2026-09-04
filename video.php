@@ -196,12 +196,18 @@ if ( $total_related > 32 ) {
 }
 $pagination     = new Pagination(8, 'p_related_videos_' .$video['VID']. '_');
 $limit          = $pagination->getLimit($total_related);
-$sql            = "SELECT VID, title, duration, addtime, rate, likes, dislikes, viewnumber, type, thumb, thumbs, hd FROM video
-                   WHERE active = '1' AND channel = '" .$video['channel']. "' AND VID != " .$vid. "
-                   AND ( title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")
-                   ORDER BY addtime DESC LIMIT " .$limit;
+$sql            = "SELECT v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.hd, v.keyword, u.username FROM video AS v, signup AS u
+                   WHERE v.UID = u.UID AND v.active = '1' AND v.channel = '" .$video['channel']. "' AND v.VID != " .$vid. "
+                   AND ( v.title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")
+                   ORDER BY v.addtime DESC LIMIT " .$limit;
 $rs             = $conn->execute($sql);
 $videos         = $rs->getrows();
+
+// Normaliza keywords para arrays (mesmo formato da home)
+foreach ( $videos as $k => $v ) {
+    $videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
+}
+
 $page_link      = $pagination->getPagination('video');
 
 $sql            = "SELECT COUNT(CID) AS total_comments FROM video_comments WHERE VID = " .$vid. " AND status = '1'";

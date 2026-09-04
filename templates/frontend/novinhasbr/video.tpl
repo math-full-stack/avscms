@@ -721,9 +721,21 @@ $( document ).ready(function() {
 			{section name=i loop=$videos}
 					<div class="related-video">
 						<a href="{$relative}/video/{$videos[i].VID}/{$videos[i].title|clean}">
-							<div class="thumb-overlay">
+							<div class="thumb-overlay" {if $videos[i].vthumbs == '1'} id="playvthumb_{$videos[i].VID}"{/if}>
 								<img src="{insert name=thumb_path vid=$videos[i].VID}/{$videos[i].thumb}.jpg" title="{$videos[i].title|escape:'html'}" alt="{$videos[i].title|escape:'html'}" {if $videos[i].vthumbs == '0'}id="rotate_{$videos[i].VID}_{$videos[i].thumbs}_{$videos[i].thumb}_viewed"{/if} class="img-responsive {if $videos[i].type == 'private'}img-private{/if}"/>
 								{if $videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
+								<span class="xb-thumb-meta">
+									{insert name=views assign=s_views views=$videos[i].viewnumber}
+									<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}</span>
+									{if isset($videos[i].username)}
+									<span class="xb-thumb-user">@{$videos[i].username}</span>
+									{/if}
+									<span class="xb-thumb-title">
+										<span class="xb-thumb-title-inner">
+											<span class="xb-tt">{$videos[i].title|escape:'html'}</span><span class="xb-tt">{$videos[i].title|escape:'html'}</span>
+										</span>
+									</span>
+								</span>
 								<div class="duration">
 									{if $videos[i].hd==1}<span class="hd-text-icon">HD</span>{/if}
 									{insert name=duration assign=duration duration=$videos[i].duration}
@@ -732,17 +744,8 @@ $( document ).ready(function() {
 							</div>
 							<div class="content-info">
 								<a href="{$relative}/video/{$videos[i].VID}/{$videos[i].title|clean}">
-									<span class="content-title">{$videos[i].title|escape:'html'}</span>					
+									<span class="content-title">{$videos[i].title|escape:'html'}</span>
 								</a>
-								<div class="content-details">
-									{insert name=views assign=s_views views=$videos[i].viewnumber}											
-									<span class="content-views">
-										{$s_views}								
-									</span>
-									{if $videos[i].rate != 0}
-										<span class="content-rating"><i class="fas fa-thumbs-up"></i> <span>{$videos[i].rate}%</span></span>
-									{/if}
-								</div>				
 							</div>
 						</a>
 						<div class="clearfix"></div>
