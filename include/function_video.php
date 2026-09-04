@@ -202,9 +202,20 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 	$logfile = $config['LOG_DIR'].'/'.$video_id.'.thumbs.log';
 	@chmod($logfile,0777);
 	@unlink($logfile);   
-  
+
 	// Get Duration of Video from Database
 	$duration = get_video_duration($video_path, $video_id);
+
+	// Get video width for automatic thumbnail sizing
+	$ffprobe_cmd = $config['ffprobe']." -v error -select_streams v:0 -show_entries stream=width,height -of default=noprint_wrappers=1:nokey=1 ".$video_path;
+	exec($ffprobe_cmd, $width_out);
+	$video_width = isset($width_out[0]) ? (int)$width_out[0] : 0;
+	$video_height = isset($width_out[1]) ? (int)$width_out[1] : 0;
+	
+	$thumb_width_player 	= $video_width > 0 ? min(($video_width * 5) / 10, 1280) : 1280;
+	$thumb_height_player 	= $video_height > 0 ? min(($video_height * 5) / 10, 720) : 720;
+	$thumb_width_max 		= $video_width > 0 ? min(($video_width * 2) / 10, 384) : 384;
+	$thumb_height_max 		= $video_height > 0 ? min(($video_height * 2) / 10, 216) : 216;
 
 	// Only continue if source video exists
 	if (file_exists($video_path) || file_url_exists($video_path)) {
@@ -391,13 +402,13 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 			if ($black_bars) {
 				remove_black_bars($final_thumbnail, $left, $right, $top, $bottom);
 			}
-			process_thumb($final_thumbnail, $config['thumbnail_player_width'], $config['thumbnail_player_height'], $keep_ar);
+			process_thumb($final_thumbnail, $thumb_width_player, $thumb_height_player, $keep_ar);
 		} else {
 			$final_thumbnail = $final_thumbs_folder.'/'.$i.'.jpg';
 			if ($black_bars) {
 				remove_black_bars($final_thumbnail, $left, $right, $top, $bottom);			
 			}
-			process_thumb($final_thumbnail, $config['img_max_width'], $config['img_max_height'], $keep_ar);					
+			process_thumb($final_thumbnail, $thumb_width_max, $thumb_height_max, $keep_ar);					
 		}
 	}	
   

@@ -19,5 +19,6 @@ $templates['dark-mint'] = 'Dark/Mint';
 $templates['dark-orange'] = 'Dark/Orange';
 $templates['dark-purple'] = 'Dark/Purple';
 $templates['dark-red'] = 'Dark/Red';
+$templates['novinhasbr'] = 'NovinhasBR';
 
 ?>

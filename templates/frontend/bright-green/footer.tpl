@@ -77,7 +77,7 @@
 		  var msViewportStyle = document.createElement('style')
 		  msViewportStyle.appendChild(
 			document.createTextNode(
-			  '@-ms-viewport{width:auto!important}'
+			  '@-ms-viewport{width=1280!important}'
 			)
 		  )
 		  document.querySelector('head').appendChild(msViewportStyle)
