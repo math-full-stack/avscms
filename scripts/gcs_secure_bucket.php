@@ -10,7 +10,12 @@
  *      Media Bunny player, which reads objects cross-origin).
  *
  * Usage (run from the VM / project root, like the migrations runner):
- *   php scripts/gcs_secure_bucket.php <server_id> [--origin https://novinhasbr.net] [--dry-run]
+ *   php scripts/gcs_secure_bucket.php <server_id> [--origin https://novinhasbr.net,http://localhost] [--dry-run]
+ *
+ *   --origin accepts a comma-separated list (or repeated flags) so both the
+ *   production origin and localhost can be allowed in the same CORS rule.
+ *   Note: setCors() REPLACES the whole bucket CORS config, so list ALL
+ *   origins you need in a single run.
  *
  * DB credentials come from env vars (same convention as function_migrations.php):
  *   DB_HOST (localhost)  DB_USER (root)  DB_PASS ('')  DB_NAME (avs)
@@ -24,21 +29,27 @@ define('_VALID', true);
 
 $args    = array_slice($argv, 1);
 $serverId = 0;
-$origin   = '';
+$origins  = array();
 $dryRun   = false;
 
 foreach ($args as $arg) {
     if (preg_match('/^--origin=(.+)$/', $arg, $m)) {
-        $origin = trim($m[1]);
+        foreach (explode(',', $m[1]) as $o) {
+            $o = trim($o);
+            if ($o !== '') {
+                $origins[] = rtrim($o, '/');
+            }
+        }
     } elseif ($arg === '--dry-run') {
         $dryRun = true;
     } elseif (ctype_digit($arg)) {
         $serverId = (int) $arg;
     }
 }
+$origins = array_values(array_unique($origins));
 
 if ($serverId <= 0) {
-    fwrite(STDERR, "Usage: php scripts/gcs_secure_bucket.php <server_id> [--origin https://site] [--dry-run]\n");
+    fwrite(STDERR, "Usage: php scripts/gcs_secure_bucket.php <server_id> [--origin https://site,http://localhost] [--dry-run]\n");
     exit(1);
 }
 
@@ -133,22 +144,27 @@ if (!$dryRun) {
 }
 
 // --- Step 2: CORS -----------------------------------------------------------------
-if ($origin === '') {
+if (empty($origins)) {
     $env = getenv('GCLOUD_SITE_URL');
     if ($env) {
-        $origin = rtrim(trim($env), '/');
+        foreach (explode(',', $env) as $o) {
+            $o = rtrim(trim($o), '/');
+            if ($o !== '') {
+                $origins[] = $o;
+            }
+        }
+        $origins = array_values(array_unique($origins));
     }
 }
-if ($origin === '') {
-    echo "\n[AVISO] --origin não informado (ex.: --origin=https://novinhasbr.net). CORS não alterado.\n";
+if (empty($origins)) {
+    echo "\n[AVISO] --origin não informado (ex.: --origin=https://novinhasbr.net,http://localhost). CORS não alterado.\n";
     echo "        Rode novamente com --origin para liberar o Media Bunny ler os vídeos.\n";
 } else {
-    $origin = rtrim($origin, '/');
     if ($dryRun) {
-        echo "\n[DRY] aplicaria CORS permitindo origem {$origin}\n";
+        echo "\n[DRY] aplicaria CORS permitindo origens: " . implode(', ', $origins) . "\n";
     } else {
-        if ($gcs->setCors(array($origin))) {
-            echo "\n[OK] CORS configurado para {$origin} (GET/HEAD/OPTIONS).\n";
+        if ($gcs->setCors($origins)) {
+            echo "\n[OK] CORS configurado para: " . implode(', ', $origins) . " (GET/HEAD/OPTIONS).\n";
         } else {
             echo "\n[FAIL] CORS: {$gcs->getError()}\n";
             exit(1);
