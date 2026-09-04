@@ -614,12 +614,11 @@ a:hover .xb-thumb-meta {
    -------------------------------------------------------------------------- */
 .xb-hero {
 	display: grid;
-	grid-template-columns: 1.55fr 1fr 1fr;
-	grid-template-rows: repeat(2, 1fr);
-	gap: 12px;
+	grid-template-columns: 1.6fr 1fr 1fr 1fr;
+	grid-template-rows: repeat(2, minmax(0, 1fr));
+	gap: 10px;
 	margin-top: 18px;
-	aspect-ratio: 21 / 9;
-	max-height: 430px;
+	height: clamp(380px, 34vw, 470px);
 }
 
 .xb-hero .xb-hero-main {
@@ -1251,8 +1250,7 @@ a:hover .xb-thumb-meta {
 @media (max-width: 991.98px) {
 	.xb-hero {
 		grid-template-columns: 1fr 1fr;
-		aspect-ratio: auto;
-		max-height: none;
+		height: auto;
 	}
 
 	.xb-hero .xb-hero-main {
@@ -1262,6 +1260,13 @@ a:hover .xb-thumb-meta {
 	}
 
 	.xb-hero .xb-hero-item {
+		aspect-ratio: 16 / 9;
+	}
+
+	.xb-hero .xb-hero-main .thumb-overlay,
+	.xb-hero .xb-hero-item .thumb-overlay {
+		position: relative;
+		inset: auto;
 		aspect-ratio: 16 / 9;
 	}
 }
@@ -1277,10 +1282,6 @@ a:hover .xb-thumb-meta {
 
 	.xb-hero {
 		grid-template-columns: 1fr;
-	}
-
-	.xb-hero .xb-hero-item {
-		aspect-ratio: 16 / 9;
 	}
 
 	.xb-hero .xb-hero-main .xb-hero-title {

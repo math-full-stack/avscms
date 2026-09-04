@@ -25,7 +25,7 @@ $rs             = $conn->execute($sql);
 $recent_videos  = $rs->getrows();
 
 // Hero da home: destaques (mais vistos)
-$sql            = "SELECT " .$video_select. $video_from. " ORDER BY v.viewnumber DESC, v.viewtime DESC LIMIT 5";
+$sql            = "SELECT " .$video_select. $video_from. " ORDER BY v.viewnumber DESC, v.viewtime DESC LIMIT 7";
 $rs             = $conn->execute($sql);
 $hero_videos    = $rs->getrows();
 
