@@ -62,6 +62,9 @@ media/csv/
 # include/config.local.php holds the admin password + tool paths;
 # the VM keeps its own copy (preserved by deploy.sh).
 include/config.local.php
+# GCS config + service account key (contains private key)
+include/config.gcs.php
+include/gcs-service-account.json
 # Session cookies used by the grabber (xfree, etc.)
 cookies.txt
 cookies2.txt

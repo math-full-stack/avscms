@@ -3,42 +3,52 @@ define('_VALID', true);
 require 'include/config.php';
 require 'include/function_global.php';
 require 'include/function_smarty.php';
+require $config['BASE_DIR']. '/include/function_video.php';
 
 $vid   = intval($_GET['id']);
 $label = intval($_GET['label']);
 
 $sql = "SELECT * FROM video WHERE VID = ".$vid." LIMIT 1";
-$rs = $conn->execute($sql);	
-$formats = $rs->fields['formats'];
-$server  = $rs->fields['server'];
-$formats_arr = explode(',', $formats);
+$rs  = $conn->execute($sql);
+if ( $conn->Affected_Rows() != 1 ) {
+	VRedirect::go($config['BASE_URL']. '/error');
+}
+$video   = $rs->fields;
+$server  = $video['server'];
 
-if ($server != '') {
-	$sql = "SELECT * FROM video v, servers s WHERE v.VID = ".$vid." AND v.server = s.video_url LIMIT 1";
-	$rs  = $conn->execute($sql); 
-	$video_root = $rs->fields['video_url']; 
-}
-if (!$video_root) {
-	$video_root = $config['BASE_DIR']."/media/videos";
-}
-	
-foreach ($formats_arr as $format) {
-	$f = explode('.', $format);
-	if ($label == $f[1]) {
-		if ($f[0] >= 480) {
-			$condition = $new_permisions['hd_downloads'];
-		} else {
-			$condition = $new_permisions['sd_downloads'];			
-		}
-		$file = $video_root.'/h264/'.$vid.'_'.$f[1].'.'.$f[2];
-		$file_name = $vid.'_'.$f[1].'.'.$f[2];
+// Single source of truth for the file URL (signed URLs for GCS servers)
+$sources = get_video_sources($video);
+$file    = '';
+$height  = 0;
+
+foreach ($sources['files'] as $f) {
+	if (intval($f['label']) == $label) {
+		$file   = $f['url'];
+		$height = intval($f['height']);
 		break;
 	}
-
 }
-	
+
+if ($file == '') {
+	VRedirect::go($config['BASE_URL']. '/error');
+}
+
+if ($height >= 480) {
+	$condition = $new_permisions['hd_downloads'];
+} else {
+	$condition = $new_permisions['sd_downloads'];
+}
+
 if ($condition == 1) {
 	ini_set('memory_limit', '-1');
+
+	// GCS: object is private — just redirect to the short-lived signed URL
+	if ($sources['server_type'] == 'gcs') {
+		$conn->execute("UPDATE video SET download_num = download_num+1 WHERE VID = ".$vid." LIMIT 1");
+		header('Location: '.$file);
+		exit();
+	}
+
 	if (!$server) {
 		if (file_exists($file) && is_file($file) && is_readable($file)) {
 			$conn->execute("UPDATE video SET download_num = download_num+1 WHERE VID = ".$vid." LIMIT 1");
@@ -117,4 +127,4 @@ if ($condition == 0 && $_SESSION['uid_premium']) {
 	VRedirect::go($config['BASE_URL']. '/notfound/download_premium');
 }
 die();
-?>
+?>

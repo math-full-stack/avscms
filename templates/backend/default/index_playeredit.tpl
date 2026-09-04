@@ -23,6 +23,17 @@
 											<h3>General <span class="semi-bold">Settings</span></h3>
 										</div>									
 										<div class="form-group">
+											<label class="col-lg-4 control-label">Player Engine</label>
+											<div class="col-lg-8">
+												<select id="engine" name="engine" style="width:100%">
+													<option value="videojs"{if $player.engine == 'videojs' || $player.engine == ''} selected{/if}>Video.js (default)</option>
+													<option value="mediabunny"{if $player.engine == 'mediabunny'} selected{/if}>Media Bunny</option>
+												</select>
+												<span class="help">Media Bunny requires a modern browser (WebCodecs). For GCS servers the videos are served via short-lived signed URLs and the bucket must be private with CORS enabled.</span>
+											</div>
+											<div class="clearfix"></div>
+										</div>
+										<div class="form-group">
 											<label class="col-lg-4 control-label">Autoplay</label>
 											<div class="col-lg-8">
 												<div class="radio p-t-9">

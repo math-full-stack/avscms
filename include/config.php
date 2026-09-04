@@ -14,6 +14,11 @@ require 'config.local.php';
 require 'config.seo.php';
 require 'config.language.php';
 
+// Google Cloud Storage config (optional - only if file exists)
+if (file_exists(__DIR__ . '/config.gcs.php')) {
+    require __DIR__ . '/config.gcs.php';
+}
+
 require $config['BASE_DIR']. '/classes/timer.class.php';
 require $config['BASE_DIR']. '/classes/redirect.class.php';
 

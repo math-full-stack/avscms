@@ -1,16 +1,39 @@
 <?php
 defined('_VALID') or die('Restricted Access!');
 
-require $config['BASE_DIR'] . '/classes/filter.class.php';
-require $config['BASE_DIR'] . '/classes/auth.class.php';
+require_once $config['BASE_DIR'] . '/classes/filter.class.php';
+require_once $config['BASE_DIR'] . '/classes/auth.class.php';
 Auth::checkAdmin();
 
 header('Content-Type: application/json; charset=utf-8');
 
-$ip       = isset($_POST['server_ip']) ? trim($_POST['server_ip']) : '';
-$username = isset($_POST['ftp_username']) ? trim($_POST['ftp_username']) : '';
-$password = isset($_POST['ftp_password']) ? trim($_POST['ftp_password']) : '';
-$root     = isset($_POST['ftp_root']) ? trim($_POST['ftp_root']) : '';
+// Accept both direct params (for add/edit forms) and server_id (for list)
+$serverId = isset($_POST['server_id']) ? intval($_POST['server_id']) : 0;
+
+if ($serverId > 0) {
+    // Fetch from database (secure - password never leaves server)
+    require_once $config['BASE_DIR'] . '/include/compat/json.php';
+    require_once $config['BASE_DIR'] . '/include/adodb/adodb.inc.php';
+    require_once $config['BASE_DIR'] . '/include/dbconn.php';
+
+    $sql = "SELECT server_ip, ftp_username, ftp_password, ftp_root FROM servers WHERE server_id = " . $serverId . " LIMIT 1";
+    $rs = $conn->execute($sql);
+    if ($conn->Affected_Rows() != 1) {
+        echo json_encode(array('status' => 0, 'message' => 'Servidor não encontrado.'));
+        exit();
+    }
+    $server = $rs->fields;
+    $ip       = $server['server_ip'];
+    $username = $server['ftp_username'];
+    $password = $server['ftp_password'];
+    $root     = $server['ftp_root'];
+} else {
+    // Direct params (for add/edit forms before save)
+    $ip       = isset($_POST['server_ip']) ? trim($_POST['server_ip']) : '';
+    $username = isset($_POST['ftp_username']) ? trim($_POST['ftp_username']) : '';
+    $password = isset($_POST['ftp_password']) ? trim($_POST['ftp_password']) : '';
+    $root     = isset($_POST['ftp_root']) ? trim($_POST['ftp_root']) : '';
+}
 
 if (empty($ip) || empty($username) || empty($password)) {
     echo json_encode(array(
@@ -85,3 +108,4 @@ if ($writeOk) {
     ));
     exit();
 }
+?>

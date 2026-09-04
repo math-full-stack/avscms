@@ -355,7 +355,12 @@ function postThumbs($vid, $src) {
 		foreach ($formats as $format) {
 			 unset($f);
 			 $f    = explode('.', $format);
-			 $vfs[] = $server.'/h264/'.$vid."_".$f[1].".".$f[2];
+			 // GCS buckets são organizados por pasta por vídeo: h264/{VID}/{label}.{ext};
+			 // FTP/local mantêm o layout plano antigo: h264/{VID}_{label}.{ext}
+			 $h264Path = (strpos($server, 'storage.googleapis.com') !== false)
+			 	       ? '/h264/'.$vid.'/'.$f[1].'.'.$f[2]
+			 	       : '/h264/'.$vid."_".$f[1].".".$f[2];
+			 $vfs[] = $server.$h264Path;
 		}		
 	}
 	foreach ($vf as $file) {

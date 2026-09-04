@@ -152,12 +152,26 @@ EOF
 fi
 
 # --- DB migrations (idempotent) -------------------------------------------
-if mysql -u root avs -N -e "SHOW COLUMNS FROM video LIKE 'last_update'" 2>/dev/null | grep -q .; then
-    echo "DB migration: video.last_update already present"
+# Run the migration system which tracks applied migrations in db_migrations table
+echo "Running DB migrations..."
+# Find PHP binary on the VM
+PHP_BIN=$(command -v php || echo "/usr/bin/php")
+if [ -x "$PHP_BIN" ]; then
+    "$PHP_BIN" "${REMOTE_DIR}/include/function_migrations.php" 2>&1 || {
+        echo "WARNING: php migrations runner failed, trying direct mysql fallback..."
+        for sqlfile in "${REMOTE_DIR}"/sql/migrations/*.sql; do
+            [ -f "$sqlfile" ] || continue
+            mysql -u root avs < "$sqlfile" 2>/dev/null && echo "  Applied: $(basename "$sqlfile")" || true
+        done
+    }
 else
-    mysql -u root avs < "${REMOTE_DIR}/sql/add_last_update.sql" \
-        && echo "DB migration: video.last_update added"
+    echo "PHP not found, running migrations via mysql directly..."
+    for sqlfile in "${REMOTE_DIR}"/sql/migrations/*.sql; do
+        [ -f "$sqlfile" ] || continue
+        mysql -u root avs < "$sqlfile" 2>/dev/null && echo "  Applied: $(basename "$sqlfile")" || true
+    done
 fi
+echo "DB migrations complete."
 
 # --- Runtime directories ---------------------------------------------------
 mkdir -p "${REMOTE_DIR}/cache/backend" "${REMOTE_DIR}/cache/frontend" "${REMOTE_DIR}/tmp/logs" "${REMOTE_DIR}/scripts"

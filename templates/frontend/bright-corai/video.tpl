@@ -413,9 +413,9 @@ $( document ).ready(function() {
 		let vid_files = '{"vid_files":['+
 		{/literal}
 		{if $video.iphone == 1}
-			{literal}'{"src":"{/literal}{$video_root}/iphone/{$video.VID}.mp4","type":"video/mp4", "label":"SD", "res":"720" {literal}},'+{/literal} 
+			{literal}'{"src":"{/literal}{$video.iphone_url}","type":"video/mp4", "label":"SD", "res":"720" {literal}},'+{/literal} 
 			{if $video.hd == 1}
-				{literal}'{"src":"{/literal}{$video_root}/hd/{$video.VID}.mp4","type":"video/mp4", "label":"HD", "res":"1080" {literal}}},'+{/literal} 
+				{literal}'{"src":"{/literal}{$video.hd_url}","type":"video/mp4", "label":"HD", "res":"1080" {literal}}},'+{/literal} 
 			{/if}
 		{else}
 			{section name=i loop=$video.files}
@@ -765,6 +765,10 @@ $( document ).ready(function() {
 		</div>			
 	{/if}		
 </div>
+{if $player.engine == 'mediabunny'}
+<script type="text/javascript" src="{$relative_tpl}/js/decrypt.min.js?ver=1.0.35"></script>
+{else}
 <script type="text/javascript" src="{$relative_tpl}/js/player.js?ver=1.0.35"></script>
 <script type="text/javascript" src="{$relative_tpl}/js/decrypt.min.js?ver=1.0.35"></script>
 <script type="text/javascript" src="{$relative_tpl}/js/player-init.min.js?ver=1.0.35"></script>
+{/if}

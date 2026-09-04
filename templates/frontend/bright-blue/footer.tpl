@@ -65,7 +65,7 @@
     <script type="text/javascript" src="{$relative_tpl}/js/jquery.rotator.js"></script>
     <script type="text/javascript" src="{$relative_tpl}/js/jquery.main.js"></script>	
     <script type="text/javascript" src="{$relative_tpl}/js/jquery.easy-autocomplete.min.js"></script>		
-	{if $view && !$video.embed_code}
+	{if $view && !$video.embed_code && $player.engine != 'mediabunny'}
 		<script src="{$baseurl}/media/player/videojs/video-js-events.js?ver=1.0.20"></script>			
 	{/if}
 	{if $g_signin == '1' || $fb_signin == '1'}

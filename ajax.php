@@ -152,6 +152,7 @@ $modules_allowed    = array(
 	'admin_used_server' => 1,
 	'admin_status_server' => 1,
 	'admin_test_server' => 1,
+	'admin_test_gcs' => 1,
 	'admin_grabber_fetch' => 1,
 	'admin_reprocess_video' => 1,
 	'admin_get_csvformat' => 1,

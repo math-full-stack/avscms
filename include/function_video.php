@@ -546,5 +546,172 @@ function log_conversion($file_path, $text)
     }
                                                             
     @fclose($handle);
-}                                                        
+}
+
+/**
+ * Resolves the secondary server row linked to a video.
+ *
+ * The video.server column stores the server's video_url; we join back to the
+ * servers table exactly like the original duplicated queries did.
+ *
+ * @param array $video Video row (must contain VID and server)
+ * @return array|false Server row or false when the video has no server
+ */
+function get_video_server($video)
+{
+    global $conn;
+
+    if (empty($video['server'])) {
+        return false;
+    }
+
+    $sql = "SELECT * FROM video v, servers s
+            WHERE v.VID = " . intval($video['VID']) . " AND v.server = s.video_url LIMIT 1";
+    $rs  = $conn->execute($sql);
+
+    if ( $conn->Affected_Rows() == 1 ) {
+        return $rs->fields;
+    }
+
+    return false;
+}
+
+/**
+ * Builds the playback sources for a video — single source of truth for the
+ * URL logic that used to be duplicated in video.php, view.php, embed.php and
+ * the download endpoints.
+ *
+ * URL strategy per server type:
+ *   - gcs   : V4 signed URLs (short-lived, bucket stays PRIVATE)
+ *   - ftp   : public URL on the secondary server (video_url/h264/...)
+ *   - local : this site's own media/videos directory
+ *
+ * When $mykey and $iv are given, every URL is additionally obfuscated with the
+ * legacy encryptPhp() layer (AES-256-CBC) so the existing Video.js client-side
+ * decryption pipeline keeps working unchanged. The Media Bunny engine receives
+ * the plain URLs (they are expiring signed URLs anyway).
+ *
+ * @param array       $video Video row
+ * @param string|null $mykey Optional AES obfuscation key (8 chars)
+ * @param string|null $iv    Optional AES obfuscation IV (16 chars)
+ * @return array
+ */
+function get_video_sources($video, $mykey = null, $iv = null)
+{
+    global $config;
+
+    $sources = array(
+        'files'       => array(),
+        'iphone_url'  => null,
+        'hd_url'      => null,
+        'server_type' => 'local',
+        'server'      => false
+    );
+
+    $server = get_video_server($video);
+    $sources['server'] = $server;
+
+    $serverType = 'local';
+    if ($server) {
+        $serverType = (isset($server['server_type']) && $server['server_type'] === 'gcs') ? 'gcs' : 'ftp';
+    }
+    $sources['server_type'] = $serverType;
+
+    // --- GCS: prepare the signer (V4 signed URLs) ---
+    $gcs  = null;
+    $ttl  = 21600;
+    $sign = false;
+
+    if ($serverType === 'gcs' && !empty($server['gcs_key_path']) && !empty($server['gcs_bucket'])) {
+        $keyPath = $server['gcs_key_path'];
+        if (!file_exists($keyPath)) {
+            $relative = $config['BASE_DIR'] . '/' . $keyPath;
+            if (file_exists($relative)) {
+                $keyPath = $relative;
+            }
+        }
+        if (file_exists($keyPath)) {
+            require_once $config['BASE_DIR'] . '/classes/gcs.class.php';
+            $gcs  = new GCS($keyPath, $server['gcs_bucket']);
+            $ttl  = (isset($server['gcs_signed_ttl']) && intval($server['gcs_signed_ttl']) > 0)
+                  ? intval($server['gcs_signed_ttl']) : 21600;
+            $sign = true;
+        }
+    }
+
+    // --- Non-GCS: plain root URL ---
+    $videoRoot = '';
+    if (!$sign) {
+        if ($server) {
+            $videoRoot = rtrim($server['video_url'], '/');
+        }
+        if ($videoRoot === '') {
+            $videoRoot          = $config['BASE_URL'] . '/media/videos';
+            $sources['server_type'] = 'local';
+        }
+    }
+
+    /**
+     * Builds the playback URL for an object path (GCS: "h264/12/480p.mp4",
+     * local/FTP: "h264/12_480p.mp4").
+     * @param string $object
+     * @return string
+     */
+    $makeUrl = function ($object) use ($sign, $gcs, $ttl, $videoRoot) {
+        if ($sign) {
+            $signed = $gcs->getSignedUrl($object, $ttl);
+            return $signed !== false ? $signed : $videoRoot . '/' . $object;
+        }
+        return $videoRoot . '/' . ltrim($object, '/');
+    };
+
+    // --- Regular formats ---
+    // GCS bucket is organized per video: h264/{VID}/{label}.{ext}
+    // (e.g. h264/88/720p.mp4). Local/FTP keep the legacy flat layout
+    // h264/{VID}_{label}.{ext} (local files on the VM are flat).
+    $formats = array();
+    if (!empty($video['formats'])) {
+        $formats = explode(',', $video['formats']);
+    }
+
+    $vid = intval($video['VID']);
+
+    foreach ($formats as $value) {
+        $f = explode('.', trim($value));
+        if (count($f) < 3) {
+            continue;
+        }
+
+        $file   = $vid . '_' . $f[1] . '.' . $f[2]; // legacy flat name (info only)
+        $object = ($sources['server_type'] === 'gcs')
+                ? 'h264/' . $vid . '/' . $f[1] . '.' . $f[2]
+                : 'h264/' . $file;
+        $url    = $makeUrl($object);
+
+        $entry = array(
+            'height' => $f[0],
+            'label'  => $f[1],
+            'format' => $f[2],
+            'file'   => $file,
+            'url'    => $url
+        );
+
+        // Legacy AES obfuscation layer (Video.js pipeline) — optional
+        if ($mykey !== null && $iv !== null && $mykey !== '' && $iv !== '') {
+            $entry['url'] = encryptPhp($url, $mykey, $iv);
+        }
+
+        $sources['files'][] = $entry;
+    }
+
+    // --- iphone / hd single-file formats (used when video.iphone / video.hd) ---
+    if (isset($video['iphone']) && intval($video['iphone']) == 1) {
+        $sources['iphone_url'] = $makeUrl('iphone/' . $vid . '.mp4');
+    }
+    if (isset($video['hd']) && intval($video['hd']) == 1) {
+        $sources['hd_url'] = $makeUrl('hd/' . $vid . '.mp4');
+    }
+
+    return $sources;
+}
 ?>

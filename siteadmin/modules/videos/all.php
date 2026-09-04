@@ -60,6 +60,72 @@ if (isset($_POST['suspend_selected_videos']) || isset($_POST['approve_selected_v
     }
 }
 
+if (isset($_POST['reprocess_selected_videos'])) {
+    $index   = 0;
+    $skipped = 0;
+    foreach ( $_POST as $key => $value ) {
+        if ( $key != 'check_all_videos' && substr($key, 0, 18) == 'video_id_checkbox_') {        
+            if ( $value == 'on' ) {
+                $vid = intval(str_replace('video_id_checkbox_', '', $key));
+                $sql = "SELECT VID, source_url FROM video WHERE VID = " .$vid. " LIMIT 1";
+                $rs  = $conn->execute($sql);
+                if ($rs && $conn->Affected_Rows() == 1) {
+                    $row       = $rs->fields;
+                    $sourceUrl = trim($row['source_url'] ?? '');
+                    if (empty($sourceUrl)) {
+                        ++$skipped;
+                        continue;
+                    }
+                    // Skip if in conversion queue
+                    $qfp = $conn->execute("SELECT status FROM conversion_queue_fp WHERE VID = " .$vid. " LIMIT 1");
+                    if ($qfp && $conn->Affected_Rows() == 1) {
+                        ++$skipped;
+                        continue;
+                    }
+                    $qsp = $conn->execute("SELECT status FROM conversion_queue_sp WHERE VID = " .$vid. " LIMIT 1");
+                    if ($qsp && $conn->Affected_Rows() == 1) {
+                        ++$skipped;
+                        continue;
+                    }
+                    // Set active=2 (downloading) and launch worker
+                    $conn->execute("UPDATE video SET active = '2', last_update = " .time(). " WHERE VID = " .$vid. " LIMIT 1");
+                    $encodedUrl   = base64_encode($sourceUrl);
+                    $encodedThumb = base64_encode('');
+                    $worker       = $config['BASE_DIR'] . '/scripts/grabber_worker.php';
+                    if (file_exists($worker)) {
+                        $cmd = sprintf('%s %s %d %s %s %s > /dev/null 2>&1 & echo $!',
+                            escapeshellarg($config['phppath']),
+                            escapeshellarg($worker),
+                            $vid,
+                            escapeshellarg($encodedUrl),
+                            escapeshellarg('best'),
+                            escapeshellarg($encodedThumb)
+                        );
+                        $logFile = $config['LOG_DIR'] . '/' .$vid. '.grabber.log';
+                        @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Reprocessamento em massa via admin. URL: $sourceUrl\n", FILE_APPEND);
+                        @shell_exec($cmd);
+                        ++$index;
+                    } else {
+                        $conn->execute("UPDATE video SET active = '0' WHERE VID = " .$vid. " LIMIT 1");
+                        ++$skipped;
+                    }
+                } else {
+                    ++$skipped;
+                }
+            }
+        }
+    }
+    if ( $index === 0 ) {
+        $errors[]   = 'Please select videos to be reprocessed!';
+    } else {
+        $msg = 'Successfully queued ' .$index. ' (selected) videos for reprocessing!';
+        if ($skipped > 0) {
+            $msg .= ' ' .$skipped. ' video(s) skipped (no source URL or already in conversion queue).';
+        }
+        $messages[] = $msg;
+    }
+}
+
 $remove = NULL;
 $page   = (isset($_GET['page'])) ? intval($_GET['page']) : 1;
 

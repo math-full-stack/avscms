@@ -45,40 +45,42 @@ $video              = $rs->getrows();
 $video              = $video['0'];
 
 if ($video['embed_code'] == '') {
-	$formats = explode(',', $video['formats']);
-	$length = 8;
-	$mykey = substr(str_shuffle("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, $length);
-	$iv = substr(str_shuffle("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 16);
-	$secret = $mykey.".".$iv;
-	
-	if ($video['server'] != '') {
-		$sql = "SELECT * FROM video v, servers s WHERE v.VID = ".$vid." AND v.server = s.video_url LIMIT 1";
-		$rs  = $conn->execute($sql); 
-		$video_root = $rs->fields['video_url']; 
-	}
-	if (!$video_root) {
-		$video_root = $config['BASE_URL']."/media/videos";
-	}	
+	require_once $config['BASE_DIR']. '/include/function_video.php';
 
-	foreach ($formats as $key => $value) {
-		 unset($f);
-		 $f = explode('.', $value);
-		 $vf[$key]['height'] = $f[0];
-		 $vf[$key]['label']  = $f[1]; 
-		 $vf[$key]['format'] = $f[2];
-		 $vf[$key]['file']   = $video['VID']."_".$vf[$key]['label'].".".$vf[$key]['format'];	 
-		 $vurl = $video_root.'/h264/'.$video['VID']."_".$vf[$key]['label'].".".$vf[$key]['format'];
-		 $vf[$key]['url']   = encryptPhp($vurl, $mykey, $iv);
-	}
-	$video['files'] = $vf;
-	
-
-	//---- VJS
+	//---- Player engine (drives how the playback sources are built)
 	$sql    = "SELECT * from player WHERE profile = 'Main' LIMIT 1";
 	$rs     = $conn->execute($sql);
 	$player = $rs->getrows();
 	$player = $player['0'];
 
+	$secret = '';
+	if ($player['engine'] == 'mediabunny') {
+		// Media Bunny: plain (signed/expiring) URLs — the security comes from
+		// the V4 signature + TTL, not from client-side obfuscation.
+		$sources = get_video_sources($video);
+	} else {
+		// Video.js: keep the legacy AES obfuscation layer (decrypt.min.js)
+		$length = 8;
+		$mykey = substr(str_shuffle("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, $length);
+		$iv = substr(str_shuffle("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 16);
+		$secret = $mykey.".".$iv;
+		$sources = get_video_sources($video, $mykey, $iv);
+	}
+
+	$video['files']      = $sources['files'];
+	$video['iphone_url'] = $sources['iphone_url'];
+	$video['hd_url']     = $sources['hd_url'];
+
+	// video_root kept for template compatibility (FTP/local servers)
+	$video_root = '';
+	if ($sources['server']) {
+		$video_root = rtrim($sources['server']['video_url'], '/');
+	}
+	if ($video_root == '') {
+		$video_root = $config['BASE_URL']."/media/videos";
+	}
+
+	//---- VJS
 	if ($player['timeline_preview'] == 1) {
 		require_once 'classes/sprite.class.php';
 		$sprite = new images_to_sprite(get_thumb_dir($vid),get_thumb_dir($vid).'/sprite',$config['img_max_width'],$config['img_max_height']);

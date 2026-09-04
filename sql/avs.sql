@@ -653,6 +653,7 @@ CREATE TABLE `photo_rating_ip` (
 CREATE TABLE `player` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `profile` varchar(255) NOT NULL DEFAULT '',
+  `engine` enum('videojs','mediabunny') NOT NULL DEFAULT 'videojs',
   `autoplay` enum('0','1') NOT NULL DEFAULT '0',
   `resolution` enum('low','high') NOT NULL DEFAULT 'low',
   `timeline_preview` enum('0','1') NOT NULL DEFAULT '1',
@@ -704,7 +705,11 @@ CREATE TABLE `servers` (
   `ftp_root` varchar(255) NOT NULL DEFAULT '',
   `last_used` datetime DEFAULT NULL,
   `current_used` enum('0','1') NOT NULL DEFAULT '0',
-  `status` enum('0','1') NOT NULL DEFAULT '1'
+  `status` enum('0','1') NOT NULL DEFAULT '1',
+  `server_type` enum('ftp','gcs') NOT NULL DEFAULT 'ftp',
+  `gcs_key_path` varchar(500) NOT NULL DEFAULT '',
+  `gcs_bucket` varchar(255) NOT NULL DEFAULT '',
+  `gcs_signed_ttl` int(11) NOT NULL DEFAULT 21600
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------

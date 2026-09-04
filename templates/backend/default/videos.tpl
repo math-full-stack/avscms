@@ -135,6 +135,7 @@
 											<input type="submit" name="delete_selected_videos" value="Delete" class="btn btn-danger btn-cons" onClick="javascript:return confirm('Are you sure you want to delete all selected videos?');">
 											<input type="submit" name="suspend_selected_videos" value="Suspend" class="btn btn-white btn-cons" onClick="javascript:return confirm('Are you sure you want to suspend all selected videos?');">
 											<input type="submit" name="approve_selected_videos" value="Approve" class="btn btn-white btn-cons" onClick="javascript:return confirm('Are you sure you want to approve all selected videos?');">
+											<input type="submit" name="reprocess_selected_videos" value="Reprocess" class="btn btn-warning btn-cons" onClick="javascript:return confirm('Are you sure you want to reprocess all selected videos?');">
 										</div>
 										<div class="s-pagination">{$paging}</div>
 										<div class="checkbox check-default">											

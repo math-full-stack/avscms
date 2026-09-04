@@ -24,6 +24,7 @@ if ( isset($_POST['submit_settings']) && !$errors ) {
 	$autoplay 			= intval($_POST['autoplay']);
 	$resolution 		= trim($_POST['resolution']);
 	$timeline_preview   = intval($_POST['timeline_preview']);
+	$engine             = ( isset($_POST['engine']) && $_POST['engine'] == 'mediabunny' ) ? 'mediabunny' : 'videojs';
 	
 	//Logo Settings
     $logo               = intval($_POST['logo']);
@@ -37,7 +38,8 @@ if ( isset($_POST['submit_settings']) && !$errors ) {
 	$vast_vpaid_adv     = intval($_POST['vast_vpaid_adv']);	
 	$timeline_adv 		= intval($_POST['timeline_adv']);	
 
-	$sql   = "UPDATE player SET autoplay = " .$conn->qStr($autoplay). ", 
+	$sql   = "UPDATE player SET engine = " .$conn->qStr($engine). ", 
+								autoplay = " .$conn->qStr($autoplay). ", 
 								resolution = " .$conn->qStr($resolution). ", 
 								timeline_preview = " .$conn->qStr($timeline_preview). ", 
 								logo = " .$conn->qStr($logo). ", 
