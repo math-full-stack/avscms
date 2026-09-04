@@ -49,8 +49,9 @@
 						<img src="{insert name=thumb_path vid=$viewed_videos[i].VID}/{$viewed_videos[i].thumb}.jpg" title="{$viewed_videos[i].title|escape:'html'}" alt="{$viewed_videos[i].title|escape:'html'}" {if $viewed_videos[i].vthumbs == '0'}id="rotate_{$viewed_videos[i].VID}_{$viewed_videos[i].thumbs}_{$viewed_videos[i].thumb}_viewed"{/if} class="img-responsive {if $viewed_videos[i].type == 'private'}img-private{/if}"/>
 						{if $viewed_videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 						<span class="xb-thumb-meta">
-							{insert name=views assign=s_views views=$viewed_videos[i].viewnumber}
-							<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}</span>
+							{insert name=views assign=s_views views=$viewed_videos[i].viewnumber text='0'}
+							{insert name=views assign=s_views_w views=$viewed_videos[i].viewnumber text='w'}
+							<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
 							{if isset($viewed_videos[i].username)}
 							<span class="xb-thumb-user">@{$viewed_videos[i].username}</span>
 							{/if}
@@ -102,8 +103,9 @@
 						<img src="{insert name=thumb_path vid=$recent_videos[i].VID}/{$recent_videos[i].thumb}.jpg" title="{$recent_videos[i].title|escape:'html'}" alt="{$recent_videos[i].title|escape:'html'}" {if $recent_videos[i].vthumbs == '0'}id="rotate_{$recent_videos[i].VID}_{$recent_videos[i].thumbs}_{$recent_videos[i].thumb}_viewed"{/if} class="img-responsive {if $recent_videos[i].type == 'private'}img-private{/if}"/>
 						{if $recent_videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 						<span class="xb-thumb-meta">
-							{insert name=views assign=s_views views=$recent_videos[i].viewnumber}
-							<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}</span>
+							{insert name=views assign=s_views views=$recent_videos[i].viewnumber text='0'}
+							{insert name=views assign=s_views_w views=$recent_videos[i].viewnumber text='w'}
+							<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
 							{if isset($recent_videos[i].username)}
 							<span class="xb-thumb-user">@{$recent_videos[i].username}</span>
 							{/if}

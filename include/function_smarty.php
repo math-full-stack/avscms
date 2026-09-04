@@ -83,11 +83,21 @@ function insert_views( $options )
 	global $lang;
 
 	$number = $options['views'];
+	// text='0'  → apenas o número abreviado (ex: 1.2K)
+	// text='w'  → apenas a palavra (ex: exibições)
+	// (sem text) → número + palavra (comportamento original)
+	$mode = isset($options['text']) ? $options['text'] : '';
 	
-	if ($number == 1) 
-		return '1'. ' ' . $lang['global.view'];	
-	elseif ($number == 0) 
-		return '0'. ' ' . $lang['global.views'];	
+	if ($number == 1) {
+		if ($mode == '0') return '1';
+		if ($mode == 'w') return $lang['global.view'];
+		return '1'. ' ' . $lang['global.view'];
+	}
+	elseif ($number == 0) {
+		if ($mode == '0') return '0';
+		if ($mode == 'w') return $lang['global.views'];
+		return '0'. ' ' . $lang['global.views'];
+	}
 		
 	$abbrevs = array(12 => "T", 9 => "B", 6 => "M", 3 => "K", 0 => "");
 	foreach($abbrevs as $exponent => $abbrev) {
@@ -97,6 +107,12 @@ function insert_views( $options )
 			$result = number_format($display_num,$decimals);
 			if ($result == (int)$result) {
 				$result = (int)$result;
+			}
+			if ($mode == '0') {
+				return $result . $abbrev;
+			}
+			if ($mode == 'w') {
+				return $lang['global.views'];
 			}
 			return $result . $abbrev. ' ' . $lang['global.views'];
 		}

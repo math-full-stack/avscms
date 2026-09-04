@@ -516,6 +516,18 @@ $( document ).ready(function() {
 					</div>					
 				</div>
 			</div>
+
+			{* Carousels estilo Netflix *}
+			{if $caro_creator}
+				{include file='video_carousel.tpl' videos=$caro_creator title='Mais do creator' icon='fa-user-circle' link=$relative|cat:'/user/'|cat:$video.username}
+			{/if}
+			{if $caro_trending}
+				{include file='video_carousel.tpl' videos=$caro_trending title='Em alta' icon='fa-fire' link=$relative|cat:'/videos?o=mv'}
+			{/if}
+			{if $caro_new}
+				{include file='video_carousel.tpl' videos=$caro_new title='Novos vídeos' icon='fa-bolt' link=$relative|cat:'/videos?o=mr'}
+			{/if}
+
 			{if $video_comments == '1'}
 				<script type="text/javascript">
 					var lang_comments_confirm_delete 		= "{t c='comments.delete_confirm'}";
@@ -725,8 +737,9 @@ $( document ).ready(function() {
 								<img src="{insert name=thumb_path vid=$videos[i].VID}/{$videos[i].thumb}.jpg" title="{$videos[i].title|escape:'html'}" alt="{$videos[i].title|escape:'html'}" {if $videos[i].vthumbs == '0'}id="rotate_{$videos[i].VID}_{$videos[i].thumbs}_{$videos[i].thumb}_viewed"{/if} class="img-responsive {if $videos[i].type == 'private'}img-private{/if}"/>
 								{if $videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 								<span class="xb-thumb-meta">
-									{insert name=views assign=s_views views=$videos[i].viewnumber}
-									<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}</span>
+									{insert name=views assign=s_views views=$videos[i].viewnumber text='0'}
+									{insert name=views assign=s_views_w views=$videos[i].viewnumber text='w'}
+									<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
 									{if isset($videos[i].username)}
 									<span class="xb-thumb-user">@{$videos[i].username}</span>
 									{/if}

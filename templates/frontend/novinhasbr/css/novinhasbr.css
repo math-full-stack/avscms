@@ -442,6 +442,11 @@ a:hover .thumb-overlay::after {
 }
 
 /* Meta dentro da thumb — chip futurista minimalista (ícone + valor) */
+.thumb-overlay {
+	container-type: inline-size;
+	container-name: xb-thumb;
+}
+
 .xb-thumb-meta {
 	position: absolute;
 	left: 8px;
@@ -462,6 +467,28 @@ a:hover .thumb-overlay::after {
 	z-index: 3;
 	pointer-events: none;
 	transition: background .2s ease, border-color .2s ease;
+	max-width: calc(100% - 16px);
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.xb-thumb-meta > span {
+	min-width: 0;
+}
+
+/* Em cards pequenos: só o ícone de views + valor (sem @autor e sem a palavra) */
+@container xb-thumb (max-width: 210px) {
+	.xb-thumb-meta .xb-thumb-user,
+	.xb-thumb-meta .xb-thumb-views-word {
+		display: none;
+	}
+}
+
+@container xb-thumb (max-width: 130px) {
+	.xb-thumb-meta {
+		gap: 5px;
+		padding: 3px 7px;
+	}
 }
 
 .xb-thumb-views {
@@ -469,11 +496,23 @@ a:hover .thumb-overlay::after {
 	align-items: center;
 	gap: 4px;
 	white-space: nowrap;
+	min-width: 0;
 }
 
 .xb-thumb-views i {
 	color: var(--xb-accent);
 	font-size: 10px;
+	flex-shrink: 0;
+}
+
+/* Palavra "exibições" — só quando o card tem espaço; trunca com ... se faltar */
+.xb-thumb-views-word {
+	font-weight: 500;
+	color: #9a9a9a;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 90px;
 }
 
 .xb-thumb-user {
@@ -482,6 +521,7 @@ a:hover .thumb-overlay::after {
 	max-width: 90px;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	flex-shrink: 1;
 }
 
 .xb-thumb-user::before {
@@ -993,6 +1033,84 @@ a:hover .xb-thumb-meta {
 	text-decoration: none;
 }
 
+/* --------------------------------------------------------------------------
+   Carousel estilo Netflix (página do vídeo)
+   -------------------------------------------------------------------------- */
+.xb-carousel-sec {
+	position: relative;
+}
+
+.xb-carousel {
+	position: relative;
+	margin-top: 4px;
+}
+
+.xb-carousel-track {
+	display: flex;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+	margin: 0 -6px;
+	padding: 4px 6px 12px;
+}
+
+.xb-carousel-track::-webkit-scrollbar {
+	display: none;
+}
+
+.xb-carousel-item {
+	flex: 0 0 20%;
+	max-width: 20%;
+	padding: 0 6px;
+	scroll-snap-align: start;
+}
+
+.xb-carousel-item .thumb-overlay {
+	width: 100%;
+}
+
+.xb-carousel-arrow {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 5;
+	width: 36px;
+	height: 54px;
+	border: none;
+	border-radius: 6px;
+	background: rgba(10, 10, 10, .6);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+	color: #fff;
+	font-size: 14px;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity .2s ease, background .2s ease;
+}
+
+.xb-carousel:hover .xb-carousel-arrow {
+	opacity: 1;
+}
+
+.xb-carousel-arrow:hover {
+	background: rgba(255, 20, 147, .85);
+}
+
+.xb-carousel-prev {
+	left: 0;
+}
+
+.xb-carousel-next {
+	right: 0;
+}
+
+.xb-carousel-arrow:disabled {
+	opacity: .25;
+	cursor: default;
+}
+
 /* Relacionados — mesmo card da home (thumb vertical + chip) */
 .related-video {
 	background: transparent;
@@ -1303,6 +1421,20 @@ a:hover .xb-thumb-meta {
 }
 
 @media (max-width: 991.98px) {
+	.xb-carousel-item {
+		flex: 0 0 33.3333%;
+		max-width: 33.3333%;
+	}
+}
+
+@media (max-width: 575.98px) {
+	.xb-carousel-item {
+		flex: 0 0 50%;
+		max-width: 50%;
+	}
+}
+
+@media (max-width: 991.98px) {
 	.xb-hero {
 		grid-template-columns: 1fr 1fr;
 		height: auto;
@@ -1345,5 +1477,11 @@ a:hover .xb-thumb-meta {
 
 	.xb-section h2 {
 		font-size: 16px;
+	}
+
+	/* Fallback p/ browsers sem container queries: cards 2-col no mobile */
+	.xb-thumb-meta .xb-thumb-user,
+	.xb-thumb-meta .xb-thumb-views-word {
+		display: none;
 	}
 }

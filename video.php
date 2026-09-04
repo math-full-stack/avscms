@@ -254,6 +254,30 @@ if ($new_permisions['watch_normal_videos'] == 0) {
 
 
 $video['total_subscribers'] = get_user_total_subscribers($video['UID']);	
+
+// ---- Carousels estilo Netflix (seções abaixo do player) ----
+$caro_select = "v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.hd, u.username";
+$caro_from   = " FROM video AS v, signup AS u WHERE v.UID = u.UID AND v.active = '1' AND v.type = 'public' AND v.VID != " .$vid. " ";
+
+// Em alta (mais vistos)
+$sql         = "SELECT " .$caro_select. $caro_from. " ORDER BY v.viewnumber DESC LIMIT 15";
+$rs          = $conn->execute($sql);
+$caro_trending = $rs->getrows();
+
+// Novos vídeos
+$sql         = "SELECT " .$caro_select. $caro_from. " ORDER BY v.addtime DESC LIMIT 15";
+$rs          = $conn->execute($sql);
+$caro_new    = $rs->getrows();
+
+// Do mesmo creator
+$sql         = "SELECT " .$caro_select. $caro_from. " AND v.UID = " .(int)$video['UID']. " ORDER BY v.addtime DESC LIMIT 15";
+$rs          = $conn->execute($sql);
+$caro_creator = $rs->getrows();
+
+$smarty->assign('caro_trending', $caro_trending);
+$smarty->assign('caro_new', $caro_new);
+$smarty->assign('caro_creator', $caro_creator);
+
 $smarty->assign('errors',$errors);
 $smarty->assign('messages',$messages);
 $smarty->assign('menu', 'videos');
