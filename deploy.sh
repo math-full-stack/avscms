@@ -116,6 +116,14 @@ else
     rm -f /tmp/cookies.txt.prev
 fi
 
+# Keep the VM's own GCS config (if any)
+for _gcs in include/config.gcs.php include/gcs-service-account.json; do
+    if [ -f "${REMOTE_DIR}/${_gcs}" ]; then
+        cp -a "${REMOTE_DIR}/${_gcs}" "/tmp/${_gcs##*/}.prev"
+        echo "Backed up remote ${_gcs}"
+    fi
+done
+
 # Extract shipped code over the existing deployment (media/tmp/cache untouched)
 mkdir -p "${REMOTE_DIR}"
 tar --warning=no-unknown-keyword -xzf "${TARBALL}" -C "${REMOTE_DIR}"
@@ -129,6 +137,13 @@ if [ -f /tmp/cookies.txt.prev ]; then
     cp -a /tmp/cookies.txt.prev "${REMOTE_DIR}/scripts/cookies.txt"
     echo "Restored remote scripts/cookies.txt"
 fi
+# Restore the VM's own GCS config
+for _gcs in config.gcs.php gcs-service-account.json; do
+    if [ -f "/tmp/${_gcs}.prev" ]; then
+        cp -a "/tmp/${_gcs}.prev" "${REMOTE_DIR}/include/${_gcs}"
+        echo "Restored remote include/${_gcs}"
+    fi
+done
 
 # --- Environment-specific patches (idempotent) -----------------------------
 CONFIG_LOCAL="${REMOTE_DIR}/include/config.local.php"
@@ -203,6 +218,21 @@ chmod +x "${REMOTE_DIR}/scripts/yt-dlp" "${REMOTE_DIR}"/scripts/*.sh 2>/dev/null
 rm -f "${TARBALL}"
 echo "VM deploy OK"
 REMOTE
+
+# ---------------------------------------------------------------------------
+# 2b. Deploy GCS config files (if they exist locally)
+# ---------------------------------------------------------------------------
+step "Deploying GCS config files..."
+for _gcs in include/config.gcs.php include/gcs-service-account.json; do
+    if [ -f "${SCRIPT_DIR}/${_gcs}" ]; then
+        gcloud compute scp --quiet --strict-host-key-checking=no \
+            "${SCRIPT_DIR}/${_gcs}" "${TARGET}:${REMOTE_DIR}/${_gcs}" \
+            --zone "$ZONE" --project "$PROJECT"
+        echo "  Uploaded: ${_gcs}"
+    else
+        echo "  Skipped (not found locally): ${_gcs}"
+    fi
+done
 
 # ---------------------------------------------------------------------------
 # 3. Sync static media assets (media/player) — shipped in the repo
