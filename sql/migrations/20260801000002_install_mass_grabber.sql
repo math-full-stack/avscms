@@ -1,5 +1,10 @@
 -- Migration: Install Mass Video Grabber tables
--- All CREATE TABLE statements use IF NOT EXISTS (idempotent)
+--
+-- SCHEMA-ONLY migration. It must never insert or alter DATA on an existing
+-- install (deploys run these automatically against the production DB).
+-- Default/seed rows (grabber_sources, grabber_settings) live exclusively in
+-- sql/install_mass_grabber.sql, which is applied manually on a fresh install.
+-- All CREATE TABLE statements use IF NOT EXISTS (idempotent).
 
 CREATE TABLE IF NOT EXISTS `grabber_sources` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -146,16 +151,3 @@ CREATE TABLE IF NOT EXISTS `grabber_settings` (
   `updated_at` int(11) unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY (`setting_key`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
-INSERT IGNORE INTO `grabber_settings` (`setting_key`, `setting_value`, `updated_at`) VALUES
-('realtime_enabled', '0', UNIX_TIMESTAMP());
-
-INSERT IGNORE INTO `grabber_sources` (`name`, `slug`, `domain`, `provider`, `enabled`, `automatic_enabled`, `discovery_enabled`, `discovery_url`, `quality`, `max_per_run`, `max_pages`, `schedule_type`, `schedule_value`, `delay_seconds`, `last_error`, `created_at`, `updated_at`) VALUES
-('YouTube', 'youtube', 'youtube.com', 'YouTube', 1, 0, 1, 'https://www.youtube.com/@PewDiePie/videos', 'best', 5, 3, 'daily', '02:00', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
-('XFree', 'xfree', 'xfree.com', 'XFree', 1, 0, 1, 'https://www.xfree.com/USERNAME', 'best', 5, 3, 'daily', '02:30', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
-('XVideos', 'xvideos', 'xvideos.com', 'XVideos', 1, 0, 1, 'https://www.xvideos.com/new/1', 'best', 5, 3, 'daily', '03:00', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
-('XHamster', 'xhamster', 'xhamster.com', 'XHamster', 1, 0, 1, 'https://xhamster.com/newest/1', 'best', 5, 3, 'daily', '03:30', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
-('PornHub', 'pornhub', 'pornhub.com', 'PornHub', 1, 0, 1, 'https://www.pornhub.com/videos?o=cm', 'best', 5, 3, 'daily', '04:00', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
-('Vimeo', 'vimeo', 'vimeo.com', 'Vimeo', 1, 0, 1, 'https://vimeo.com/channels/popular', 'best', 5, 3, 'daily', '04:30', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
-('DailyMotion', 'dailymotion', 'dailymotion.com', 'DailyMotion', 1, 0, 1, 'https://www.dailymotion.com/popular/videos', 'best', 5, 3, 'daily', '05:00', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
-('SonovinhasBR', 'sonovinhasbr', 'sonovinhasbr.com', 'SonovinhasBR', 1, 0, 1, 'https://www.sonovinhasbr.com/category/novinhas-gostosas/', 'best', 5, 3, 'daily', '05:30', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP());
