@@ -223,12 +223,18 @@ REMOTE
 # 2b. Deploy GCS config files (if they exist locally)
 # ---------------------------------------------------------------------------
 step "Deploying GCS config files..."
+# Upload to /tmp and sudo-install into place: the code step above already
+# chown'd REMOTE_DIR to www-data, so a plain scp as the SSH user cannot
+# overwrite these files (Permission denied).
 for _gcs in include/config.gcs.php include/gcs-service-account.json; do
     if [ -f "${SCRIPT_DIR}/${_gcs}" ]; then
+        _name="${_gcs##*/}"
         gcloud compute scp --quiet --strict-host-key-checking=no \
-            "${SCRIPT_DIR}/${_gcs}" "${TARGET}:${REMOTE_DIR}/${_gcs}" \
+            "${SCRIPT_DIR}/${_gcs}" "${TARGET}:/tmp/${_name}" \
             --zone "$ZONE" --project "$PROJECT"
-        echo "  Uploaded: ${_gcs}"
+        gcloud compute ssh --quiet --strict-host-key-checking=no "$TARGET" \
+            --zone "$ZONE" --project "$PROJECT" --command \
+            "sudo install -o www-data -g www-data -m 644 '/tmp/${_name}' '${REMOTE_DIR}/${_gcs}' && rm -f '/tmp/${_name}' && echo '  Uploaded: ${_gcs}'"
     else
         echo "  Skipped (not found locally): ${_gcs}"
     fi

@@ -257,4 +257,65 @@ function upload_video_formats_gcs($vid, $formats, $server)
 
     return false;
 }
+
+/**
+ * Remove do bucket GCS todos os objetos de um vídeo.
+ *
+ * Apaga o layout atual (h264/{VID}/{label}.{ext} — pasta por vídeo) e também
+ * o layout plano legado (h264/{VID}_{label}.{ext}, anterior ao
+ * scripts/gcs_reorganize.php). Falhas de API/credencial não matam o request:
+ * o registro local é removido mesmo que o bucket não possa ser alcançado.
+ *
+ * @param int   $video_id ID do vídeo (VID)
+ * @param array $server   Linha da tabela servers (server_type = 'gcs')
+ * @return int|false Número de objetos removidos; false se nada pôde ser feito
+ */
+function delete_video_gcs( $video_id, $server )
+{
+    global $config;
+
+    $keyPath = isset($server['gcs_key_path']) ? $server['gcs_key_path'] : '';
+    $bucket  = isset($server['gcs_bucket']) ? $server['gcs_bucket'] : '';
+
+    if (empty($keyPath) || empty($bucket)) {
+        return false;
+    }
+
+    // Resolver caminho absoluto da chave (igual ao upload GCS)
+    if (!file_exists($keyPath)) {
+        $keyPathRelative = $config['BASE_DIR'] . '/' . $keyPath;
+        if (file_exists($keyPathRelative)) {
+            $keyPath = $keyPathRelative;
+        } else {
+            return false;
+        }
+    }
+
+    require_once $config['BASE_DIR'] . '/classes/gcs.class.php';
+
+    $gcs      = new GCS($keyPath, $bucket);
+    $video_id = intval($video_id);
+    $deleted  = 0;
+    $objects  = array();
+
+    // Layout atual: h264/{VID}/{label}.{ext}
+    $list = $gcs->listObjects('h264/' . $video_id . '/');
+    if (is_array($list)) {
+        $objects = array_merge($objects, $list);
+    }
+
+    // Layout legado: h264/{VID}_{label}.{ext}
+    $list = $gcs->listObjects('h264/' . $video_id . '_');
+    if (is_array($list)) {
+        $objects = array_merge($objects, $list);
+    }
+
+    foreach (array_unique($objects) as $object) {
+        if ($gcs->deleteObject($object)) {
+            ++$deleted;
+        }
+    }
+
+    return $deleted;
+}
 ?>

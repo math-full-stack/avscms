@@ -106,6 +106,12 @@ import {
 
     const supportsWebCodecs = typeof window.VideoDecoder !== 'undefined';
 
+    // Resolves once the Media Bunny pipeline (or the native fallback) is ready
+    // to accept a play() call — guards manual clicks that arrive mid-init.
+    let resolveReady = null;
+    const readyPromise = new Promise((r) => { resolveReady = r; });
+    const markReady = () => { if (resolveReady) { resolveReady(); resolveReady = null; } };
+
     // Native <video> fallback — used when WebCodecs is missing OR when Media
     // Bunny cannot decode the file in this browser (e.g. Firefox has no H.264
     // in WebCodecs). Guarantees playback wherever the plain MP4 plays.
@@ -121,6 +127,7 @@ import {
         player.insertBefore(fallbackVideo, player.firstChild);
         posterImg.style.display = 'none';
         player.classList.add('avs-fallback');
+        markReady();
         return fallbackVideo;
     };
 
@@ -147,6 +154,8 @@ import {
     let asyncId = 0;
     let volume = 0.8;
     let volumeMuted = false;
+    let seeking = false;
+    let endedFired = false;
     const queuedAudioNodes = new Set();
 
     // ------------------------------------------------------------------
@@ -223,9 +232,31 @@ import {
         await startVideoIterator();
         renderTime(playbackTimeAtStart);
         durationEl.textContent = formatSeconds(endTimestamp);
+        markReady();
 
-        if (autoplay) {
-            void play();
+        // Autoplay is handled by beginPlayback() (section 9.4) so a VAST
+        // pre-roll can run before the content when enabled.
+    };
+
+    const beginPlayback = () => {
+        if (!adPlayed) {
+            void playAd().then(() => {
+                void readyPromise.then(() => {
+                    if (fallbackVideo) {
+                        void fallbackVideo.play().catch(() => {});
+                    } else {
+                        void play();
+                    }
+                });
+            });
+        } else {
+            void readyPromise.then(() => {
+                if (fallbackVideo) {
+                    void fallbackVideo.play().catch(() => {});
+                } else {
+                    void play();
+                }
+            });
         }
     };
 
@@ -270,6 +301,8 @@ import {
             if (t >= endTimestamp) {
                 pause();
                 playbackTimeAtStart = endTimestamp;
+                endedFired = true;
+                onEnded();
             }
             if (nextFrame && nextFrame.timestamp <= t) {
                 context2d.clearRect(0, 0, canvas.width, canvas.height);
@@ -340,6 +373,7 @@ import {
     };
 
     const play = async () => {
+        hidePauseAd();
         if (!fileLoaded) return;
         if (audioContext.state === 'suspended') {
             await audioContext.resume();
@@ -367,19 +401,26 @@ import {
         for (const node of queuedAudioNodes) { node.stop(); }
         queuedAudioNodes.clear();
         player.classList.remove('avs-playing');
+        // Pause ad (parity with video-js-events.js): only on a real user pause
+        // past 1s, never while seeking or at the very end of the video.
+        if (!seeking && getPlaybackTime() > 1 && getPlaybackTime() < endTimestamp - 0.5) {
+            showPauseAd();
+        }
     };
 
     const togglePlay = () => {
-        if (playing) { pause(); } else { void play(); }
+        if (playing) { pause(); } else { beginPlayback(); }
     };
 
     const seekToTime = async (seconds) => {
+        seeking = true;
         const wasPlaying = playing;
         if (wasPlaying) pause();
         playbackTimeAtStart = Math.max(firstTimestamp, Math.min(seconds, endTimestamp));
         await startVideoIterator();
         renderTime(playbackTimeAtStart);
         if (wasPlaying && playbackTimeAtStart < endTimestamp) void play();
+        seeking = false;
     };
 
     const updateVolume = () => {
@@ -441,7 +482,11 @@ import {
         }
     });
     player.addEventListener('click', (e) => {
-        if (e.target.closest('.avs-controls')) return;
+        // Clicks on the control bar or on any overlay (VAST ad, pause ad,
+        // autoplay-next, logo) must NOT toggle the content — their own
+        // handlers deal with them (avoids a double-toggle that would pause
+        // playback right after resume/skip).
+        if (e.target.closest('.avs-controls, .avs-ad, .avs-pause-ad, .avs-logo, #autoplay-overlay, .avs-error')) return;
         togglePlay();
     });
 
@@ -496,13 +541,513 @@ import {
     });
 
     // ------------------------------------------------------------------
-    // 9. Go
+    // 9. Player profile features (parity with the original Video.js player)
     // ------------------------------------------------------------------
+    // Reads the same globals the site already emits via player_settings.tpl
+    // (player_pause_adv, aid, player_logo*, player_sprite, player_timeline_preview,
+    // video_duration, base_url, related_videos_data) plus the VAST data-* attrs.
+    const cfg = {
+        pauseAdv:    player.dataset.pauseAdv === '1' || window.player_pause_adv === '1',
+        aid:         (typeof window.aid !== 'undefined' && window.aid && window.aid !== 'false') ? window.aid : '',
+        vastEnabled: player.dataset.vastEnabled === '1',
+        vastUrl:     player.dataset.vastUrl || '',
+        vastCancel:  parseInt(player.dataset.vastCancel || '5000', 10) || 5000,
+        logo:        window.player_logo === '1',
+        logoImage:   window.player_logo_image || (base_url + '/media/player/logo/logo.png'),
+        logoLink:    (window.player_logo_link && window.player_logo_link !== '') ? window.player_logo_link : (base_url + '/video/' + video_id + '/' + (window.location.pathname.split('/').pop() || '')),
+        logoPosition: window.player_logo_position || 'top-right',
+        logoOpacity: parseFloat(window.player_logo_opacity || '40') / 100 || 0.4,
+        timelinePreview: window.player_timeline_preview === '1',
+        sprite:      window.player_sprite || '',
+        duration:    parseFloat(window.video_duration || 0) || 0,
+        related:     (typeof window.related_videos_data !== 'undefined' && Array.isArray(window.related_videos_data)) ? window.related_videos_data : [],
+        baseUrl:     (typeof window.base_url !== 'undefined') ? window.base_url : '',
+        videoId:     (typeof window.video_id !== 'undefined') ? window.video_id : '',
+    };
+
+    // --- 9.1 Logo overlay ------------------------------------------------
+    const setupLogo = () => {
+        if (!cfg.logo || !cfg.logoImage) return;
+        const wrap = document.createElement('a');
+        wrap.className = 'avs-logo avs-logo-' + (cfg.logoPosition || 'top-right');
+        wrap.href = cfg.logoLink;
+        wrap.target = '_blank';
+        wrap.rel = 'noopener';
+        const img = document.createElement('img');
+        img.src = cfg.logoImage;
+        img.alt = '';
+        wrap.style.opacity = String(cfg.logoOpacity);
+        wrap.appendChild(img);
+        player.appendChild(wrap);
+    };
+    setupLogo();
+
+    // --- 9.2 Pause ad (adv_pause) ---------------------------------------
+    // Mirrors video-js-events.js: when the user pauses (past 1s, not seeking)
+    // an iframe to ads.php?id=aid is centered over the player with RESUME/CLOSE.
+    let adPauseEl = null;
+    let adIframe = null;
+
+    const showPauseAd = () => {
+        if (adPauseEl) return;
+        if (!cfg.pauseAdv || !cfg.aid) return;
+
+        adPauseEl = document.createElement('div');
+        adPauseEl.className = 'avs-pause-ad';
+        adPauseEl.style.position = 'absolute';
+        adPauseEl.style.left = '50%';
+        adPauseEl.style.top = '50%';
+        adPauseEl.style.transform = 'translate(-50%, -50%)';
+        adPauseEl.style.zIndex = '6';
+        adPauseEl.style.textAlign = 'center';
+        adPauseEl.style.lineHeight = 'normal';
+
+        adIframe = document.createElement('iframe');
+        adIframe.className = 'ad-iframe';
+        adIframe.src = cfg.baseUrl + '/ads.php?id=' + cfg.aid;
+        adIframe.setAttribute('marginwidth', '0');
+        adIframe.setAttribute('marginheight', '0');
+        adIframe.setAttribute('frameborder', '0');
+        adIframe.setAttribute('scrolling', 'no');
+        adIframe.style.border = '0';
+        adIframe.style.display = 'block';
+
+        const controls = document.createElement('div');
+        controls.className = 'ad-controls';
+        const resume = document.createElement('button');
+        resume.id = 'ad-resume';
+        resume.className = 'ad-resume';
+        resume.title = 'Resume';
+        resume.innerHTML = '&#9654;&nbsp;&nbsp;RESUME';
+        const close = document.createElement('button');
+        close.id = 'ad-close';
+        close.className = 'ad-close';
+        close.title = 'Close Ad';
+        close.innerHTML = '&#10005;&nbsp;&nbsp;CLOSE';
+        controls.appendChild(resume);
+        controls.appendChild(close);
+
+        resume.addEventListener('click', (e) => {
+            e.preventDefault();
+            hidePauseAd();
+            void play();
+        });
+        close.addEventListener('click', (e) => {
+            e.preventDefault();
+            hidePauseAd();
+        });
+
+        // Size iframe after load (like resizeIframe in the original)
+        adIframe.addEventListener('load', () => {
+            try {
+                const doc = adIframe.contentWindow.document;
+                const w = doc.body.scrollWidth;
+                const h = doc.body.scrollHeight;
+                if (w > 0 && h > 0) {
+                    adIframe.style.width = w + 'px';
+                    adIframe.style.height = h + 'px';
+                }
+            } catch (e) { /* cross-origin: keep defaults */ }
+        });
+
+        adPauseEl.appendChild(controls);
+        adPauseEl.appendChild(adIframe);
+        player.appendChild(adPauseEl);
+    };
+
+    const hidePauseAd = () => {
+        if (adPauseEl && adPauseEl.parentNode) {
+            adPauseEl.parentNode.removeChild(adPauseEl);
+        }
+        adPauseEl = null;
+        adIframe = null;
+    };
+
+    // --- 9.3 Timeline preview (sprite) ----------------------------------
+    // Same math as video-js-events.js: 20 frames, thumb 256x144 scaled 0.6.
+    let previewEl = null;
+    let previewImg = null;
+
+    const setupTimelinePreview = () => {
+        if (!cfg.timelinePreview || !cfg.sprite) return;
+        const step = (cfg.duration || endTimestamp || 1) / 20;
+        const resize = 0.6;
+        const thumbW = Math.floor(256 * resize);
+        const thumbH = Math.floor(144 * resize);
+
+        previewEl = document.createElement('div');
+        previewEl.className = 'avs-preview';
+        previewEl.style.position = 'absolute';
+        previewEl.style.pointerEvents = 'none';
+        previewEl.style.display = 'none';
+        previewEl.style.zIndex = '5';
+        previewEl.style.overflow = 'hidden';
+        previewEl.style.width = thumbW + 'px';
+        previewEl.style.height = thumbH + 'px';
+        previewEl.style.border = '1px solid rgba(255,255,255,0.6)';
+        previewEl.style.background = '#000';
+
+        previewImg = document.createElement('img');
+        previewImg.src = cfg.sprite;
+        previewImg.style.position = 'absolute';
+        previewImg.style.top = '0';
+        previewImg.style.maxWidth = 'none';
+        previewImg.style.height = thumbH + 'px';
+        previewEl.appendChild(previewImg);
+        player.appendChild(previewEl);
+
+        seekBar.addEventListener('pointermove', (e) => {
+            const rect = seekBar.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const t = ratio * (cfg.duration || endTimestamp || 1);
+            const frame = Math.min(19, Math.max(0, Math.round(t / step)));
+            previewImg.style.left = (-(frame * thumbW)) + 'px';
+
+            const pRect = player.getBoundingClientRect();
+            const previewW = previewEl.offsetWidth;
+            let left = rect.left - pRect.left + (rect.width * ratio) - (previewW / 2);
+            left = Math.max(0, Math.min(pRect.width - previewW, left));
+            previewEl.style.left = left + 'px';
+            previewEl.style.bottom = (player.offsetHeight - (rect.top - pRect.top)) + 12 + 'px';
+            previewEl.style.display = '';
+        });
+        seekBar.addEventListener('pointerleave', () => {
+            if (previewEl) previewEl.style.display = 'none';
+        });
+    };
+    setupTimelinePreview();
+
+    // --- 9.4 VAST linear pre-roll ---------------------------------------
+    // Lightweight VAST 2/3/4 client: fetch adTagUrl, parse XML, play the first
+    // playable MP4/WebM MediaFile in a <video> overlay with a skip button,
+    // click-through and impression/error beacons. Any failure -> skip ad.
+    let adPlayed = false;
+    let adOverlay = null;
+
+    const parseVast = (xmlText) => {
+        const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+        if (doc.querySelector('parsererror')) return null;
+        const linear = doc.querySelector('Linear');
+        if (!linear) return null;
+
+        const mediaFiles = Array.from(linear.querySelectorAll('MediaFile'));
+        const media = mediaFiles.find((m) => {
+            const type = (m.getAttribute('type') || '').toLowerCase();
+            const txt = (m.textContent || '').trim();
+            return txt && (/mp4|webm|video\//.test(type) || /\.(mp4|webm)(\?|$)/i.test(txt));
+        }) || mediaFiles[0];
+        if (!media || !(media.textContent || '').trim()) return null;
+
+        const parseDur = (txt) => {
+            if (!txt) return 0;
+            const m = txt.trim().match(/(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?/);
+            if (m) return parseInt(m[1], 10) * 3600 + parseInt(m[2], 10) * 60 + parseInt(m[3], 10);
+            return parseFloat(txt.trim()) || 0;
+        };
+
+        const track = (ev) => Array.from(linear.querySelectorAll('TrackingEvents Tracking[event="' + ev + '"]'))
+            .map((t) => (t.textContent || '').trim()).filter(Boolean);
+
+        return {
+            mediaUrl: media.textContent.trim(),
+            duration: parseDur((linear.querySelector('Duration') || {}).textContent),
+            skipOffset: parseDur((linear.querySelector('SkipOffset') || {}).textContent),
+            clickThrough: (linear.querySelector('VideoClicks ClickThrough') || {}).textContent || '',
+            impression: Array.from(doc.querySelectorAll('Impression')).map((t) => (t.textContent || '').trim()).filter(Boolean),
+            trackers: {
+                start: track('start'),
+                firstQuartile: track('firstQuartile'),
+                midpoint: track('midpoint'),
+                thirdQuartile: track('thirdQuartile'),
+                complete: track('complete'),
+            },
+        };
+    };
+
+    const fireBeacons = (urls) => {
+        (urls || []).forEach((u) => {
+            try {
+                const img = new Image();
+                img.src = u;
+            } catch (e) { /* ignore */ }
+        });
+    };
+
+    const loadAdTag = (url, timeoutMs) => {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), timeoutMs || 5000);
+        return fetch(url, { signal: ctrl.signal, credentials: 'omit' })
+            .then((r) => {
+                if (!r.ok) throw new Error('VAST HTTP ' + r.status);
+                return r.text();
+            })
+            .finally(() => clearTimeout(timer));
+    };
+
+    const playAd = () => new Promise((resolve) => {
+        adPlayed = true;
+        if (!cfg.vastEnabled || !cfg.vastUrl) return resolve();
+
+        loadAdTag(cfg.vastUrl, cfg.vastCancel).then((xml) => {
+            const ad = parseVast(xml);
+            if (!ad || !ad.mediaUrl) return resolve();
+
+            adOverlay = document.createElement('div');
+            adOverlay.className = 'avs-ad';
+            adOverlay.style.position = 'absolute';
+            adOverlay.style.inset = '0';
+            adOverlay.style.zIndex = '7';
+            adOverlay.style.background = '#000';
+            adOverlay.style.display = 'flex';
+            adOverlay.style.alignItems = 'center';
+            adOverlay.style.justifyContent = 'center';
+
+            const adVideo = document.createElement('video');
+            adVideo.src = ad.mediaUrl;
+            adVideo.autoplay = true;
+            adVideo.playsInline = true;
+            adVideo.controls = true;
+            adVideo.style.maxWidth = '100%';
+            adVideo.style.maxHeight = '100%';
+            adVideo.style.width = '100%';
+            adVideo.style.height = '100%';
+            adVideo.style.objectFit = 'contain';
+            adVideo.style.background = '#000';
+
+            const skipBtn = document.createElement('button');
+            skipBtn.className = 'avs-ad-skip';
+            skipBtn.textContent = 'Pular anúncio';
+            skipBtn.style.position = 'absolute';
+            skipBtn.style.right = '12px';
+            skipBtn.style.bottom = '48px';
+            skipBtn.style.zIndex = '8';
+            skipBtn.style.display = 'none';
+
+            const clickBox = document.createElement('a');
+            clickBox.className = 'avs-ad-click';
+            clickBox.style.position = 'absolute';
+            clickBox.style.inset = '0';
+            clickBox.style.zIndex = '7';
+            clickBox.style.display = 'block';
+            if (ad.clickThrough) {
+                clickBox.href = ad.clickThrough;
+                clickBox.target = '_blank';
+                clickBox.rel = 'noopener';
+            }
+
+            fireBeacons(ad.impression);
+            let started = false;
+            const onTime = () => {
+                const d = ad.duration;
+                const t = adVideo.currentTime;
+                if (!started && t > 0) { started = true; fireBeacons(ad.trackers.start); }
+                if (d > 0 && t >= d * 0.25) fireBeacons(ad.trackers.firstQuartile);
+                if (d > 0 && t >= d * 0.5) fireBeacons(ad.trackers.midpoint);
+                if (d > 0 && t >= d * 0.75) fireBeacons(ad.trackers.thirdQuartile);
+            };
+            adVideo.addEventListener('timeupdate', onTime);
+            adVideo.addEventListener('ended', () => {
+                fireBeacons(ad.trackers.complete);
+                cleanupAd();
+                resolve();
+            });
+            adVideo.addEventListener('error', () => {
+                cleanupAd();
+                resolve();
+            });
+            adVideo.addEventListener('pause', () => {
+                // If the ad ends and the browser fires pause, treat as done when duration reached
+                if (ad.duration > 0 && adVideo.currentTime >= ad.duration - 0.3) {
+                    fireBeacons(ad.trackers.complete);
+                    cleanupAd();
+                    resolve();
+                }
+            });
+
+            skipBtn.addEventListener('click', () => { cleanupAd(); resolve(); });
+
+            // Show skip after VAST skipoffset, or after adCancelTimeout as fallback
+            const skipAt = ad.skipOffset > 0 ? ad.skipOffset : (cfg.vastCancel / 1000);
+            if (skipAt > 0 && (!ad.duration || skipAt < ad.duration)) {
+                setTimeout(() => { if (adOverlay) skipBtn.style.display = ''; }, Math.min(skipAt, 30) * 1000);
+            }
+
+            adOverlay.appendChild(adVideo);
+            adOverlay.appendChild(skipBtn);
+            if (ad.clickThrough) adOverlay.appendChild(clickBox);
+            player.insertBefore(adOverlay, player.firstChild);
+            player.classList.add('avs-ad-playing');
+
+            const p = adVideo.play();
+            if (p) p.catch(() => { cleanupAd(); resolve(); });
+
+            // Safety net: never let an ad block content forever
+            setTimeout(() => {
+                if (adOverlay) { cleanupAd(); resolve(); }
+            }, 45000);
+        }).catch(() => resolve());
+    });
+
+    const cleanupAd = () => {
+        if (adOverlay && adOverlay.parentNode) {
+            adOverlay.parentNode.removeChild(adOverlay);
+        }
+        adOverlay = null;
+        player.classList.remove('avs-ad-playing');
+    };
+
+    // --- 9.5 Autoplay next overlay + sidebar card ------------------------
+    // Port of the video-js-events.js block: track watched videos, populate the
+    // autoplay-card and show a 3s countdown overlay on ended.
+    const watchedKey = 'watched_videos';
+    const maxWatched = 50;
+
+    const getWatched = () => {
+        try { return JSON.parse(localStorage.getItem(watchedKey)) || []; }
+        catch (e) { return []; }
+    };
+
+    const markWatched = () => {
+        if (!cfg.videoId) return;
+        const watched = getWatched();
+        if (watched.indexOf(cfg.videoId) === -1) {
+            watched.push(cfg.videoId);
+            if (watched.length > maxWatched) watched.shift();
+            localStorage.setItem(watchedKey, JSON.stringify(watched));
+        }
+    };
+
+    const getNextVideo = () => {
+        if (!cfg.related || cfg.related.length === 0) return null;
+        const watched = getWatched();
+        for (let i = 0; i < cfg.related.length; i++) {
+            if (watched.indexOf(String(cfg.related[i].vid)) === -1) {
+                return cfg.related[i];
+            }
+        }
+        localStorage.removeItem(watchedKey);
+        return cfg.related[0];
+    };
+
+    const populateAutoplayCard = () => {
+        const nextVideo = getNextVideo();
+        if (!nextVideo) return;
+        const card = document.getElementById('autoplay-card');
+        if (!card) return;
+        const cardLink = card.querySelector('.autoplay-card-body');
+        const cardImg = card.querySelector('.autoplay-card-thumb img');
+        const cardDur = card.querySelector('.autoplay-card-duration');
+        const cardTitle = card.querySelector('.autoplay-card-title');
+        const cardViews = card.querySelector('.autoplay-card-views');
+        const cardRate = card.querySelector('.autoplay-card-rate');
+        const cardRateWrap = card.querySelector('.autoplay-card-rate-wrap');
+        if (cardLink) cardLink.href = cfg.baseUrl + '/video/' + nextVideo.vid + '/' + nextVideo.slug;
+        if (cardImg) cardImg.src = nextVideo.thumb;
+        if (cardImg) cardImg.alt = nextVideo.title;
+        if (cardDur) cardDur.textContent = nextVideo.duration;
+        if (cardTitle) cardTitle.textContent = nextVideo.title;
+        if (cardViews) cardViews.textContent = nextVideo.views;
+        if (cardRate) cardRate.textContent = nextVideo.rate != 0 ? nextVideo.rate + '%' : '';
+        if (cardRateWrap) cardRateWrap.style.display = (nextVideo.rate != 0) ? '' : 'none';
+        card.style.display = '';
+    };
+
+    let autoplayTimer = null;
+    let autoplayOverlay = null;
+
+    const showAutoplayNext = () => {
+        if (!getNextVideo()) return;
+        if (localStorage.getItem('autoplayNext') === 'false') return;
+        const nextVideo = getNextVideo();
+
+        let overlay = document.getElementById('autoplay-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'autoplay-overlay';
+            overlay.style.position = 'absolute';
+            overlay.style.inset = '0';
+            overlay.style.zIndex = '10';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.background = 'rgba(0,0,0,0.88)';
+            overlay.innerHTML =
+                '<div class="autoplay-overlay-content">' +
+                '  <div class="autoplay-next-count" id="autoplay-count">3</div>' +
+                '  <div class="autoplay-next-thumb">' +
+                '    <img id="autoplay-overlay-thumb" src="" alt="">' +
+                '    <div class="autoplay-next-duration" id="autoplay-overlay-dur"></div>' +
+                '  </div>' +
+                '  <div class="autoplay-next-title" id="autoplay-overlay-title"></div>' +
+                '  <div class="autoplay-overlay-buttons">' +
+                '    <button id="autoplay-cancel" class="autoplay-btn-cancel">CANCELAR</button>' +
+                '    <button id="autoplay-skip" class="autoplay-btn-skip">PRÓXIMO <i class="fas fa-forward"></i></button>' +
+                '  </div>' +
+                '</div>';
+            player.appendChild(overlay);
+        }
+
+        const thumb = document.getElementById('autoplay-overlay-thumb');
+        const dur = document.getElementById('autoplay-overlay-dur');
+        const title = document.getElementById('autoplay-overlay-title');
+        if (thumb) thumb.src = nextVideo.thumb;
+        if (thumb) thumb.alt = nextVideo.title;
+        if (dur) dur.textContent = nextVideo.duration;
+        if (title) title.textContent = nextVideo.title;
+        overlay.style.display = 'flex';
+
+        const nextUrl = cfg.baseUrl + '/video/' + nextVideo.vid + '/' + nextVideo.slug + '?autoplay=1';
+        let count = 3;
+        const countEl = document.getElementById('autoplay-count');
+        if (countEl) countEl.textContent = count;
+
+        if (autoplayTimer) clearInterval(autoplayTimer);
+        autoplayTimer = setInterval(() => {
+            count--;
+            if (count <= 0) {
+                clearInterval(autoplayTimer);
+                window.location.href = nextUrl;
+            } else if (countEl) {
+                countEl.textContent = count;
+            }
+        }, 1000);
+
+        const cancel = document.getElementById('autoplay-cancel');
+        if (cancel) cancel.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            clearInterval(autoplayTimer);
+            overlay.style.display = 'none';
+        };
+        const skip = document.getElementById('autoplay-skip');
+        if (skip) skip.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            clearInterval(autoplayTimer);
+            window.location.href = nextUrl;
+        };
+    };
+
+    const onEnded = () => {
+        markWatched();
+        showAutoplayNext();
+    };
+
+    // ------------------------------------------------------------------
+    // 10. Go
+    // ------------------------------------------------------------------
+    markWatched();
+    populateAutoplayCard();
+
     if (supportsWebCodecs) {
-        void startPlayer();
+        void startPlayer().then(() => {
+            if (autoplay) beginPlayback();
+        });
     } else {
         // Native fallback: plain <video> with the same (signed) URL
         fallbackVideo.src = pickSource().src;
         fallbackVideo.load();
+        if (autoplay) beginPlayback();
+        fallbackVideo.addEventListener('ended', onEnded);
     }
 })();

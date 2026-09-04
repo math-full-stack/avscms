@@ -158,3 +158,121 @@
         max-width: 70px;
     }
 }
+
+/* ============================================================
+   Player profile features (parity with the original Video.js
+   player: logo, pause ad, timeline preview, VAST pre-roll)
+   ============================================================ */
+
+/* --- 9.1 Logo overlay --------------------------------------- */
+.avs-player .avs-logo {
+    position: absolute;
+    z-index: 5;
+    line-height: 0;
+}
+.avs-player .avs-logo img {
+    width: 90px;
+    height: auto;
+    border: 0;
+}
+.avs-player .avs-logo-top-right { top: 10px; right: 10px; }
+.avs-player .avs-logo-top-left  { top: 10px; left: 10px; }
+.avs-player .avs-logo-bottom-right { bottom: 50px; right: 10px; }
+.avs-player .avs-logo-bottom-left  { bottom: 50px; left: 10px; }
+
+/* --- 9.2 Pause ad (adv_pause) -------------------------------- */
+.avs-player .avs-pause-ad {
+    position: absolute;
+    z-index: 6;
+}
+.avs-player .avs-pause-ad .ad-iframe {
+    position: static;
+    display: block;
+    border: 0;
+    margin: 0 auto;
+}
+.avs-player .avs-pause-ad .ad-controls {
+    position: static;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.avs-player .avs-pause-ad .ad-controls .ad-resume,
+.avs-player .avs-pause-ad .ad-controls .ad-close {
+    color: #fff;
+    width: 90px;
+    height: 26px;
+    background-color: #222 !important;
+    -webkit-border-radius: 4px;
+    border-radius: 4px;
+    cursor: pointer !important;
+    border: 1px solid #444;
+    font-size: 12px;
+}
+.avs-player .avs-pause-ad .ad-controls .ad-resume:focus,
+.avs-player .avs-pause-ad .ad-controls .ad-close:focus {
+    outline: 0;
+}
+
+/* --- 9.3 Timeline preview (sprite) --------------------------- */
+.avs-player .avs-preview {
+    position: absolute;
+    z-index: 5;
+    pointer-events: none;
+    display: none;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: #000;
+}
+.avs-player .avs-preview img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    max-width: none;
+}
+
+/* --- 9.4 VAST linear pre-roll -------------------------------- */
+.avs-player .avs-ad {
+    position: absolute;
+    inset: 0;
+    z-index: 7;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+}
+.avs-player .avs-ad video {
+    max-width: 100%;
+    max-height: 100%;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+}
+.avs-player .avs-ad-skip {
+    position: absolute;
+    right: 12px;
+    bottom: 48px;
+    z-index: 8;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    border: 1px solid #fff;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.avs-player .avs-ad-skip:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+.avs-player .avs-ad-click {
+    position: absolute;
+    inset: 0;
+    z-index: 7;
+    display: block;
+}
+.avs-player.avs-ad-playing .avs-controls {
+    display: none;
+}

@@ -1,4 +1,4 @@
-<div class="avs-player" id="avs-player" data-autoplay="{if $smarty.get.autoplay == '1'}1{elseif $player.autoplay}1{else}0{/if}" data-poster="{insert name=thumb_path vid=$video.VID}/default.jpg">
+<div class="avs-player" id="avs-player" data-autoplay="{if $smarty.get.autoplay == '1'}1{elseif $player.autoplay}1{else}0{/if}" data-poster="{insert name=thumb_path vid=$video.VID}/default.jpg" data-vast-enabled="{if $vast_vpaid && $player.vast_vpaid_adv}1{else}0{/if}" data-vast-url="{if $vast_vpaid}{$vast_vpaid.adtagurl}{/if}" data-vast-cancel="{if $vast_vpaid}{$vast_vpaid.adscanceltimeout}{/if}">
 	<canvas></canvas>
 	<img class="avs-poster" alt="" style="display:none;">
 	<div class="avs-controls">
@@ -15,5 +15,5 @@
 	</div>
 	<div class="avs-error" style="display:none;"></div>
 </div>
-<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=2.0.1">
-<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=2.0.1"></script>
+<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=2.0.2">
+<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=2.0.2"></script>
