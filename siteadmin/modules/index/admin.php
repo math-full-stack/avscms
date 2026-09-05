@@ -8,9 +8,12 @@ if ( isset($_POST['submit_admin']) ) {
     $filter                 = new VFilter();
 
     $admin_name             = $filter->get('admin_name');
-    $admin_pass             = $filter->get('admin_pass');
-    $admin_pass_np          = $filter->get('admin_pass_np');
-	$admin_pass_cnp         = $filter->get('admin_pass_cnp');
+    // Passwords must be read RAW: VFilter runs HTMLPurifier (xss_filter),
+    // which HTML-encodes '&' -> '&amp;' and corrupts the stored value so the
+    // login never matches again. siteadmin/login.php also compares raw input.
+    $admin_pass             = trim($_POST['admin_pass'] ?? '');
+    $admin_pass_np          = trim($_POST['admin_pass_np'] ?? '');
+    $admin_pass_cnp         = trim($_POST['admin_pass_cnp'] ?? '');
     $admin_email            = $filter->get('admin_email');
     $noreply_email          = $filter->get('noreply_email');
 
