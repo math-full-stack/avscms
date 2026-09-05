@@ -82,14 +82,20 @@ if ($video['embed_code'] == '') {
 
 	//---- VJS
 	if ($player['timeline_preview'] == 1) {
-		require_once 'classes/sprite.class.php';
-		$sprite = new images_to_sprite(get_thumb_dir($vid),get_thumb_dir($vid).'/sprite',$config['img_max_width'],$config['img_max_height']);
-		$thumb_dir = get_thumb_dir($vid);
-		if ($sprite->sprite_is_stale() && is_dir($thumb_dir) && count(glob($thumb_dir.'/*.jpg')) > 0) {
-			$sprite->create_sprite();
-			// Mantém o sprite do bucket em dia (thumbs de vídeos GCS são servidos do bucket)
-			require_once $config['BASE_DIR']. '/include/function_server.php';
-			sync_video_sprite($vid, true);
+		require_once $config['BASE_DIR']. '/include/function_server.php';
+
+		// Vídeos GCS: o sprite.jpg é gerado e enviado ao bucket pelo pipeline de
+		// conversão (e pelo backfill gcs_sync_thumbs.php --prune) e servido de lá
+		// — o tmb/{VID} local pode nem existir, então não regenerar aqui.
+		if (!video_is_on_gcs($vid)) {
+			require_once 'classes/sprite.class.php';
+			$sprite = new images_to_sprite(get_thumb_dir($vid),get_thumb_dir($vid).'/sprite',$config['img_max_width'],$config['img_max_height']);
+			$thumb_dir = get_thumb_dir($vid);
+			if ($sprite->sprite_is_stale() && is_dir($thumb_dir) && count(glob($thumb_dir.'/*.jpg')) > 0) {
+				$sprite->create_sprite();
+				// Mantém o sprite do bucket em dia (thumbs de vídeos GCS são servidos do bucket)
+				sync_video_sprite($vid, true);
+			}
 		}
 		$player['sprite'] = get_thumb_url($vid).'/sprite.jpg';
 	}

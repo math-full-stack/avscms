@@ -21,16 +21,23 @@ $conn->execute($sql);
 $response['status'] = 1;
 
 $tmp_thumb_dir = $config['TMP_DIR'].'/thumbs/'.$vid.'_adm';
+
+// Pasta local pode ter sido removida pela limpeza automática (GCS + del_original_video)
+$final_thumb_dir = get_thumb_dir($vid);
+if (!is_dir($final_thumb_dir)) {
+	@mkdir($final_thumb_dir, 0777, true);
+}
+
 for ($i = 1; $i <= 20; $i++) {
 	$temp_thumb_file  = $tmp_thumb_dir.'/'.$i.'.jpg';
-	$final_thumb_file = get_thumb_dir($vid).'/'.$i.'.jpg';
+	$final_thumb_file = $final_thumb_dir.'/'.$i.'.jpg';
 	if (file_exists($temp_thumb_file)) {
 		copy($temp_thumb_file, $final_thumb_file);
 	}
 }
 
 $temp_thumb_file  = $tmp_thumb_dir.'/default.jpg';
-$final_thumb_file = get_thumb_dir($vid).'/default.jpg';
+$final_thumb_file = $final_thumb_dir.'/default.jpg';
 if (file_exists($temp_thumb_file)) {
 	copy($temp_thumb_file, $final_thumb_file);
 }

@@ -295,13 +295,15 @@ function upload_video_formats_gcs($vid, $formats, $server)
  *
  * Idempotente: pode rodar quantas vezes for preciso (upload substitui o objeto).
  *
- * @param int         $vid      ID do vídeo (VID)
- * @param array       $server   Linha da tabela servers (server_type = 'gcs')
- * @param string|null $onlyFile Sincroniza apenas um arquivo (ex.: 'sprite.jpg')
- * @param bool        $silent   Suprime o log de progresso (contexto web/JSON)
+ * @param int         $vid                  ID do vídeo (VID)
+ * @param array       $server               Linha da tabela servers (server_type = 'gcs')
+ * @param string|null $onlyFile             Sincroniza apenas um arquivo (ex.: 'sprite.jpg')
+ * @param bool        $silent               Suprime o log de progresso (contexto web/JSON)
+ * @param bool|null   $deleteLocalOverride  Força remover (true) ou manter (false) a pasta
+ *                                          local após o upload; null segue del_original_video
  * @return bool
  */
-function upload_video_thumbs_gcs($vid, $server, $onlyFile = null, $silent = false)
+function upload_video_thumbs_gcs($vid, $server, $onlyFile = null, $silent = false, $deleteLocalOverride = null)
 {
     global $config;
 
@@ -322,6 +324,15 @@ function upload_video_thumbs_gcs($vid, $server, $onlyFile = null, $silent = fals
     if (!is_dir($thumbDir)) {
         $log("\n[Multi-Server-GCS] Thumbs do vídeo " . intval($vid) . " não encontrados localmente (nada a sincronizar).\n");
         return true;
+    }
+
+    // Sprite do timeline preview: quando sincronizamos a pasta inteira e o
+    // player Main usa preview, garante o sprite.jpg local ANTES de listar os
+    // arquivos — assim ele entra no lote enviado e o tmb/{VID} local pode ser
+    // removido logo depois sem perder o preview do player.
+    $spriteState = 'disabled';
+    if ($onlyFile === null) {
+        $spriteState = ensure_video_sprite_local(intval($vid));
     }
 
     // Arquivos a enviar: um único (sprite, por exemplo) ou a pasta inteira.
@@ -386,6 +397,26 @@ function upload_video_thumbs_gcs($vid, $server, $onlyFile = null, $silent = fals
         }
     }
 
+    // Deleção da pasta local governada pela MESMA config dos vídeos
+    // (del_original_video): só depois do upload confirmado (sem falhas) e
+    // apenas quando o sprite não é mais necessário localmente (ou já foi
+    // garantido acima). Em caso de falha o local permanece como fallback.
+    if ($success && $onlyFile === null) {
+        $deleteLocal = ($deleteLocalOverride !== null)
+            ? $deleteLocalOverride
+            : (isset($config['del_original_video']) && $config['del_original_video'] == '1');
+
+        if ($deleteLocal) {
+            if ($spriteState === 'failed') {
+                $log("\n[Multi-Server-GCS] Thumbs locais mantidos: sprite do timeline preview não pôde ser gerado (vídeo " . $vid . ").\n");
+            } elseif (delete_local_video_thumbs($vid)) {
+                $log("\n[Multi-Server-GCS] Thumbs locais removidos após upload confirmado (tmb/" . $vid . ").\n");
+            } else {
+                $log("\n[Multi-Server-GCS] Falha ao remover thumbs locais (tmb/" . $vid . ").\n");
+            }
+        }
+    }
+
     return $success;
 }
 
@@ -430,7 +461,7 @@ function get_server_by_video_url($videoUrl)
  * @param bool        $silent   Suprime o log de progresso (contexto web/JSON)
  * @return bool
  */
-function sync_video_thumbs($vid, $onlyFile = null, $silent = false)
+function sync_video_thumbs($vid, $onlyFile = null, $silent = false, $deleteLocalOverride = null)
 {
     global $conn;
 
@@ -450,7 +481,37 @@ function sync_video_thumbs($vid, $onlyFile = null, $silent = false)
         return false;
     }
 
-    return upload_video_thumbs_gcs($vid, $server, $onlyFile, $silent);
+    return upload_video_thumbs_gcs($vid, $server, $onlyFile, $silent, $deleteLocalOverride);
+}
+
+/**
+ * Indica se um vídeo está vinculado a um servidor GCS (mídia servida do
+ * bucket). Usado pelos fluxos de admin/regeneração para não depender da
+ * existência de arquivos locais após a limpeza automática (del_original_video).
+ *
+ * @param int $vid ID do vídeo
+ * @return bool
+ */
+function video_is_on_gcs($vid)
+{
+    global $conn;
+
+    static $cache = array();
+
+    $vid = intval($vid);
+    if (array_key_exists($vid, $cache)) {
+        return $cache[$vid];
+    }
+
+    $cache[$vid] = false;
+    $sql = "SELECT server FROM video WHERE VID = " . $vid . " LIMIT 1";
+    $rs  = $conn->execute($sql);
+    if ($conn->Affected_Rows() == 1 && !empty($rs->fields['server'])) {
+        $server = get_server_by_video_url($rs->fields['server']);
+        $cache[$vid] = ($server && isset($server['server_type']) && $server['server_type'] === 'gcs');
+    }
+
+    return $cache[$vid];
 }
 
 /**
@@ -464,6 +525,129 @@ function sync_video_thumbs($vid, $onlyFile = null, $silent = false)
 function sync_video_sprite($vid, $silent = false)
 {
     return sync_video_thumbs($vid, 'sprite.jpg', $silent);
+}
+
+/**
+ * Gera o sprite.jpg local de um vídeo (a partir das thumbs 1..20) quando o
+ * player Main usa timeline preview e o sprite está desatualizado ou ausente.
+ *
+ * Replica a lógica de regeneração do video.php, centralizada aqui para que o
+ * pipeline de conversão e o backfill possam garanti-lo ANTES de enviar a pasta
+ * ao bucket (e de remover o tmb/{VID} local).
+ *
+ * @param int $vid ID do vídeo
+ * @return string 'ok' sprite local pronto | 'disabled' player sem timeline
+ *                preview (sprite não é necessário) | 'failed' não foi possível
+ *                gerar (mantém pasta local como fallback)
+ */
+function ensure_video_sprite_local($vid)
+{
+    global $config, $conn;
+
+    static $previewCache = null;
+    if ($previewCache === null) {
+        $previewCache = '0';
+        $sql = "SELECT timeline_preview FROM player WHERE profile = 'Main' LIMIT 1";
+        $rs  = $conn->execute($sql);
+        if ($conn->Affected_Rows() == 1) {
+            $previewCache = $rs->fields['timeline_preview'];
+        }
+    }
+
+    if ($previewCache != '1') {
+        return 'disabled';
+    }
+
+    if (!function_exists('imagecreatefromjpeg')) {
+        return 'failed';
+    }
+
+    require_once $config['BASE_DIR'] . '/include/function_thumbs.php';
+    $thumb_dir = get_thumb_dir(intval($vid));
+    if (!is_dir($thumb_dir) || count(glob($thumb_dir . '/*.jpg')) == 0) {
+        return 'failed';
+    }
+
+    require_once $config['BASE_DIR'] . '/classes/sprite.class.php';
+    if (!class_exists('images_to_sprite')) {
+        return 'failed';
+    }
+
+    $sprite = new images_to_sprite(
+        $thumb_dir,
+        $thumb_dir . '/sprite',
+        $config['img_max_width'],
+        $config['img_max_height']
+    );
+
+    if ($sprite->sprite_is_stale()) {
+        $sprite->create_sprite();
+    }
+
+    return is_file($thumb_dir . '/sprite.jpg') ? 'ok' : 'failed';
+}
+
+/**
+ * Remove a pasta local de thumbs de um vídeo (tmb/tmbN/{VID}) — usada após
+ * upload GCS confirmado quando del_original_video governa a limpeza local.
+ *
+ * No-op quando a pasta não existe. Nunca recria a pasta (diferente de
+ * get_thumb_dir(), que faz mkdir do volume quando ausente).
+ *
+ * @param int $vid ID do vídeo
+ * @return bool true quando a pasta foi removida ou já não existia
+ */
+function delete_local_video_thumbs($vid)
+{
+    global $config;
+
+    $vid  = intval($vid);
+    if ($vid <= 0) {
+        return true;
+    }
+
+    $index = intval(($vid - 1) / $config['max_thumb_folders']);
+    $tmb_folder = ($index === 0) ? 'tmb' : 'tmb' . $index;
+    $dir  = $config['BASE_DIR'] . '/media/videos/' . $tmb_folder . '/' . $vid;
+
+    if (!is_dir($dir)) {
+        return true;
+    }
+
+    require_once $config['BASE_DIR'] . '/include/function_thumbs.php';
+    return delete_directory($dir);
+}
+
+/**
+ * Confere se o bucket GCS já guarda ao menos um formato H.264 do vídeo.
+ *
+ * Usada como fail-safe ANTES de remover o original local (vid/{VID}.mp4): só
+ * deletamos a fonte se houver cópia reproduzível no bucket (o upload de todos
+ * os formatos pode falhar parcialmente e o sp/legacy não deve destruir a única
+ * cópia restante nesse caso).
+ *
+ * @param int   $vid    ID do vídeo
+ * @param array $server Linha da tabela servers (server_type = 'gcs')
+ * @return bool true quando existe pelo menos um objeto h264/{VID}/...
+ */
+function gcs_video_has_formats($vid, $server)
+{
+    $gcs = gcs_get_client($server);
+    if (!$gcs) {
+        return false;
+    }
+
+    $vid = intval($vid);
+
+    // Layout atual: h264/{VID}/{label}.{ext}
+    $list = $gcs->listObjects('h264/' . $vid . '/');
+    if (is_array($list) && count($list) > 0) {
+        return true;
+    }
+
+    // Layout legado: h264/{VID}_{label}.{ext}
+    $list = $gcs->listObjects('h264/' . $vid . '_');
+    return (is_array($list) && count($list) > 0);
 }
 
 /**

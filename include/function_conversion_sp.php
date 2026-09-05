@@ -395,19 +395,32 @@ function postConversion($vid,$src) {
 	}		
 		
 	// Multi-Server Transfer (GCS / FTP)
+	$transferServer = false;
 	if (isset($config['multi_server']) && $config['multi_server'] == '1') {
 		require_once $config['BASE_DIR'] . '/include/function_server.php';
 		$server = get_server();
 		if ($server) {
+			$transferServer = $server;
 			echo "\n[Multi-Server] Iniciando transferencia para o servidor secundario ID #" . $server['server_id'] . " (" . $server['server_ip'] . ")...\n";
 			upload_video_formats($vid, $formats, $server);
 		}
 	}
 
 	// Delete original video?
+	// Fail-safe GCS: o original local (vid/{VID}.mp4) só é removido quando ao
+	// menos um formato foi confirmado no bucket. Se o upload falhou (total ou
+	// parcialmente), a fonte local é a única cópia restante para reprocessar.
 	if ($config['del_original_video'] == 1) {
-		@chmod($src, 0777);
-		@unlink($src);
+		$canDelete = true;
+		if ($transferServer && isset($transferServer['server_type']) && $transferServer['server_type'] === 'gcs') {
+			$canDelete = gcs_video_has_formats($vid, $transferServer);
+		}
+		if ($canDelete) {
+			@chmod($src, 0777);
+			@unlink($src);
+		} else {
+			echo "\n[Multi-Server-GCS] Upload não confirmado no bucket; original mantido localmente: " . $src . "\n";
+		}
 	}
 
 }

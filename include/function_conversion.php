@@ -426,24 +426,37 @@ function postConversion($vid,$src) {
 	echo "\n".$nl."SQL:\n".$nl.$sql."\n\n";
 
 	// Multi-Server Transfer
+	$transferServer = false;
 	if (isset($config['multi_server']) && $config['multi_server'] == '1') {
 		require_once $config['BASE_DIR'] . '/include/function_server.php';
 		$server = get_server();
 		if ($server) {
+			$transferServer = $server;
 			echo "\n[Multi-Server] Iniciando transferencia para o servidor secundario ID #" . $server['server_id'] . " (" . $server['server_ip'] . ")...\n";
 			upload_video_formats($vid, $formats, $server);
 		} else {
 			echo "\n[Multi-Server] Nenhum servidor secundario ativo disponivel na fila. O video sera mantido no servidor principal.\n";
 		}
 	}
-	
+
 	// Delete original video?
+	// Fail-safe GCS: o original local (vid/{VID}.mp4) só é removido quando ao
+	// menos um formato foi confirmado no bucket. Se o upload falhou (total ou
+	// parcialmente), a fonte local é a única cópia restante para reprocessar.
 	if(file_exists($src.'.bak')) {
 		@rename($src.'.bak', $src);
 	}	
 	if ($config['del_original_video'] == 1) {
-		@chmod($src, 0777);
-		@unlink($src);
+		$canDelete = true;
+		if ($transferServer && isset($transferServer['server_type']) && $transferServer['server_type'] === 'gcs') {
+			$canDelete = gcs_video_has_formats($vid, $transferServer);
+		}
+		if ($canDelete) {
+			@chmod($src, 0777);
+			@unlink($src);
+		} else {
+			echo "\n[Multi-Server-GCS] Upload não confirmado no bucket; original mantido localmente: " . $src . "\n";
+		}
 	}	
 }
 
