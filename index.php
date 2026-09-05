@@ -3,6 +3,7 @@ define('_VALID', true);
 require 'include/config.php';
 require 'include/function_global.php';
 require 'include/function_smarty.php';
+require_once $config['BASE_DIR']. '/include/function_video.php';
 
 $sql_add	= NULL;
 $sql_delim	= ' AND';  // o 'WHERE v.UID = u.UID' já vem no FROM
@@ -25,9 +26,34 @@ $rs             = $conn->execute($sql);
 $recent_videos  = $rs->getrows();
 
 // Hero da home: destaques (mais vistos)
-$sql            = "SELECT " .$video_select. $video_from. " ORDER BY v.viewnumber DESC, v.viewtime DESC LIMIT 7";
-$rs             = $conn->execute($sql);
-$hero_videos    = $rs->getrows();
+$hero_select = $video_select. ", v.server, v.formats, v.iphone, v.embed_code";
+$sql         = "SELECT " .$hero_select. $video_from. " ORDER BY v.viewnumber DESC, v.viewtime DESC LIMIT 7";
+$rs          = $conn->execute($sql);
+$hero_videos = $rs->getrows();
+
+// Mini-clip mudo no primeiro card do hero: fonte de playback (URL assinada)
+foreach ( $hero_videos as $k => $v ) {
+    $hero_videos[$k]['hero_src'] = '';
+    if ( $v['embed_code'] != '' || empty($v['formats']) ) {
+        continue;
+    }
+    $sources = get_video_sources($v);
+    $best    = null;
+    foreach ( $sources['files'] as $f ) {
+        if ( $best === null || $f['height'] < $best['height'] ) {
+            $best = $f;
+        }
+    }
+    if ( $best === null && !empty($sources['iphone_url']) ) {
+        $best = array('url' => $sources['iphone_url']);
+    }
+    if ( $best === null && !empty($sources['hd_url']) ) {
+        $best = array('url' => $sources['hd_url']);
+    }
+    if ( $best !== null && !empty($best['url']) ) {
+        $hero_videos[$k]['hero_src'] = $best['url'];
+    }
+}
 
 // Rotação de capas (frames marcados em thumbnails_opt)
 video_apply_cover_rotation($viewed_videos);

@@ -67,6 +67,16 @@ sync_video_thumbs($vid, null, true);
 
 $response['src'] = get_thumb_url($vid).'/'.$thumb.'.jpg';
 
+// Frames ordenados para o carousel da listagem: principal primeiro, depois as capas.
+$frames = array_unique(array_merge(array($thumb), $covers));
+$urls = array();
+require_once $config['BASE_DIR']. '/include/function_thumbs.php';
+foreach ($frames as $f) {
+	$urls[] = get_video_thumb_src($vid, $f);
+}
+$response['frames'] = array_values($frames);
+$response['urls'] = $urls;
+
 echo json_encode($response);
 die();
 ?>

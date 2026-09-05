@@ -808,7 +808,8 @@ a:hover .xb-thumb-meta {
 }
 
 .xb-hero .xb-hero-main .thumb-overlay img,
-.xb-hero .xb-hero-item .thumb-overlay img {
+.xb-hero .xb-hero-item .thumb-overlay img,
+.xb-hero .xb-hero-main .thumb-overlay video.xb-hero-video {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
@@ -818,7 +819,8 @@ a:hover .xb-thumb-meta {
 }
 
 .xb-hero .xb-hero-main:hover .thumb-overlay img,
-.xb-hero .xb-hero-item:hover .thumb-overlay img {
+.xb-hero .xb-hero-item:hover .thumb-overlay img,
+.xb-hero .xb-hero-main:hover .thumb-overlay video.xb-hero-video {
 	transform: scale(1.05);
 }
 
@@ -1191,6 +1193,76 @@ a:hover .xb-thumb-meta {
 .xb-carousel-arrow:disabled {
 	opacity: .25;
 	cursor: default;
+}
+
+/* Carousel de imagens selecionadas (frames de capa) na página do vídeo */
+.xb-covers-item {
+	flex: 0 0 25%;
+	max-width: 25%;
+	padding: 0 6px;
+	scroll-snap-align: start;
+}
+
+.xb-covers-item a {
+	position: relative;
+	display: block;
+	border-radius: 8px;
+	overflow: hidden;
+	aspect-ratio: 16 / 9;
+	background: #151515;
+	border: 1px solid #262626;
+	transition: border-color .2s ease, transform .18s ease;
+}
+
+.xb-covers-item a:hover {
+	border-color: var(--xb-accent);
+	transform: translateY(-2px);
+	text-decoration: none;
+}
+
+.xb-covers-item img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.xb-cover-frame {
+	position: absolute;
+	right: 8px;
+	bottom: 8px;
+	width: 30px;
+	height: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, .65);
+	backdrop-filter: blur(3px);
+	-webkit-backdrop-filter: blur(3px);
+	color: #fff;
+	font-size: 12px;
+	border-radius: 50%;
+	opacity: 0;
+	transition: opacity .2s ease, background .2s ease;
+}
+
+.xb-covers-item a:hover .xb-cover-frame {
+	opacity: 1;
+	background: var(--xb-accent);
+}
+
+@media (max-width: 991.98px) {
+	.xb-covers-item {
+		flex: 0 0 33.3333%;
+		max-width: 33.3333%;
+	}
+}
+
+@media (max-width: 575.98px) {
+	.xb-covers-item {
+		flex: 0 0 50%;
+		max-width: 50%;
+	}
 }
 
 /* Relacionados — mesmo card da home (thumb vertical + chip) */

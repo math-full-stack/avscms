@@ -10,7 +10,11 @@
 			{if $smarty.section.h.index == 0}
 			<a class="xb-hero-main" href="{$relative}/video/{$hero_videos[h].VID}/{$hero_videos[h].title|clean}">
 				<div class="thumb-overlay" {if $hero_videos[h].vthumbs == '1'} id="playvthumb_{$hero_videos[h].VID}"{/if}>
+					{if $hero_videos[h].hero_src}
+					<video id="xb-hero-video" class="xb-hero-video" src="{$hero_videos[h].hero_src}" poster="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>
+					{else}
 					<img src="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" title="{$hero_videos[h].title|escape:'html'}" alt="{$hero_videos[h].title|escape:'html'}" />
+					{/if}
 				</div>
 				<span class="xb-hero-overlay">
 					<span class="xb-hero-title">{$hero_videos[h].title|escape:'html'}</span>
@@ -34,6 +38,21 @@
 		{/section}
 	</div>
 	{/if}
+
+	<script>
+	{if $hero_videos && $hero_videos[0].hero_src}
+	{literal}
+	(function(){
+		var v = document.getElementById('xb-hero-video');
+		if (!v) return;
+		v.muted = true;
+		var play = function(){ v.play().catch(function(){}); };
+		v.addEventListener('loadeddata', play);
+		play();
+	})();
+	{/literal}
+	{/if}
+	</script>
 
 	<div class="xb-section">
 		<span class="xb-section-bar"></span>

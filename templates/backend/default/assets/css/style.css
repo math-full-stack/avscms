@@ -8582,6 +8582,85 @@ table ol > li {
 	border: none;
 }
 
+/* Carousel de capas na listagem de vídeos (setas/dots sem fundo, sem autoplay) */
+.thumb-carousel {
+	position: relative;
+}
+
+.thumb-carousel .tc-link {
+	display: block;
+}
+
+.thumb-carousel .tc-slide {
+	display: none;
+	width: 100%;
+}
+
+.thumb-carousel .tc-slide.active {
+	display: block;
+}
+
+.tc-arrow {
+	position: absolute;
+	top: 50%;
+	-webkit-transform: translateY(-50%);
+	-moz-transform: translateY(-50%);
+	-ms-transform: translateY(-50%);
+	transform: translateY(-50%);
+	background: transparent;
+	border: none;
+	color: #fff;
+	text-shadow: 0 1px 3px rgba(0,0,0,.85);
+	font-size: 16px;
+	line-height: 1;
+	padding: 6px 4px;
+	cursor: pointer;
+	z-index: 3;
+}
+
+.tc-prev {
+	left: 2px;
+}
+
+.tc-next {
+	right: 2px;
+}
+
+.tc-dots {
+	position: absolute;
+	bottom: 3px;
+	left: 50%;
+	-webkit-transform: translateX(-50%);
+	-moz-transform: translateX(-50%);
+	-ms-transform: translateX(-50%);
+	transform: translateX(-50%);
+	z-index: 3;
+	display: -webkit-flex;
+	display: -moz-box;
+	display: flex;
+	-webkit-align-items: center;
+	align-items: center;
+	gap: 4px;
+}
+
+.tc-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	border: 1px solid rgba(255,255,255,.95);
+	background: transparent;
+	cursor: pointer;
+	display: inline-block;
+}
+
+.tc-dot:hover {
+	background: rgba(255,255,255,.6);
+}
+
+.tc-dot.active {
+	background: #fff;
+}
+
 .item-id .fa-times {
 	color: #cb0000
 }

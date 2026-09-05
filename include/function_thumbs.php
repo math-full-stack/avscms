@@ -105,6 +105,38 @@ function get_thumb_url($vid)
 	return get_video_thumb_base($vid);
 }
 
+/**
+ * URL pública de um frame de thumbnail — fonte única de verdade.
+ *
+ * - Vídeo no bucket GCS: serve direto da URL pública (thumbs/{VID}/{frame}.jpg).
+ * - Vídeo local: só usa o frame se o arquivo existir em disco; senão fallback
+ *   default.jpg.
+ *
+ * @param int $vid
+ * @param int $frame
+ * @return string
+ */
+function get_video_thumb_src($vid, $frame)
+{
+	global $config;
+
+	$base = get_video_thumb_base($vid);
+	$num  = intval($frame);
+	$tmb_url_def = $config['BASE_URL'].'/media/videos/tmb/default.jpg';
+
+	if (strpos($base, 'storage.googleapis.com') !== false) {
+		return $base.'/'.$num.'.jpg';
+	}
+
+	$path_dir = get_thumb_dir($vid);
+	$tmb = $path_dir.'/'.$num.'.jpg';
+	if (file_exists($tmb) && is_file($tmb)) {
+		return $base.'/'.$num.'.jpg';
+	} else {
+		return $tmb_url_def;
+	}
+}
+
 function get_thumb_dir($vid) 
 {               
 	global $config;

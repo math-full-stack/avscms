@@ -281,7 +281,7 @@
 .avs-player .avs-quick-controls {
     position: absolute;
     right: 16px;
-    bottom: 56px;
+    bottom: 78px;
     z-index: 6;
     display: flex;
     align-items: center;
@@ -318,15 +318,6 @@
 .avs-player .avs-quick-controls .avs-qc-btn:hover {
     background-color: rgba(255, 255, 255, 0.28);
     color: #fff;
-}
-
-.avs-player .avs-quick-controls .avs-qc-play {
-    background-color: #e50914;
-    font-size: 14px;
-}
-
-.avs-player .avs-quick-controls .avs-qc-play:hover {
-    background-color: #f6121d;
 }
 
 .avs-player .avs-quick-controls .avs-qc-speed {

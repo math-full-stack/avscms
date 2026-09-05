@@ -517,6 +517,9 @@ $( document ).ready(function() {
 				</div>
 			</div>
 
+			{* Imagens selecionadas (frames de capa) — carousel + lightbox *}
+			{include file='video_cover_carousel.tpl'}
+
 			{* Carousels estilo Netflix *}
 			{if $caro_creator}
 				{include file='video_carousel.tpl' videos=$caro_creator title='Mais do creator' icon='fa-user-circle' link=$relative|cat:'/user/'|cat:$video.username}

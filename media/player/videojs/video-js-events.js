@@ -68,7 +68,6 @@ if (player_quick_controls == '1') {
 	quickControlsEl = document.createElement('div');
 	quickControlsEl.className = 'vjs-quick-controls';
 	quickControlsEl.innerHTML =
-		'<button type="button" class="qc-btn qc-play" title="Play / Pause">&#9654;</button>' +
 		'<button type="button" class="qc-btn qc-speed" title="Playback speed">1x</button>' +
 		'<button type="button" class="qc-btn qc-seek qc-back" title="-5 seconds">-5</button>' +
 		'<button type="button" class="qc-btn qc-seek qc-forward" title="+5 seconds">+5</button>';
@@ -86,16 +85,9 @@ player.ready(function(){
 	if (player_quick_controls == '1' && quickControlsEl != null) {
 		var qcSpeeds = [1, 1.25, 1.5, 2, 0.75, 0.5];
 		var qcSpeedIndex = 0;
-		var qcPlay = quickControlsEl.querySelector('.qc-play');
 		var qcSpeed = quickControlsEl.querySelector('.qc-speed');
 		var qcBack = quickControlsEl.querySelector('.qc-back');
 		var qcFwd = quickControlsEl.querySelector('.qc-forward');
-
-		qcPlay.addEventListener('click', function(e) {
-			e.preventDefault();
-			e.stopPropagation();
-			if (player.paused()) { player.play(); } else { player.pause(); }
-		});
 
 		qcSpeed.addEventListener('click', function(e) {
 			e.preventDefault();
@@ -118,9 +110,6 @@ player.ready(function(){
 			var d = (player.duration && player.duration()) ? player.duration() : player.currentTime();
 			player.currentTime(Math.min(d, player.currentTime() + 5));
 		});
-
-		player.on('play', function() { qcPlay.innerHTML = '&#10074;&#10074;'; });
-		player.on('pause', function() { qcPlay.innerHTML = '&#9654;'; });
 	}
 
 	if (player_pause_adv == '1' && aid != false) {

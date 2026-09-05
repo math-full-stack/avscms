@@ -156,9 +156,26 @@
 														</div>
 														<div class="item-thumb">
 															<div class="thumb-overlay">														
-																<a id="view_video_{$videos[i].VID}" href="#">
-																	<img id="thumb-{$videos[i].VID}" src="{insert name=thumb_adm vid=$videos[i].VID thumb=$videos[i].thumb}" class="img-responsive">
-																</a>
+																{if $videos[i].thumbnail_frames|@count > 1}
+																	<div class="thumb-carousel" id="thumb-carousel-{$videos[i].VID}">
+																		<a id="view_video_{$videos[i].VID}" href="#">
+																			{section name=j loop=$videos[i].thumbnail_frames}
+																				<img {if $smarty.section.j.first}id="thumb-{$videos[i].VID}"{/if} src="{$videos[i].thumbnail_urls[j]}" class="img-responsive tc-slide {if $smarty.section.j.first}active{/if}" data-frame="{$videos[i].thumbnail_frames[j]}" alt="">
+																			{/section}
+																		</a>
+																		<span class="tc-arrow tc-prev"><i class="fa fa-chevron-left"></i></span>
+																		<span class="tc-arrow tc-next"><i class="fa fa-chevron-right"></i></span>
+																		<span class="tc-dots">
+																			{section name=k loop=$videos[i].thumbnail_frames}
+																			<span class="tc-dot {if $smarty.section.k.first}active{/if}"></span>
+																			{/section}
+																		</span>
+																	</div>
+																{else}
+																	<a id="view_video_{$videos[i].VID}" href="#">
+																		<img id="thumb-{$videos[i].VID}" src="{insert name=thumb_adm vid=$videos[i].VID thumb=$videos[i].thumb}" class="img-responsive">
+																	</a>
+																{/if}
 																<div class="item-id">
 																	<b>ID</b> {$videos[i].VID}
 																</div>

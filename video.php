@@ -44,6 +44,30 @@ $embed_auto_height = round($embed_width * ($video_height/$video_width));
 $video              = $rs->getrows();
 $video              = $video['0'];
 
+// Frames de capa para a seção de imagens abaixo do player (principal + thumbnails_opt)
+$cover_frames = array();
+$cover_max    = max(1, intval($video['thumbs']));
+$cover_main   = intval($video['thumb']);
+if ($cover_main < 1 || $cover_main > $cover_max) {
+	$cover_main = 1;
+}
+$cover_frames[] = $cover_main;
+$cover_opt = trim((string)$video['thumbnails_opt']);
+if ($cover_opt !== '') {
+	foreach (explode(',', $cover_opt) as $cf) {
+		$cf = intval($cf);
+		if ($cf >= 1 && $cf <= $cover_max && !in_array($cf, $cover_frames, true)) {
+			$cover_frames[] = $cf;
+		}
+	}
+}
+$cover_urls = array();
+foreach ($cover_frames as $cf) {
+	$cover_urls[] = get_video_thumb_src($vid, $cf);
+}
+$smarty->assign('cover_frames', $cover_frames);
+$smarty->assign('cover_urls', $cover_urls);
+
 if ($video['embed_code'] == '') {
 	require_once $config['BASE_DIR']. '/include/function_video.php';
 

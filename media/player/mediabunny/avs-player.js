@@ -584,33 +584,17 @@ import {
         quickControlsEl = document.createElement('div');
         quickControlsEl.className = 'avs-quick-controls';
         quickControlsEl.innerHTML =
-            '<button type="button" class="avs-qc-btn avs-qc-play" title="Play / Pause">&#9654;</button>' +
             '<button type="button" class="avs-qc-btn avs-qc-speed" title="Playback speed">1x</button>' +
             '<button type="button" class="avs-qc-btn avs-qc-back" title="-5 seconds">-5</button>' +
             '<button type="button" class="avs-qc-btn avs-qc-forward" title="+5 seconds">+5</button>';
         player.appendChild(quickControlsEl);
 
-        const qcPlay = quickControlsEl.querySelector('.avs-qc-play');
         const qcSpeed = quickControlsEl.querySelector('.avs-qc-speed');
         const qcBack = quickControlsEl.querySelector('.avs-qc-back');
         const qcFwd = quickControlsEl.querySelector('.avs-qc-forward');
 
         const qcSpeeds = [1, 1.25, 1.5, 2, 0.75, 0.5];
         let qcSpeedIndex = 0;
-
-        qcPlay.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (fallbackVideo) {
-                if (fallbackVideo.paused) {
-                    void fallbackVideo.play().catch(() => {});
-                } else {
-                    fallbackVideo.pause();
-                }
-            } else {
-                togglePlay();
-            }
-        });
 
         qcSpeed.addEventListener('click', (e) => {
             e.preventDefault();
@@ -631,21 +615,6 @@ import {
             e.stopPropagation();
             seekBy(5);
         });
-
-        const syncQcPlay = () => {
-            if (!qcPlay) return;
-            const paused = fallbackVideo ? fallbackVideo.paused : !playing;
-            qcPlay.innerHTML = paused ? '&#9654;' : '&#10074;&#10074;';
-        };
-
-        if (fallbackVideo) {
-            fallbackVideo.addEventListener('play', syncQcPlay);
-            fallbackVideo.addEventListener('pause', syncQcPlay);
-        } else {
-            const mo = new MutationObserver(syncQcPlay);
-            mo.observe(player, { attributes: true, attributeFilter: ['class'] });
-        }
-        syncQcPlay();
     }
 
     // ------------------------------------------------------------------

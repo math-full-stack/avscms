@@ -15,5 +15,5 @@
 	</div>
 	<div class="avs-error" style="display:none;"></div>
 </div>
-<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=2.1.0">
-<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=2.1.0"></script>
+<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=2.1.1">
+<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=2.1.1"></script>

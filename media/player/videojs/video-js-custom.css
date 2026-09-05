@@ -334,7 +334,7 @@ img#vjs-logobrand-image-top-left, img#vjs-logobrand-image-top-right, img#vjs-log
 .vjs-quick-controls {
 	position: absolute;
 	right: 16px;
-	bottom: 56px;
+	bottom: 78px;
 	z-index: 1100;
 	display: flex;
 	align-items: center;
@@ -371,15 +371,6 @@ img#vjs-logobrand-image-top-left, img#vjs-logobrand-image-top-right, img#vjs-log
 .vjs-quick-controls .qc-btn:hover {
 	background-color: rgba(255, 255, 255, 0.28);
 	color: #fff;
-}
-
-.vjs-quick-controls .qc-btn.qc-play {
-	background-color: #e50914;
-	font-size: 14px;
-}
-
-.vjs-quick-controls .qc-btn.qc-play:hover {
-	background-color: #f6121d;
 }
 
 .vjs-quick-controls .qc-btn.qc-speed {

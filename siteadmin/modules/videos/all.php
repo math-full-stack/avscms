@@ -5,6 +5,7 @@ Auth::checkAdmin();
 
 require $config['BASE_DIR']. '/include/function_video.php';
 require $config['BASE_DIR']. '/include/function_smarty.php';
+require $config['BASE_DIR']. '/include/function_thumbs.php';
 require $config['BASE_DIR']. '/classes/pagination.class.php';
 
 if (isset($_POST['delete_selected_videos'])) {
@@ -168,6 +169,37 @@ if ($videos) {
         }
         $videos[$idx]['queue_status'] = $queue_status;
         $videos[$idx]['queue_detail'] = $queue_detail;
+    }
+}
+
+// Frames de capa ordenados para o carousel da listagem (principal primeiro,
+// depois as capas rotativas de thumbnails_opt, sem duplicatas).
+if ($videos) {
+    foreach ($videos as $idx => $v) {
+        $max = max(1, intval($v['thumbs']));
+        $main = intval($v['thumb']);
+        if ($main < 1 || $main > $max) {
+            $main = 1;
+        }
+
+        $frames = array($main);
+        $opt = trim((string)$v['thumbnails_opt']);
+        if ($opt !== '') {
+            foreach (explode(',', $opt) as $f) {
+                $f = intval($f);
+                if ($f >= 1 && $f <= $max && !in_array($f, $frames, true)) {
+                    $frames[] = $f;
+                }
+            }
+        }
+
+        $urls = array();
+        foreach ($frames as $f) {
+            $urls[] = get_video_thumb_src(intval($v['VID']), $f);
+        }
+
+        $videos[$idx]['thumbnail_frames'] = $frames;
+        $videos[$idx]['thumbnail_urls']   = $urls;
     }
 }
 

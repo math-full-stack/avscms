@@ -574,6 +574,7 @@ $lang['video.flag'] = 'Flag Video';
 $lang['video.EMBED'] = 'Embed Video';
 $lang['video.RELATED'] = 'Related Videos';
 $lang['video.related_none'] = 'No related videos found!';
+$lang['video.cover_images'] = 'Selected Images';
 $lang['global.blocking'] = 'Blocking';
 $lang['global.unblocking'] = 'Unblocking';
 $lang['global.chars_left'] = 'chars left';
