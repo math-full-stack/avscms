@@ -29,6 +29,16 @@ body {
 	color: var(--xb-text);
 }
 
+/* --------------------------------------------------------------------------
+   Container fluido — aproveita todo o espaço horizontal da tela
+   -------------------------------------------------------------------------- */
+.container {
+	width: 100%;
+	max-width: none;
+	padding-left: 24px;
+	padding-right: 24px;
+}
+
 ::selection {
 	background: var(--xb-accent);
 	color: #fff;

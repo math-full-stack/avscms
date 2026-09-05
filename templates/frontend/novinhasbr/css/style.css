@@ -45,7 +45,9 @@ body {
 
 @media only screen and (min-width : 1400px) {
 	.container {
-		max-width: 1323px;
+		max-width: none;
+		padding-left: 24px;
+		padding-right: 24px;
 	}
 }
 
