@@ -11,7 +11,85 @@ class images_to_sprite {
 		$this->files = array();
 	}
  
+/**
+ * Timeline scrub tiles are displayed at roughly 154x86 css px (256x144 at
+ * 0.6), so 320x180 source tiles are ~2x / retina sharp without bloating the
+ * sprite file that is loaded on every watch page.
+ */
+const SPRITE_TILE_W = 320;
+const SPRITE_TILE_H = 180;
+
+/**
+ * High-quality sprite builder: resamples each available frame into a
+ * uniform 320x180 tile row (smooth downscale, JPEG 88) and skips missing
+ * frames instead of rendering black placeholders.
+ *
+ * @return bool true when the sprite was written
+ */
+private function build_sprite() {
+	$out = $this->output . '.jpg';
+
+	$frames = array();
+	for ($i = 1; $i <= 20; $i++) {
+		$f = $this->folder . '/' . $i . '.jpg';
+		if (is_file($f) && is_readable($f)) {
+			$frames[] = $f;
+		}
+	}
+	if (empty($frames)) {
+		return false;
+	}
+
+	$cols  = count($frames);
+	$tileW = self::SPRITE_TILE_W;
+	$tileH = self::SPRITE_TILE_H;
+
+	$im    = imagecreatetruecolor($tileW * $cols, $tileH);
+	$black = imagecolorallocate($im, 0, 0, 0);
+	imagefilledrectangle($im, 0, 0, $tileW * $cols, $tileH, $black);
+
+	$col = 0;
+	foreach ($frames as $f) {
+		$src = @imagecreatefromjpeg($f);
+		if ($src) {
+			imagecopyresampled($im, $src, $col * $tileW, 0, 0, 0, $tileW, $tileH, imagesx($src), imagesy($src));
+			imagedestroy($src);
+		}
+		$col++;
+	}
+
+	imagejpeg($im, $out, 88);
+	imagedestroy($im);
+	return true;
+}
+
+/**
+ * Rebuild the sprite only when it is missing or any 1..20 frame is newer
+ * (thumbnails were regenerated) — avoids re-encoding it on every page view.
+ *
+ * @return bool true when the sprite should be (re)generated
+ */
+public function sprite_is_stale() {
+	$out = $this->output . '.jpg';
+	if (!is_file($out)) {
+		return true;
+	}
+	$out_time = filemtime($out);
+	for ($i = 1; $i <= 20; $i++) {
+		$f = $this->folder . '/' . $i . '.jpg';
+		if (is_file($f) && filemtime($f) > $out_time) {
+			return true;
+		}
+	}
+	return false;
+}
+
 	function create_sprite() {
+		if ($this->build_sprite()) {
+			return true;
+		}
+		// Legacy body below runs only when no frames were available.
+		
 		$resize = 1;
 		$basedir = $this->folder;
 		$files = array();

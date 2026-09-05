@@ -84,7 +84,9 @@ if ($video['embed_code'] == '') {
 	if ($player['timeline_preview'] == 1) {
 		require_once 'classes/sprite.class.php';
 		$sprite = new images_to_sprite(get_thumb_dir($vid),get_thumb_dir($vid).'/sprite',$config['img_max_width'],$config['img_max_height']);
-		$sprite->create_sprite();
+		if ($sprite->sprite_is_stale()) {
+			$sprite->create_sprite();
+		}
 		$player['sprite'] = get_thumb_url($vid).'/sprite.jpg';
 	}
 	$smarty->assign('player', $player);

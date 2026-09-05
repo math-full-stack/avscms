@@ -23,7 +23,15 @@ class VImageConv
 	public function __construct()
 	{
 		$this->checkGDSupport();
-		$this->jpgQuality	= 90;
+		$this->jpgQuality	= 95;
+	}
+
+	/**
+	 * Overrides the JPEG save quality (default 95).
+	 */
+	public function setJpgQuality( $quality )
+	{
+		$this->jpgQuality	= (int)$quality;
 	}
 	
 	public function __destruct()

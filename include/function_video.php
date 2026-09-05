@@ -149,7 +149,7 @@ function remove_black_bars($src, $removeLeft, $removeRight, $removeTop, $removeB
 	imagecopy($cropped, $jpg, 0, 0, $removeLeft, $removeTop, imagesx($cropped), imagesy($cropped));
 
 	header("Content-type: image/jpeg");
-	imagejpeg($cropped, $image_path);
+	imagejpeg($cropped, $image_path, 95);
 	imagedestroy($cropped);
 	imagedestroy($jpg);		
 }
@@ -194,6 +194,38 @@ function get_video_duration($video_path, $video_id)
 	return floatval($output[0]);
 }
 
+/**
+ * Computes the output size for a thumbnail so it keeps the source aspect
+ * ratio inside the target box (fit) and never upscales a small source.
+ *
+ * @param int $src_w  Source width
+ * @param int $src_h  Source height
+ * @param int $box_w  Maximum box width
+ * @param int $box_h  Maximum box height
+ * @return array      [width, height] — both even, >= 2
+ */
+function thumb_target_dims($src_w, $src_h, $box_w, $box_h)
+{
+	$src_w = max(2, (int)$src_w);
+	$src_h = max(2, (int)$src_h);
+	$box_w = max(2, (int)$box_w);
+	$box_h = max(2, (int)$box_h);
+
+	if ($src_w <= $box_w && $src_h <= $box_h) {
+		$w = $src_w;
+		$h = $src_h;
+	} else {
+		$scale = min($box_w / $src_w, $box_h / $src_h);
+		$w = $src_w * $scale;
+		$h = $src_h * $scale;
+	}
+
+	$w = max(2, (int)(floor($w / 2) * 2));
+	$h = max(2, (int)(floor($h / 2) * 2));
+
+	return array($w, $h);
+}
+
 function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_bars = false, $keep_ar = true, $admin = false) {
 
 	global $config, $conn;
@@ -216,6 +248,32 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 	$thumb_height_player 	= $video_height > 0 ? min(($video_height * 5) / 10, 720) : 720;
 	$thumb_width_max 		= $video_width > 0 ? min(($video_width * 2) / 10, 384) : 384;
 	$thumb_height_max 		= $video_height > 0 ? min(($video_height * 2) / 10, 216) : 216;
+
+		// High-quality target sizing (overrides the legacy %-based caps above):
+	//   - default.jpg : player cover poster   (thumbnail_player_width/height)
+	//   - 1..20.jpg   : grid/rotation frames  (img_max_width/img_max_height)
+	if ($video_width > 0 && $video_height > 0) {
+		// Quality floors: admin values are only honored when they are ABOVE the
+		// high-quality minimums below. A stale config.local.php (or one never
+		// updated on the VM) must not silently shrink the thumbs back to the
+		// old 320-384px sizes. Source-sized thumbs are never upscaled anyway.
+		$player_w = max(1920, (isset($config['thumbnail_player_width'])  && (int)$config['thumbnail_player_width']  > 0) ? (int)$config['thumbnail_player_width']  : 1920);
+		$player_h = max(1080, (isset($config['thumbnail_player_height']) && (int)$config['thumbnail_player_height'] > 0) ? (int)$config['thumbnail_player_height'] : 1080);
+		$grid_w   = max(960,  (isset($config['img_max_width'])  && (int)$config['img_max_width']  > 0) ? (int)$config['img_max_width']  : 960);
+		$grid_h   = max(540,  (isset($config['img_max_height']) && (int)$config['img_max_height'] > 0) ? (int)$config['img_max_height'] : 540);
+
+		if ($keep_ar) {
+			// Preserve source aspect ratio, never upscale a small source.
+			list($thumb_width_player, $thumb_height_player) = thumb_target_dims($video_width, $video_height, $player_w, $player_h);
+			list($thumb_width_max, $thumb_height_max)       = thumb_target_dims($video_width, $video_height, $grid_w, $grid_h);
+		} else {
+			// Fill the exact target box (center-crop handled by process_thumb).
+			$thumb_width_player  = $player_w;
+			$thumb_height_player = $player_h;
+			$thumb_width_max     = $grid_w;
+			$thumb_height_max    = $grid_h;
+		}
+	}
 
 	// Only continue if source video exists
 	if (file_exists($video_path) || file_url_exists($video_path)) {
@@ -299,7 +357,7 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 			// Thumbnails extraction commands
 			if ( $config['thumbs_tool'] == 'ffmpeg' ) {
 				// FFMPEG Command
-				$cmd = $config['ffmpeg']." -ss ".$seek." -i '".$video_path."' -r 1 -vframes 1 -an -vcodec mjpeg -y ".$temp_thumbs;
+				$cmd = $config['ffmpeg']." -ss ".$seek." -i '".$video_path."' -frames:v 1 -an -q:v 2 -vcodec mjpeg -y ".$temp_thumbs;
 			} else {      
 				// Mplayer Command
 				$cmd = $config['mplayer']." -zoom ".$video_path." -ss ".$seek." -nosound -frames 1 -vf scale=-1:-1 -vo jpeg:outdir=".$temp_thumbs_folder;
@@ -403,12 +461,14 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 				remove_black_bars($final_thumbnail, $left, $right, $top, $bottom);
 			}
 			process_thumb($final_thumbnail, $thumb_width_player, $thumb_height_player, $keep_ar);
+			sharp_image($final_thumbnail);
 		} else {
 			$final_thumbnail = $final_thumbs_folder.'/'.$i.'.jpg';
 			if ($black_bars) {
 				remove_black_bars($final_thumbnail, $left, $right, $top, $bottom);			
 			}
-			process_thumb($final_thumbnail, $thumb_width_max, $thumb_height_max, $keep_ar);					
+			process_thumb($final_thumbnail, $thumb_width_max, $thumb_height_max, $keep_ar);
+			sharp_image($final_thumbnail);					
 		}
 	}	
   
@@ -417,6 +477,12 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 
 
 function extract_video_vthumbs($video_path, $video_id, $img_thumbs = true) {
+
+	// High-quality hover preview (rich montage). Falls back to the legacy
+	// routine below only when the HQ pass could not produce both files.
+	if (extract_video_vthumbs_hq($video_path, $video_id, $img_thumbs)) {
+		return true;
+	}
 	
 	global $config, $conn;
 
@@ -462,11 +528,11 @@ function extract_video_vthumbs($video_path, $video_id, $img_thumbs = true) {
 
 	if ($full != false) {
 		if($config['thumbexact']=='1') {
-			$webm_command =  $config['ffmpeg'].' -i '.$video_path. ' -ss 3 -filter_complex crop='.$width.':'.$height.',scale=iw:ih -codec:v libvpx -an -y '.$copy_webm;
-			$ffmpeg_command =  $config['ffmpeg'].' -i '.$video_path. ' -ss 3 -filter_complex crop='.$width.':'.$height.',scale=iw:ih -codec:v libx264 -an -y '.$copy_mp4;
+			$webm_command =  $config['ffmpeg'].' -i '.$video_path. ' -ss 3 -filter_complex crop='.$width.':'.$height.',scale=iw:ih -codec:v libvpx -crf 20 -b:v 2500k -deadline good -cpu-used 1 -an -y '.$copy_webm;
+			$ffmpeg_command =  $config['ffmpeg'].' -i '.$video_path. ' -ss 3 -filter_complex crop='.$width.':'.$height.',scale=iw:ih -codec:v libx264 -crf 18 -preset medium -an -y '.$copy_mp4;
 		}	else {
-			$webm_command =  $config['ffmpeg'].' -i '.$video_path. ' -ss 3 -filter_complex scale='.$width.':'.$height.' -codec:v libvpx -crf 22 -an -y '.$copy_webm;
-			$ffmpeg_command =  $config['ffmpeg'].' -i '.$video_path. ' -ss 3 -filter_complex scale='.$width.':'.$height.' -codec:v libx264 -an -y '.$copy_mp4;	
+			$webm_command =  $config['ffmpeg'].' -i '.$video_path. ' -ss 3 -filter_complex scale='.$width.':'.$height.' -codec:v libvpx -crf 20 -b:v 2500k -deadline good -cpu-used 1 -an -y '.$copy_webm;
+			$ffmpeg_command =  $config['ffmpeg'].' -i '.$video_path. ' -ss 3 -filter_complex scale='.$width.':'.$height.' -codec:v libx264 -crf 18 -preset medium -an -y '.$copy_mp4;	
 		}
 	} else {		
 		$i = 0;
@@ -480,11 +546,11 @@ function extract_video_vthumbs($video_path, $video_id, $img_thumbs = true) {
 			++$i;
 		}
 		if ($config['thumbexact']=='1') {		
-			$webm_command =  $config['ffmpeg'].' '.$cmd_parts. ' -filter_complex "[0][1][2][3][4][5][6][7]concat=n=8:v=1:a=0",crop='.$width.':'.$height.',scale=iw:ih -codec:v libvpx -an -y '.$copy_webm;
-			$ffmpeg_command =  $config['ffmpeg'].' '.$cmd_parts. ' -filter_complex "[0][1][2][3][4][5][6][7]concat=n=8:v=1:a=0",crop='.$width.':'.$height.',scale=iw:ih -codec:v libx264 -an -y '.$copy_mp4;
+			$webm_command =  $config['ffmpeg'].' '.$cmd_parts. ' -filter_complex "[0][1][2][3][4][5][6][7]concat=n=8:v=1:a=0",crop='.$width.':'.$height.',scale=iw:ih -codec:v libvpx -crf 20 -b:v 2500k -deadline good -cpu-used 1 -an -y '.$copy_webm;
+			$ffmpeg_command =  $config['ffmpeg'].' '.$cmd_parts. ' -filter_complex "[0][1][2][3][4][5][6][7]concat=n=8:v=1:a=0",crop='.$width.':'.$height.',scale=iw:ih -codec:v libx264 -crf 18 -preset medium -an -y '.$copy_mp4;
 		} else {
-			$webm_command =  $config['ffmpeg'].' '.$cmd_parts. ' -filter_complex "[0][1][2][3][4][5][6][7]concat=n=8:v=1:a=0",scale='.$width.':'.$height.' -codec:v libvpx -an -y '.$copy_webm;
-			$ffmpeg_command =  $config['ffmpeg'].' '.$cmd_parts. ' -filter_complex "[0][1][2][3][4][5][6][7]concat=n=8:v=1:a=0",scale='.$width.':'.$height.' -codec:v libx264 -an -y '.$copy_mp4;
+			$webm_command =  $config['ffmpeg'].' '.$cmd_parts. ' -filter_complex "[0][1][2][3][4][5][6][7]concat=n=8:v=1:a=0",scale='.$width.':'.$height.' -codec:v libvpx -crf 20 -b:v 2500k -deadline good -cpu-used 1 -an -y '.$copy_webm;
+			$ffmpeg_command =  $config['ffmpeg'].' '.$cmd_parts. ' -filter_complex "[0][1][2][3][4][5][6][7]concat=n=8:v=1:a=0",scale='.$width.':'.$height.' -codec:v libx264 -crf 18 -preset medium -an -y '.$copy_mp4;
 		}
 	
 	}
@@ -522,17 +588,171 @@ function extract_video_vthumbs($video_path, $video_id, $img_thumbs = true) {
 	return false;
 }       
 
+/**
+ * High-quality hover preview ("quick clip").
+ *
+ * Builds a silent 30 fps montage of up to 8 two-second cuts spread evenly
+ * through the video, centered on the clip box (like the CSS object-fit) and
+ * encodes both a WebM (primary hover source) and an MP4 (fallback/iOS) at a
+ * config-driven resolution with proper quality settings.
+ */
+function extract_video_vthumbs_hq($video_path, $video_id, $img_thumbs = true) {
+
+	global $config, $conn;
+
+	$duration = get_video_duration($video_path, $video_id);
+	if ($duration <= 0) {
+		return false;
+	}
+
+	// Hover-clip target resolution: dedicated vthumb_width/vthumb_height keys
+	// win when set; otherwise follow the grid thumbnails (img_max_*).
+	// Hover-clip canvas floor: never below 960x540 (matches the grid thumbs
+	// and covers the hero card sharply). Admin values above the floor win.
+	$clip_w = max(960, (isset($config['vthumb_width'])  && (int)$config['vthumb_width']  > 0) ? (int)$config['vthumb_width']  : 960);
+	$clip_h = max(540, (isset($config['vthumb_height']) && (int)$config['vthumb_height'] > 0) ? (int)$config['vthumb_height'] : 540);
+	$clip_w = (int) floor($clip_w / 2) * 2;
+	$clip_h = (int) floor($clip_h / 2) * 2;
+	if ($clip_w < 2) $clip_w = 2;
+	if ($clip_h < 2) $clip_h = 2;
+
+	$final_thumbs_folder = get_thumb_dir($video_id);
+
+	@mkdir($final_thumbs_folder, 0777);
+	@chmod($final_thumbs_folder, 0777);
+
+	$copy_mp4     = $final_thumbs_folder.'/video_copy.mp4';
+	$copy_webm    = $final_thumbs_folder.'/video_copy.webm';
+	$copy_default = $final_thumbs_folder.'/default_copy.jpg';
+	$copy_thumb   = $final_thumbs_folder.'/thumb_copy.jpg';
+
+	$dst_mp4     = $final_thumbs_folder.'/video.mp4';
+	$dst_webm    = $final_thumbs_folder.'/video.webm';
+	$dst_default = $final_thumbs_folder.'/default.jpg';
+	$dst_thumb   = $final_thumbs_folder.'/thumb.jpg';
+
+	// --- Montage plan ----------------------------------------------------
+	// Skip the first/last second (intro/outro, credits) and pick up to 8
+	// two-second cuts spread evenly through the whole video.
+	$seg_len  = 2.0;
+	$skip     = 1.0;
+	$usable   = max($duration - ($skip * 2.0), 0.1);
+	$segs     = (int) min(8, max(1, floor($usable / $seg_len)));
+	$starts   = array();
+
+	if ($segs <= 1) {
+		$segs     = 1;
+		$seg_len  = max(0.5, $duration - ($skip * 2.0));
+		$starts[] = max(0.0, ($duration - $seg_len) / 2.0);
+	} else {
+		$spacing = ($usable - $seg_len) / ($segs - 1);
+		for ($i = 0; $i < $segs; $i++) {
+			$starts[] = $skip + ($i * $spacing);
+		}
+	}
+
+	// Input cuts: fast seek (input option) + short -t window per segment.
+	$cmd_parts = '';
+	foreach ($starts as $st) {
+		$cmd_parts .= ' -ss ' . number_format($st, 3, '.', '') . ' -t ' . number_format($seg_len, 3, '.', '') . ' -i ' . escapeshellarg($video_path);
+	}
+
+	// Cover the clip box (center-crop) and normalize to 30 fps CFR so the
+	// hover playback starts instantly and loops smoothly.
+	$filter = '';
+	for ($i = 0; $i < $segs; $i++) {
+		$filter .= '[' . $i . ':v]';
+	}
+	$filter .= 'concat=n=' . $segs . ':v=1:a=0[vc];';
+	$filter .= '[vc]scale=' . $clip_w . ':' . $clip_h . ':force_original_aspect_ratio=increase,crop=' . $clip_w . ':' . $clip_h . ',fps=30,setpts=PTS-STARTPTS[vout]';
+
+	// MP4 fallback (iOS/older Safari): high-quality H.264, faststart + short GOP.
+	$mp4_cmd = $config['ffmpeg'] . $cmd_parts
+		. ' -filter_complex "' . $filter . '"'
+		. ' -map "[vout]"'
+		. ' -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -profile:v main -level 4.0 -movflags +faststart -g 60 -an'
+		. ' -y ' . escapeshellarg($copy_mp4);
+
+	// WebM (primary hover source): VP9 constant-quality encode. IMPORTANT: do
+	// not switch back to VP8 with "-b:v 0 -crf N" — ffmpeg ignores the CRF in
+	// that mode and silently caps the stream at ~256 kb/s (verified), which is
+	// what made the old previews blocky/soft. VP9 honors -crf with -b:v 0.
+	$webm_cmd = $config['ffmpeg'] . $cmd_parts
+		. ' -filter_complex "' . $filter . '"'
+		. ' -map "[vout]"'
+		. ' -c:v libvpx-vp9 -crf 33 -b:v 0 -deadline good -cpu-used 2 -row-mt 1 -pix_fmt yuv420p -g 60 -an'
+		. ' -y ' . escapeshellarg($copy_webm);
+
+	@exec($mp4_cmd);
+	@exec($webm_cmd);
+
+	// Optional poster/grid copies (legacy img_thumbs=true path) — fresh,
+	// high-quality captures instead of the old hard -s distortion.
+	if ($img_thumbs) {
+	$poster_w = max(1920, (isset($config['thumbnail_player_width'])  && (int)$config['thumbnail_player_width']  > 0) ? (int)$config['thumbnail_player_width']  : 1920);
+	$poster_h = max(1080, (isset($config['thumbnail_player_height']) && (int)$config['thumbnail_player_height'] > 0) ? (int)$config['thumbnail_player_height'] : 1080);
+	$thumb_w  = max(960,  (isset($config['img_max_width'])  && (int)$config['img_max_width']  > 0) ? (int)$config['img_max_width']  : 960);
+	$thumb_h  = max(540,  (isset($config['img_max_height']) && (int)$config['img_max_height'] > 0) ? (int)$config['img_max_height'] : 540);
+
+		$ss0 = number_format($starts[0], 3, '.', '');
+
+		$default_command = $config['ffmpeg'] . ' -ss ' . $ss0 . ' -i ' . escapeshellarg($video_path)
+			. ' -frames:v 1 -q:v 2 -vf scale=' . $poster_w . ':' . $poster_h . ':force_original_aspect_ratio=decrease -an -y ' . escapeshellarg($copy_default);
+		$thumb_command = $config['ffmpeg'] . ' -ss ' . $ss0 . ' -i ' . escapeshellarg($video_path)
+			. ' -frames:v 1 -q:v 2 -vf scale=' . $thumb_w . ':' . $thumb_h . ':force_original_aspect_ratio=decrease -an -y ' . escapeshellarg($copy_thumb);
+
+		@exec($default_command);
+		@exec($thumb_command);
+	}
+
+	if (file_exists($copy_webm) && filesize($copy_webm) > 100 && file_exists($copy_mp4) && filesize($copy_mp4) > 100) {
+		if (file_exists($dst_webm)) @chmod($dst_webm, 0777);
+		if (file_exists($dst_mp4)) @chmod($dst_mp4, 0777);
+
+		@copy($copy_webm, $dst_webm); @unlink($copy_webm);
+		@copy($copy_mp4, $dst_mp4); @unlink($copy_mp4);
+
+		if ($img_thumbs) {
+			if (file_exists($copy_default) && filesize($copy_default)) {
+				if (file_exists($dst_default)) @chmod($dst_default, 0777);
+				@copy($copy_default, $dst_default);
+				sharp_image($dst_default);
+				@chmod($copy_default, 0777); @unlink($copy_default);
+			}
+			if (file_exists($copy_thumb) && filesize($copy_thumb)) {
+				if (file_exists($dst_thumb)) @chmod($dst_thumb, 0777);
+				@copy($copy_thumb, $dst_thumb);
+				sharp_image($dst_thumb);
+				@chmod($copy_thumb, 0777); @unlink($copy_thumb);
+			}
+		} else {
+			@unlink($copy_default);
+			@unlink($copy_thumb);
+		}
+
+		$sql = "UPDATE video SET vthumbs = '1' WHERE VID = '" . (int)$video_id . "'";
+		$conn->execute($sql);
+		return true;
+	}
+
+	@unlink($copy_mp4);
+	@unlink($copy_webm);
+	@unlink($copy_default);
+	@unlink($copy_thumb);
+	return false;
+}
+
 function sharp_image($image) {
 	if(file_exists($image)) {
 		$img = imagecreatefromjpeg($image);
 		$sharpen = array(
-			array(-1, -1,  -1),
-			array(-1, 24, -1),
-			array(-1, -1,  -1),
+			array(0,  -1,  0),
+			array(-1, 28, -1),
+			array(0,  -1,  0),
 		);
 		$divisor = array_sum(array_map('array_sum', $sharpen));
 		imageconvolution($img, $sharpen, $divisor, 0);
-		imagejpeg($img, $image, 90);
+		imagejpeg($img, $image, 95);
 	}
 }
 
