@@ -161,6 +161,66 @@ function wm_force_reencode($cfg) {
 }
 
 /**
+ * Refresh the frozen per-video snapshot (video.watermark_cfg/cut/cut_out) from
+ * the CURRENT grabber source config, resolving the source by the video's URL
+ * domain (same matching used by wm_source_config_for_url).
+ *
+ * grabber_cron() snapshots the source config when a job creates/reuses the
+ * video row, but the admin reprocess paths spawn grabber_worker.php directly
+ * and the worker never refreshed the snapshot — so editing the source (margin,
+ * size, positions, cut) had no effect on already-grabbed videos that carry an
+ * old enabled snapshot. Call this on every (re)grab so reprocess = re-apply
+ * the current source config.
+ *
+ * @param int    $vid
+ * @param string $sourceUrl
+ * @return bool true when a matching source was found and the row was updated
+ */
+function wm_refresh_video_snapshot($vid, $sourceUrl)
+{
+    global $conn;
+    $vid = intval($vid);
+    if ($vid <= 0) {
+        return false;
+    }
+
+    $host = strtolower(trim((string)parse_url(trim((string)$sourceUrl), PHP_URL_HOST)));
+    if ($host === '') {
+        return false;
+    }
+    $plain = preg_replace('/^www\./', '', $host);
+
+    try {
+        $rs = $conn->Execute(
+            "SELECT watermark_config, cut_in, cut_out FROM grabber_sources
+              WHERE (REPLACE(domain, 'www.', '') = " . $conn->qStr($plain) . "
+                     OR domain LIKE " . $conn->qStr('%.' . $plain) . ")
+              ORDER BY updated_at DESC LIMIT 1"
+        );
+        if (!$rs || $rs->EOF) {
+            return false;
+        }
+
+        $wmRaw = trim((string)$rs->fields['watermark_config']);
+        $cutIn  = intval(isset($rs->fields['cut_in'])  ? $rs->fields['cut_in']  : 0);
+        $cutOut = intval(isset($rs->fields['cut_out']) ? $rs->fields['cut_out'] : 0);
+
+        $conn->Execute(
+            "UPDATE video SET
+                watermark_cfg = " . $conn->qStr($wmRaw) . ",
+                cut = " . $conn->qStr($cutIn) . ",
+                cut_out = " . intval($cutOut) . "
+              WHERE VID = " . intval($vid) . " LIMIT 1"
+        );
+        return true;
+    } catch (Exception $e) {
+        return false;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+/**
  * Resolve the logo file path (config watermark_image, default player logo).
  * @return string
  */

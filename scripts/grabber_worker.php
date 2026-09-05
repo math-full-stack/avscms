@@ -22,6 +22,7 @@ require_once $basedir . '/include/config.php';
 require_once $basedir . '/include/function_video.php';
 require_once $basedir . '/include/function_queue.php';
 require_once $basedir . '/include/function_thumbs.php';
+require_once $basedir . '/include/function_watermark.php';
 require_once $basedir . '/classes/image.class.php';
 require_once $basedir . '/classes/grabbers/GrabberManager.php';
 require_once $basedir . '/classes/grabbers/mass/MassGrabberManager.php';
@@ -71,6 +72,16 @@ function grabber_log($msg) {
 }
 
 grabber_log("Iniciando download VID=$vid URL=$url quality=$quality thumb=$thumbUrl");
+
+// (Re)grab = re-aplicar a config ATUAL da fonte (watermark/cut). O cron
+// snapshota na criação do job, mas os reprocess do admin (all.php,
+// admin_reprocess_video.php) chamam este worker direto — sem refresh o vídeo
+// mantém o snapshot antigo e ignora edições de margin/size/positions/cut.
+if (function_exists('wm_refresh_video_snapshot')) {
+    if (wm_refresh_video_snapshot($vid, $url)) {
+        grabber_log("Snapshot watermark/cut atualizado a partir da fonte (VID=$vid)");
+    }
+}
 
 // Atualizar last_update para impedir timeout
 $conn->execute("UPDATE video SET last_update = " . time() . " WHERE VID = " . intval($vid) . " LIMIT 1");
