@@ -714,15 +714,7 @@ function extract_video_vthumbs_hq($video_path, $video_id, $img_thumbs = true) {
 	@exec($dim_cmd, $dim_out);
 	$src_w = isset($dim_out[0]) ? intval($dim_out[0]) : 0;
 	$src_h = isset($dim_out[1]) ? intval($dim_out[1]) : 0;
-	if ($src_w > 0 && $src_h > $src_w) {
-		$swap   = $clip_w;
-		$clip_w = $clip_h;
-		$clip_h = $swap;
-		$clip_w = (int) floor($clip_w / 2) * 2;
-		$clip_h = (int) floor($clip_h / 2) * 2;
-		if ($clip_w < 2) $clip_w = 2;
-		if ($clip_h < 2) $clip_h = 2;
-	}
+	$is_portrait = ($src_w > 0 && $src_h > $src_w);
 
 	$final_thumbs_folder = get_thumb_dir($video_id);
 
@@ -766,13 +758,24 @@ function extract_video_vthumbs_hq($video_path, $video_id, $img_thumbs = true) {
 	}
 
 	// Cover the clip box (center-crop) and normalize to 30 fps CFR so the
-	// hover playback starts instantly and loops smoothly.
+	// hover playback starts instantly and loops smoothly. Portrait sources are
+	// composed on the 16:9 canvas: the full vertical scene centered sharp over
+	// a blurred full-bleed backdrop, so the preview fills the card side-to-side
+	// without cropping the subject.
 	$filter = '';
 	for ($i = 0; $i < $segs; $i++) {
 		$filter .= '[' . $i . ':v]';
 	}
 	$filter .= 'concat=n=' . $segs . ':v=1:a=0[vc];';
-	$filter .= '[vc]scale=' . $clip_w . ':' . $clip_h . ':force_original_aspect_ratio=increase,crop=' . $clip_w . ':' . $clip_h . ',fps=30,setpts=PTS-STARTPTS[vout]';
+	if ($is_portrait) {
+		$filter .= '[vc]fps=30,setpts=PTS-STARTPTS[vc30];';
+		$filter .= '[vc30]split=2[bgsrc][fgsrc];';
+		$filter .= '[bgsrc]scale=' . $clip_w . ':' . $clip_h . ':force_original_aspect_ratio=increase,crop=' . $clip_w . ':' . $clip_h . ',boxblur=20:4[bg];';
+		$filter .= '[fgsrc]scale=' . $clip_w . ':' . $clip_h . ':force_original_aspect_ratio=decrease[fg];';
+		$filter .= '[bg][fg]overlay=(W-w)/2:(H-h)/2:fps=30[vout]';
+	} else {
+		$filter .= '[vc]scale=' . $clip_w . ':' . $clip_h . ':force_original_aspect_ratio=increase,crop=' . $clip_w . ':' . $clip_h . ',fps=30,setpts=PTS-STARTPTS[vout]';
+	}
 
 	// MP4 fallback (iOS/older Safari): high-quality H.264, faststart + short GOP.
 	$mp4_cmd = $config['ffmpeg'] . $cmd_parts
