@@ -197,8 +197,8 @@ function convert ($e, $vid, $video_name, $video_info) {
 
 		if (($e['height'] <= $video_info['height'] || $e['width'] <= $video_info['width']) || $e['lq']  ) {
 
-			//Check cut intro
-			$sql 	= "SELECT cut FROM video WHERE VID = '" .$vid. "' LIMIT 1";
+			//Check cut intro/outro (mass grabber snapshots: cut = start trim, cut_out = end trim)
+			$sql 	= "SELECT cut, cut_out FROM video WHERE VID = '" .$vid. "' LIMIT 1";
 			$rs		= selectQuery($sql);
 			$cut	= $rs['cut'];
 			if ($cut) {
@@ -206,6 +206,15 @@ function convert ($e, $vid, $video_name, $video_info) {
 			} else {
 				$add_cut = "";
 			}		
+			// End trim: -t = probed duration minus start cut minus end cut
+			$add_trim = "";
+			$cutOut = intval(!empty($rs['cut_out']) ? $rs['cut_out'] : 0);
+			if ($cutOut > 0 && !empty($video_info['duration']) && floatval($video_info['duration']) > 0) {
+				$trim = floatval($video_info['duration']) - floatval($cut) - $cutOut;
+				if ($trim > 1) {
+					$add_trim = " -t ".number_format($trim, 2, '.', '');
+				}
+			}
 			
 			// Source Video Path info
 			$src = $config['VDO_DIR']."/".$video_name;
@@ -219,12 +228,12 @@ function convert ($e, $vid, $video_name, $video_info) {
 				$faststart = "";			
 			}
 			$copyH264 = ($video_info['file_extension'] == "mp4" && strpos($video_info['format_name'], 'mp4') !== false && $video_info['codec_name'] == "h264" && strpos($video_info['codec_long_name'], 'MPEG-4') !== false && strpos($video_info['codec_long_name'], 'AVC') !== false);
-			if ($e['copyonly'] && $copyH264 && !wm_force_reencode($wmCfg)) {
+			if ($e['copyonly'] && $copyH264 && !wm_force_reencode($wmCfg) && $add_trim === '') {
 				// Fast path: the source is ALREADY H.264/MP4 (e.g. files from the
 				// Mass Video Grabber / yt-dlp). Re-encoding it is pure CPU waste —
 				// remux to the target with faststart instead (seconds, not minutes).
 				if ($cut) {
-					$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -c copy -y \"".$output."\"";
+					$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\"".$add_trim." -c copy -y \"".$output."\"";
 					modproc($cmd);
 				} elseif ($e['faststart']) {
 					$cmd = $config['ffmpeg']." -i \"".$src."\" -c copy -movflags +faststart -y \"".$output."\"";
@@ -250,7 +259,7 @@ function convert ($e, $vid, $video_name, $video_info) {
 				$wmArgs = wm_build_args($wmCfg, $scaleInner, $video_info, $e);
 				$vfilter = ($wmArgs !== '') ? $wmArgs : $scale;
 				$output = $config['H264_DIR']."/".$vid."_".$e['label'].".".$e['format'];
-				$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -threads 0 -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$vfilter." ".$e['ios']." ".$faststart." -y \"".$output."\"";	
+				$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\"".$add_trim." ".$vfilter." -threads 0 -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$e['ios']." ".$faststart." -y \"".$output."\"";	
 				modproc($cmd);
 			}
 			if (file_exists($output) && filesize($output) > 100) {
@@ -286,7 +295,7 @@ function convert ($e, $vid, $video_name, $video_info) {
 				$wmArgs = wm_build_args($wmCfg, $scaleInner, $video_info, $e);
 				$vfilter = ($wmArgs !== '') ? $wmArgs : $scale;
 				echo "\n"."Retrying using fixed scale: ".$scale."\n";
-				$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -threads 0 -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$vfilter." ".$e['ios']." ".$faststart." -y \"".$output."\"";
+				$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\"".$add_trim." ".$vfilter." -threads 0 -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$e['ios']." ".$faststart." -y \"".$output."\"";
 				modproc($cmd);
 				if (file_exists($output) && filesize($output) > 100) {
 					$chk_sql = "SELECT formats, lformats FROM video WHERE VID = '".(int)$vid."' LIMIT 1";
@@ -337,8 +346,11 @@ function insert_q_sp($vid, $height, $info) {
 			$sql = "INSERT INTO conversion_queue_sp SET VID = '".$vid."', UID = '".intval($uid)."', video_name = '".$video_name."', video_path = '".$video_path."', skip = '".intval($height)."', title = '".$title."', addtime = '".time()."'";
 			echo "\nINSERT INTO QUEUE SECOND PASS SQL:".$sql."\n";
 			@mysqli_query($link, $sql);
-			@mysqli_query($link, "DELETE FROM conversion_queue_fp WHERE VID = '".$vid."' LIMIT 1");
 		}
+		// The 1st pass produced a format, so its fp queue row is done no matter
+		// whether an sp row already existed - otherwise the fp row stays at
+		// status='1' forever and the video looks stuck "Converting".
+		@mysqli_query($link, "DELETE FROM conversion_queue_fp WHERE VID = '".$vid."' LIMIT 1");
 
 		mysqli_close($link);
 	}
@@ -348,8 +360,21 @@ function insert_q_sp($vid, $height, $info) {
 function postThumbs($vid, $src) {
 	global $config;
 
+	// Thumbs only AFTER processing: when the video carries a watermark profile
+	// or a trim (cut/cut_out), the frames MUST come from a converted
+	// (watermarked/trimmed) file. The raw source / a pristine .bak would expose
+	// pre-processing frames (sem logo, com a intro do anúncio, etc).
+	$requiresProcessed = (wm_video_config($vid) !== null);
+	$prsSql = "SELECT cut, cut_out FROM video WHERE VID = '".(int)$vid."' LIMIT 1";
+	$prsRs  = selectQuery($prsSql);
+	if (is_array($prsRs)) {
+		$requiresProcessed = $requiresProcessed
+			|| intval(isset($prsRs['cut'])     ? $prsRs['cut']     : 0) > 0
+			|| intval(isset($prsRs['cut_out']) ? $prsRs['cut_out'] : 0) > 0;
+	}
+
 	$bak_src = $src.'.bak';
-	if (file_exists($bak_src) && filesize($bak_src) > 100) {	
+	if (!$requiresProcessed && file_exists($bak_src) && filesize($bak_src) > 100) {	
 		echo "\n"."Extracting thumbnails: ".$src."\n\n";
 		extract_video_thumbs($bak_src, $vid, 'all', $config['thumbnail_remove_bb'], $config['thumbnail_keep_ar']);
 		return;		
@@ -398,7 +423,7 @@ function postThumbs($vid, $src) {
 			return;
 		}
 	}
-	if (file_exists($src) && filesize($src) > 100) {	
+	if (!$requiresProcessed && file_exists($src) && filesize($src) > 100) {	
 		echo "\n"."Extracting thumbnails: ".$src."\n\n";
 		extract_video_thumbs($src, $vid, 'all', $config['thumbnail_remove_bb'], $config['thumbnail_keep_ar']);
 		if ($config['vthumbs'] == '1') {
@@ -415,10 +440,11 @@ function postConversion($vid,$src) {
 
 	$sql  	     = "SELECT formats, active FROM video WHERE VID = '" .$vid. "' LIMIT 1";
 	$rs 	     = selectQuery($sql);
-    $formats     = array_values(array_unique(array_filter(array_map('trim', explode(',', $rs['formats'])))));
-    $status      = $rs['active'];	
-	
-	$hd          = 0;	
+    $f_raw       = trim((string)(isset($rs['formats']) ? $rs['formats'] : ''));
+    $formats     = array_values(array_unique(array_filter(array_map('trim', explode(',', $f_raw)))));
+    $status      = isset($rs['active']) ? $rs['active'] : '0';
+
+	$hd          = 0;
 	// Respect manual suspension: if admin set active=0 during conversion, keep it 0
 	if ($status == '0') {
 		$active = 0;
@@ -430,64 +456,84 @@ function postConversion($vid,$src) {
 		$active = 0;
 	}
 
+	// Nothing was produced by this pass: don't try to derive metadata from a
+	// missing output file. A failed probe used to feed '' values into the
+	// UPDATE below and raise a fatal mysqli exception under strict SQL, which
+	// killed this script and left its queue row stuck as "Converting".
+	if (empty($formats)) {
+		executeQuery("UPDATE video SET active = '".$active."', last_update = '".time()."' WHERE VID = '".(int)$vid."' LIMIT 1");
+		echo "\n".$nl."SQL:\n".$nl."(no format produced - video left inactive for reprocess)\n\n";
+		return;
+	}
+
 	$sd_f        = explode('.', end($formats));
 	$sd_vf       = $config['H264_DIR'].'/'.$vid."_".$sd_f[1].".".$sd_f[2];
 	$sd_ffp_data = get_ffprobe_data($sd_vf);
 	$sd_vi       = ffpInfo($sd_ffp_data);
-	
+	// ffprobe can return nothing for a file that vanished mid-run - give every
+	// column a safe default so the SQL below can never raise on ''.
+	$sd_dur      = isset($sd_vi['duration']) ? floatval($sd_vi['duration']) : 0;
+	$sd_w        = isset($sd_vi['width']) ? intval($sd_vi['width']) : 0;
+	$sd_h        = isset($sd_vi['height']) ? intval($sd_vi['height']) : 0;
+	$sd_ar       = isset($sd_vi['display_aspect_ratio']) ? $sd_vi['display_aspect_ratio'] : '';
+
 	if (intval($sd_f[0]) > 480) {
 		$hd = 1;
 	}
-	$sql = 	"UPDATE video SET 
-			active = '".$active."', 
-			duration = '".$sd_vi['duration']."',
-			width_sd = '".$sd_vi['width']."', 
-			height_sd = '".$sd_vi['height']."', 
-			aspect_sd = '".$sd_vi['display_aspect_ratio']."',
-			last_update = '".time()."' 
+	$sql = 	"UPDATE video SET
+			active = '".$active."',
+			duration = '".$sd_dur."',
+			width_sd = '".$sd_w."',
+			height_sd = '".$sd_h."',
+			aspect_sd = '".$sd_ar."',
+			last_update = '".time()."'
 			WHERE VID = '".(int)$vid."' LIMIT 1";
-			
+
 	if (count($formats)>1) {
 		$hd_f    = explode('.', $formats[0]);
 		$hd_vf = $config['H264_DIR'].'/'.$vid."_".$hd_f[1].".".$hd_f[2];
 		$hd_ffp_data = get_ffprobe_data($hd_vf);
 		$hd_vi = ffpInfo($hd_ffp_data);
-		
+		$hd_dur      = isset($hd_vi['duration']) ? floatval($hd_vi['duration']) : $sd_dur;
+		$hd_w        = isset($hd_vi['width']) ? intval($hd_vi['width']) : $sd_w;
+		$hd_h        = isset($hd_vi['height']) ? intval($hd_vi['height']) : $sd_h;
+		$hd_ar       = isset($hd_vi['display_aspect_ratio']) ? $hd_vi['display_aspect_ratio'] : $sd_ar;
 
 		if (intval($hd_f[0]) > 480) {
 			$hd = 1;
-			$sql = 	"UPDATE video SET 
-					active = '".$active."', 
-					duration = '".$hd_vi['duration']."', 
-					width_hd = '".$hd_vi['width']."', 
-					height_hd = '".$hd_vi['height']."', 
-					aspect_hd = '".$hd_vi['display_aspect_ratio']."', 
-					width_sd = '".$sd_vi['width']."', 
-					height_sd = '".$sd_vi['height']."', 
-					aspect_sd = '".$sd_vi['display_aspect_ratio']."', 
+			$sql = 	"UPDATE video SET
+					active = '".$active."',
+					duration = '".$hd_dur."',
+					width_hd = '".$hd_w."',
+					height_hd = '".$hd_h."',
+					aspect_hd = '".$hd_ar."',
+					width_sd = '".$sd_w."',
+					height_sd = '".$sd_h."',
+					aspect_sd = '".$sd_ar."',
 					hd = '".$hd."',
-					last_update = '".time()."' 
-					WHERE VID = '".(int)$vid."' LIMIT 1";			
+					last_update = '".time()."'
+					WHERE VID = '".(int)$vid."' LIMIT 1";
 		}
 	} else {
 		if ($hd == 1) {
-			$sql = 	"UPDATE video SET 
-					active = '".$active."', 
-					duration = '".$sd_vi['duration']."', 
-					width_hd = '".$sd_vi['width']."', 
-					height_hd = '".$sd_vi['height']."', 
-					aspect_hd = '".$sd_vi['display_aspect_ratio']."', 
-					width_sd = '".$sd_vi['width']."', 
-					height_sd = '".$sd_vi['height']."', 
-					aspect_sd = '".$sd_vi['display_aspect_ratio']."', 
+			$sql = 	"UPDATE video SET
+					active = '".$active."',
+					duration = '".$sd_dur."',
+					width_hd = '".$sd_w."',
+					height_hd = '".$sd_h."',
+					aspect_hd = '".$sd_ar."',
+					width_sd = '".$sd_w."',
+					height_sd = '".$sd_h."',
+					aspect_sd = '".$sd_ar."',
 					hd = '".$hd."',
-					last_update = '".time()."' 
-					WHERE VID = '".(int)$vid."' LIMIT 1";				
+					last_update = '".time()."'
+					WHERE VID = '".(int)$vid."' LIMIT 1";
 		}
 	}
-	
+
 	executeQuery($sql);
 	echo "\n".$nl."SQL:\n".$nl.$sql."\n\n";
+
 
 	// Multi-Server Transfer
 	if (isset($config['multi_server']) && $config['multi_server'] == '1') {

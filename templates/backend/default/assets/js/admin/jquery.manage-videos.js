@@ -274,6 +274,7 @@ $(document).ready(function(){
 		$("#filter_channel").select2("val", "");
 		$("#filter_active").select2("val", "");
 		$("#filter_type").select2("val", "");
+		$("#filter_show_thumbs").prop('checked', true);
 		
 		$("select[id*='filter_']" ).each(function() {
 			$(this).select2("val", "");

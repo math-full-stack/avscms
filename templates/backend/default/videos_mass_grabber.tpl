@@ -230,13 +230,19 @@
                     <div class="row">
                         <div class="col-sm-3"><div class="form-group"><label class="control-label">Enabled</label><select class="form-control" id="mg_src_wm_enabled"><option value="0">OFF</option><option value="1">ON</option></select></div></div>
                         <div class="col-sm-3"><div class="form-group"><label class="control-label">Opacity %</label><input type="number" class="form-control" id="mg_src_wm_opacity" value="60" min="0" max="100"></div></div>
-                        <div class="col-sm-3"><div class="form-group"><label class="control-label">Size % width</label><input type="number" class="form-control" id="mg_src_wm_size" value="10" min="1" max="50"></div></div>
+                        <div class="col-sm-3"><div class="form-group"><label class="control-label">Width (px)</label><input type="number" class="form-control" id="mg_src_wm_size" value="120" min="8" max="4096" title="Logo width in pixels — fixed, independent of the video resolution. Height keeps the logo's aspect ratio automatically."></div></div>
                         <div class="col-sm-3"><div class="form-group"><label class="control-label">Margin px</label><input type="number" class="form-control" id="mg_src_wm_margin" value="12" min="0" max="200"></div></div>
                     </div>
                     <div class="form-group">
                         <label class="control-label">Position Schedule <small class="text-muted">one row = fixed; multiple rows with seconds = alternates (e.g. 5s top-right then 5s bottom-left, looping)</small></label>
                         <div id="mg_wm_rows"></div>
                         <button type="button" class="btn btn-xs btn-default" onclick="mgWmAddRow()"><i class="fa fa-plus"></i> Add position</button>
+                    </div>
+                    <hr>
+                    <h5 style="margin-top:0"><i class="fa fa-scissors"></i> Trim <small class="text-muted">optional — cuts ad intro/outro from every video grabbed from this source</small></h5>
+                    <div class="row">
+                        <div class="col-sm-3"><div class="form-group"><label class="control-label">Cut start (sec)</label><input type="number" class="form-control" id="mg_src_cut_in" value="0" min="0" max="86400" title="Seconds to remove from the beginning (e.g. 4s intro ad)"></div></div>
+                        <div class="col-sm-3"><div class="form-group"><label class="control-label">Cut end (sec)</label><input type="number" class="form-control" id="mg_src_cut_out" value="0" min="0" max="86400" title="Seconds to remove from the end (e.g. outro)"></div></div>
                     </div>
                 </form>
             </div>
@@ -688,12 +694,18 @@ function mgEditSource(id) {
         var wm = {}; try { wm = s.watermark_config ? JSON.parse(s.watermark_config) : {}; } catch(e) { wm = {}; }
         document.getElementById('mg_src_wm_enabled').value = wm.enabled ? 1 : 0;
         document.getElementById('mg_src_wm_opacity').value = wm.opacity != null ? wm.opacity : 60;
-        document.getElementById('mg_src_wm_size').value = wm.size != null ? wm.size : 10;
+        document.getElementById('mg_src_wm_size').value = wm.size != null ? wm.size : 120;
         document.getElementById('mg_src_wm_margin').value = wm.margin != null ? wm.margin : 12;
+        document.getElementById('mg_src_cut_in').value = s.cut_in != null ? s.cut_in : 0;
+        document.getElementById('mg_src_cut_out').value = s.cut_out != null ? s.cut_out : 0;
         document.getElementById('mg_wm_rows').innerHTML = '';
         var rows = (wm.positions && wm.positions.length) ? wm.positions : [{pos:'top-right', dur:0}];
         for (var i = 0; i < rows.length; i++) mgWmAddRow(rows[i].pos, rows[i].dur);
     });
+}
+function mgIntVal(id, def) {
+    var v = parseInt(document.getElementById(id).value, 10);
+    return isNaN(v) ? def : v;
 }
 function mgSaveSource() {
     var alertBox = document.getElementById('mg_source_alert'); var btn = document.getElementById('btn_save_source');
@@ -706,6 +718,7 @@ function mgSaveSource() {
     fd.append('schedule_value', document.getElementById('mg_src_schedule_value').value); fd.append('max_per_run', document.getElementById('mg_src_max_per_run').value);
     fd.append('max_pages', document.getElementById('mg_src_max_pages').value); fd.append('delay_seconds', document.getElementById('mg_src_delay').value);
     fd.append('discovery_enabled', document.getElementById('mg_src_discovery').value); fd.append('enabled', document.getElementById('mg_src_enabled').value);
+    fd.append('cut_in', document.getElementById('mg_src_cut_in').value); fd.append('cut_out', document.getElementById('mg_src_cut_out').value);
     var wmRows = document.querySelectorAll('#mg_wm_rows .mg-wm-row');
     var wmPositions = [];
     for (var wi = 0; wi < wmRows.length; wi++) {
@@ -713,9 +726,9 @@ function mgSaveSource() {
     }
     fd.append('watermark_config', JSON.stringify({
         enabled: document.getElementById('mg_src_wm_enabled').value == '1' ? 1 : 0,
-        opacity: parseInt(document.getElementById('mg_src_wm_opacity').value) || 60,
-        size: parseInt(document.getElementById('mg_src_wm_size').value) || 10,
-        margin: parseInt(document.getElementById('mg_src_wm_margin').value) || 12,
+        opacity: mgIntVal('mg_src_wm_opacity', 60),
+        size: mgIntVal('mg_src_wm_size', 120),
+        margin: mgIntVal('mg_src_wm_margin', 12),
         positions: wmPositions
     }));
     mgAjax('videos.php?m=mass_grabber&a=save_source', fd, function(err, data) {

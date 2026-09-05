@@ -162,6 +162,11 @@
 	</div>
 	{/if}
 
+	{if $random_category && $random_cat_videos}
+	{assign var=random_cat_link value=$relative|cat:"/videos/"|cat:$random_category.slug}
+	{include file='video_carousel.tpl' videos=$random_cat_videos title=$random_category.name icon='fa-dice' link=$random_cat_link auto_scroll=true}
+	{/if}
+
 	{if $creators}
 	<div class="xb-section">
 		<span class="xb-section-bar"></span>

@@ -67,6 +67,24 @@ $sql            = "SELECT UID, username, photo, gender, total_videos FROM signup
 $rs             = $conn->execute($sql);
 $creators       = $rs->getrows();
 
+// Carrossel aleatório por categoria (estilo Netflix)
+$sql            = "SELECT CHID, name, slug FROM channel WHERE total_videos > 0 ORDER BY RAND() LIMIT 1";
+$rs             = $conn->execute($sql);
+$random_category = $rs->getrows();
+$random_cat_videos = array();
+if ($random_category) {
+    $cat_id = intval($random_category[0]['CHID']);
+    $sql    = "SELECT " .$video_select. $video_from. " AND v.channel = " .$cat_id. " ORDER BY v.addtime DESC LIMIT 30";
+    $rs     = $conn->execute($sql);
+    $random_cat_videos = $rs->getrows();
+    video_apply_cover_rotation($random_cat_videos);
+    foreach ( $random_cat_videos as $k => $v ) {
+        $random_cat_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
+    }
+}
+$smarty->assign('random_category', $random_category[0] ?? null);
+$smarty->assign('random_cat_videos', $random_cat_videos);
+
 // Normaliza keywords para arrays (mesmo formato da página do vídeo)
 foreach ( $viewed_videos as $k => $v ) {
     $viewed_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));

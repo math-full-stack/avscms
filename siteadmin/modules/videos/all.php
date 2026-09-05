@@ -174,7 +174,7 @@ if ($videos) {
 
 // Frames de capa ordenados para o carousel da listagem (principal primeiro,
 // depois as capas rotativas de thumbnails_opt, sem duplicatas).
-if ($videos) {
+if ($videos && !empty($option['show_thumbs'])) {
     foreach ($videos as $idx => $v) {
         $max = max(1, intval($v['thumbs']));
         $main = intval($v['thumb']);
@@ -201,6 +201,11 @@ if ($videos) {
         $videos[$idx]['thumbnail_frames'] = $frames;
         $videos[$idx]['thumbnail_urls']   = $urls;
     }
+} elseif ($videos) {
+    foreach ($videos as $idx => $v) {
+        $videos[$idx]['thumbnail_frames'] = array();
+        $videos[$idx]['thumbnail_urls']   = array();
+    }
 }
 
 function constructQuery($module)
@@ -215,7 +220,7 @@ function constructQuery($module)
     $query_add          = ( $query_module != '' ) ? " AND" : " WHERE";
     $query_option       = array();
     $option_orig        = array('username' => '', 'title' => '', 'description' => '', 'keyword' => '', 'channel' => '', 'active' => '',
-                                'sort' => 'VID', 'order' => 'DESC', 'display' => 100);
+                                'sort' => 'VID', 'order' => 'DESC', 'display' => 100, 'show_thumbs' => '1');
 
 	$all   = (isset($_GET['all'])) ? intval($_GET['all']) : 0;
 	if ($all == 1) {
@@ -255,6 +260,7 @@ function constructQuery($module)
 		$option['sort']         = trim($_POST['sort']);		
         $option['order']        = trim($_POST['order']);
         $option['display']      = trim($_POST['display']);
+        $option['show_thumbs']  = isset($_POST['show_thumbs']) ? '1' : '0';
 	
 		if ( $option['username'] != '' && !isset($UID)) {
 			$UID            = getUserID($option['username']);

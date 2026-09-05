@@ -340,6 +340,8 @@ if ($action === 'save_source') {
         'enabled'             => isset($_POST['enabled']) ? intval($_POST['enabled']) : 1,
         'delay_seconds'       => isset($_POST['delay_seconds']) ? intval($_POST['delay_seconds']) : 1,
         'watermark_config'    => isset($_POST['watermark_config']) ? trim($_POST['watermark_config']) : '',
+        'cut_in'              => isset($_POST['cut_in']) ? max(0, intval($_POST['cut_in'])) : 0,
+        'cut_out'             => isset($_POST['cut_out']) ? max(0, intval($_POST['cut_out'])) : 0,
     );
 
     // Extract domain from URL

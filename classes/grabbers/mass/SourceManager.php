@@ -57,6 +57,8 @@ class SourceManager {
                 concurrency = " . intval(isset($data['concurrency']) ? $data['concurrency'] : 2) . ",
                 delay_seconds = " . intval(isset($data['delay_seconds']) ? $data['delay_seconds'] : 1) . ",
                 watermark_config = " . $this->db->qStr(isset($data['watermark_config']) ? $data['watermark_config'] : '') . ",
+                cut_in = " . intval(isset($data['cut_in']) ? $data['cut_in'] : 0) . ",
+                cut_out = " . intval(isset($data['cut_out']) ? $data['cut_out'] : 0) . ",
                 last_error = '',
                 error_count = 0,
                 created_at = " . $now . ",
@@ -76,7 +78,8 @@ class SourceManager {
         $sets = array();
         $fields = array('name', 'domain', 'provider', 'discovery_url', 'quality',
                         'max_per_run', 'max_pages', 'schedule_type', 'schedule_value',
-                        'requests_per_minute', 'concurrency', 'delay_seconds', 'watermark_config');
+                        'requests_per_minute', 'concurrency', 'delay_seconds', 'watermark_config',
+                        'cut_in', 'cut_out');
 
         foreach ($fields as $f) {
             if (array_key_exists($f, $data)) {

@@ -231,6 +231,7 @@ if (isset($config['conversion_q']) && $config['conversion_q'] == '1') {
 } else {
     log_conversion($config['LOG_DIR'] . '/' . $vid . '.log', $cmd);
     $lg = $config['LOG_DIR'] . '/' . $vid . '.log2';
+    @unlink($lg);  // remove stale log: ">" over a file owned by another user fails silently and the conversion never starts
     $PID = shell_exec("$cmd > " . escapeshellarg($lg) . " 2>&1 & echo $!");
     grabber_log("Conversão iniciada em background PID=$PID CMD=$cmd");
 }

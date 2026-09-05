@@ -221,9 +221,21 @@
 
 		<div class="xb-search">
 			<form name="search" id="search_form" method="post" action="{$relative}/search/{if !isset($search_type)}videos{else}{$search_type}{/if}">
-				<input type="text" class="xb-search-input" placeholder="{t c='ajax.search'} {if isset($search_type) && $search_type == 'photos'} {t c='global.albums'}{elseif isset($search_type) && $search_type == 'users'} {t c='global.users'}{else}{t c='global.videos'}{/if}" name="search_query" id="search_query" value="{if isset($search_query)}{$search_query_f}{/if}" autocomplete="off">
-				<a id="search_select" class="xb-search-select">{if isset($search_type) && $search_type == 'photos'}<i class="fas fa-camera"></i>{elseif isset($search_type) && $search_type == 'users'}<i class="fas fa-user"></i>{else}<i class="fas fa-video"></i>{/if}</a>
-				<button type="submit" class="xb-search-btn"><i class="fa fa-search"></i></button>
+				<div class="xb-search-wrapper">
+					<div class="xb-search-type">
+						<button type="button" class="xb-search-type-btn" id="search_type_btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							<i class="xb-search-type-icon">{if isset($search_type) && $search_type == 'photos'}<i class="fas fa-camera"></i>{elseif isset($search_type) && $search_type == 'users'}<i class="fas fa-user"></i>{else}<i class="fas fa-video"></i>{/if}</i>
+							<i class="fas fa-chevron-down xb-search-type-caret"></i>
+						</button>
+						<div class="xb-search-type-dropdown dropdown-menu" aria-labelledby="search_type_btn">
+							<a class="dropdown-item xb-search-type-option" data-type="videos" href="#"><i class="fas fa-video"></i> {translate c='global.videos'}</a>
+							<a class="dropdown-item xb-search-type-option" data-type="photos" href="#"><i class="fas fa-camera"></i> {translate c='global.albums'}</a>
+							<a class="dropdown-item xb-search-type-option" data-type="users" href="#"><i class="fas fa-user"></i> {translate c='global.users'}</a>
+						</div>
+					</div>
+					<input type="text" class="xb-search-input" placeholder="{t c='ajax.search'} {if isset($search_type) && $search_type == 'photos'} {t c='global.albums'}{elseif isset($search_type) && $search_type == 'users'} {t c='global.users'}{else}{t c='global.videos'}{/if}" name="search_query" id="search_query" value="{if isset($search_query)}{$search_query_f}{/if}" autocomplete="off">
+					<button type="submit" class="xb-search-btn"><i class="fa fa-search"></i></button>
+				</div>
 				<input type="hidden" id="search_type" value="{$search_type}">
 			</form>
 		</div>
@@ -266,29 +278,147 @@
 <nav class="xb-nav collapse d-lg-block" id="xbNav">
 	<div class="container">
 		<form class="xb-mobilesearch" name="search" id="search_form_xs" method="post" action="{$relative}/search/{if !isset($search_type)}videos{else}{$search_type}{/if}">
-			<input type="text" class="xb-search-input" placeholder="{t c='ajax.search'} {if isset($search_type) && $search_type == 'photos'} {t c='global.albums'}{elseif isset($search_type) && $search_type == 'users'} {t c='global.users'}{else}{t c='global.videos'}{/if}" name="search_query" id="search_query_xs" value="{if isset($search_query)}{$search_query_f}{/if}" autocomplete="off">
-			<a id="search_select_xs" class="xb-search-select">{if isset($search_type) && $search_type == 'photos'}<i class="fas fa-camera"></i>{elseif isset($search_type) && $search_type == 'users'}<i class="fas fa-user"></i>{else}<i class="fas fa-video"></i>{/if}</a>
-			<button type="submit" class="xb-search-btn"><i class="fa fa-search"></i></button>
+			<div class="xb-search-wrapper">
+				<div class="xb-search-type">
+					<button type="button" class="xb-search-type-btn" id="search_type_btn_xs" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+						<i class="xb-search-type-icon">{if isset($search_type) && $search_type == 'photos'}<i class="fas fa-camera"></i>{elseif isset($search_type) && $search_type == 'users'}<i class="fas fa-user"></i>{else}<i class="fas fa-video"></i>{/if}</i>
+						<i class="fas fa-chevron-down xb-search-type-caret"></i>
+					</button>
+					<div class="xb-search-type-dropdown dropdown-menu" aria-labelledby="search_type_btn_xs">
+						<a class="dropdown-item xb-search-type-option" data-type="videos" href="#"><i class="fas fa-video"></i> {translate c='global.videos'}</a>
+						<a class="dropdown-item xb-search-type-option" data-type="photos" href="#"><i class="fas fa-camera"></i> {translate c='global.albums'}</a>
+						<a class="dropdown-item xb-search-type-option" data-type="users" href="#"><i class="fas fa-user"></i> {translate c='global.users'}</a>
+					</div>
+				</div>
+				<input type="text" class="xb-search-input" placeholder="{t c='ajax.search'} {if isset($search_type) && $search_type == 'photos'} {t c='global.albums'}{elseif isset($search_type) && $search_type == 'users'} {t c='global.users'}{else}{t c='global.videos'}{/if}" name="search_query" id="search_query_xs" value="{if isset($search_query)}{$search_query_f}{/if}" autocomplete="off">
+				<button type="submit" class="xb-search-btn"><i class="fa fa-search"></i></button>
+			</div>
 			<input type="hidden" id="search_type_xs" value="{$search_type}">
 		</form>
-		<ul>
-			<li class="{if $menu == 'home'}active{/if}"><a href="{$relative}/">{translate c='menu.home'}</a></li>
-			<li><a href="{$relative}/videos?o=mv">Em alta</a></li>
-			<li><a href="{$relative}/videos?o=mr">Novos</a></li>
+		<ul class="xb-nav-list">
+			<li class="xb-nav-item {if $menu == 'home'}active{/if}"><a href="{$relative}/" class="xb-nav-link">{translate c='menu.home'}</a></li>
+			<li class="xb-nav-item"><a href="{$relative}/videos?o=mv" class="xb-nav-link">Em alta</a></li>
+			<li class="xb-nav-item"><a href="{$relative}/videos?o=mr" class="xb-nav-link">Novos</a></li>
 			{if $video_module == '1'}
-				<li class="{if $menu == 'videos'}active{/if}"><a href="{$relative}/videos">{translate c='menu.videos'}</a></li>
+			<li class="xb-nav-item xb-nav-dropdown {if $menu == 'videos'}active{/if}">
+				<a href="{$relative}/videos" class="xb-nav-link xb-nav-dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
+					{translate c='menu.videos'} <i class="fas fa-chevron-down xb-nav-caret"></i>
+				</a>
+				<div class="xb-dropdown-menu">
+					<div class="xb-dropdown-grid">
+						<div class="xb-dropdown-col">
+							<h6 class="xb-dropdown-title">{t c='menu.discover_videos'}</h6>
+							<ul class="xb-dropdown-list">
+								<li><a href="{$relative}/videos?type=featured"><i class="far fa-star"></i> {t c='global.featured'}</a></li>
+								<li><a href="{$relative}/videos?o=mr"><i class="far fa-clock"></i> {t c='global.most_recent'}</a></li>
+								<li><a href="{$relative}/videos?o=mv"><i class="far fa-eye"></i> {t c='global.most_viewed'}</a></li>
+								<li><a href="{$relative}/videos?o=tr"><i class="far fa-thumbs-up"></i> {t c='global.top_rated'}</a></li>
+								<li><a href="{$relative}/videos?o=tf"><i class="far fa-heart"></i> {t c='global.top_favorites'}</a></li>
+							</ul>
+							{if $suggestion_arr}
+							<h6 class="xb-dropdown-title mt-3">{t c='menu.trending_searches'}</h6>
+							<div class="xb-dropdown-tags">
+								{section name=i loop=$suggestion_arr max=10}
+								<a href="{$relative}/search/videos/{$suggestion_arr[i].expression}" class="xb-dropdown-tag"><i class="fas fa-search"></i> {$suggestion_arr[i].expression}</a>
+								{/section}
+							</div>
+							{/if}
+						</div>
+						{if $featured_videos_sm}
+						<div class="xb-dropdown-col xb-dropdown-featured">
+							<h6 class="xb-dropdown-title">{t c='menu.featured_videos'}</h6>
+							<div class="xb-dropdown-videos">
+								{section name=i loop=$featured_videos_sm}
+								<a href="{$relative}/video/{$featured_videos_sm[i].VID}/{$featured_videos_sm[i].title|clean}" class="xb-dropdown-video">
+									<div class="xb-dropdown-video-thumb">
+										<img src="{insert name=thumb_path vid=$featured_videos_sm[i].VID}/{$featured_videos_sm[i].thumb}.jpg" alt="{$featured_videos_sm[i].title|escape:'html'}" loading="lazy">
+										{if $featured_videos_sm[i].hd==1}<span class="xb-hd-badge">HD</span>{/if}
+										<div class="xb-dropdown-video-duration">
+											{insert name=duration assign=duration duration=$featured_videos_sm[i].duration}{$duration}
+										</div>
+									</div>
+									<div class="xb-dropdown-video-info">
+										<span class="xb-dropdown-video-title">{$featured_videos_sm[i].title|escape:'html'|truncate:40:"..."}</span>
+										<span class="xb-dropdown-video-meta">
+											{insert name=views assign=s_views views=$featured_videos_sm[i].viewnumber}
+											<i class="far fa-eye"></i> {$s_views}
+										</span>
+									</div>
+								</a>
+								{/section}
+							</div>
+							<a href="{$relative}/videos" class="xb-dropdown-view-all">{translate c='categories.view_all'} <i class="fas fa-arrow-right"></i></a>
+						</div>
+						{/if}
+					</div>
+				</div>
+			</li>
 			{/if}
-			<li class="{if $menu == 'categories'}active{/if}"><a href="{$relative}/categories">{translate c='menu.categories'}</a></li>
-			<li><a href="{$relative}/users">Creators</a></li>
-			<li class="{if $menu == 'tags'}active{/if}"><a href="{$relative}/tags">{translate c='menu.tags'}</a></li>
+			<li class="xb-nav-item xb-nav-dropdown {if $menu == 'categories'}active{/if}">
+				<a href="{$relative}/categories" class="xb-nav-link xb-nav-dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
+					{translate c='menu.categories'} <i class="fas fa-chevron-down xb-nav-caret"></i>
+				</a>
+				<div class="xb-dropdown-menu">
+					<div class="xb-dropdown-grid">
+						<div class="xb-dropdown-col">
+							<h6 class="xb-dropdown-title">{t c='menu.popular_categories'}</h6>
+							<ul class="xb-dropdown-list">
+								{if $categories_sm}
+								{section name=i loop=$categories_sm max=15}
+								<li><a href="{$relative}/videos/{$categories_sm[i].slug}"><i class="fas fa-folder"></i> {$categories_sm[i].name|escape:'html'} <span class="xb-badge-sm">{$categories_sm[i].total_videos}</span></a></li>
+								{/section}
+								{/if}
+								<li><a href="{$relative}/categories"><i class="fas fa-th"></i> {translate c='categories.view_all'}</a></li>
+							</ul>
+						</div>
+						{if $categories_sm}
+						<div class="xb-dropdown-col xb-dropdown-categories">
+							<div class="xb-dropdown-cats-grid">
+								{section name=i loop=$categories_sm max=12}
+								<a href="{$relative}/videos/{$categories_sm[i].slug}" class="xb-dropdown-cat">
+									<div class="xb-dropdown-cat-thumb">
+										<img src="{$relative}/media/categories/video/{$categories_sm[i].CHID}.jpg" alt="{$categories_sm[i].name|escape:'html'}" loading="lazy">
+									</div>
+									<span class="xb-dropdown-cat-name">{$categories_sm[i].name|escape:'html'|truncate:20:"..."}</span>
+									<span class="xb-dropdown-cat-count">{$categories_sm[i].total_videos}</span>
+								</a>
+								{/section}
+							</div>
+							<a href="{$relative}/categories" class="xb-dropdown-view-all">{translate c='categories.view_all'} <i class="fas fa-arrow-right"></i></a>
+						</div>
+						{/if}
+					</div>
+				</div>
+			</li>
+			<li class="xb-nav-item"><a href="{$relative}/users" class="xb-nav-link">Creators</a></li>
+			<li class="xb-nav-item xb-nav-dropdown {if $menu == 'tags'}active{/if}">
+				<a href="{$relative}/tags" class="xb-nav-link xb-nav-dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
+					{translate c='menu.tags'} <i class="fas fa-chevron-down xb-nav-caret"></i>
+				</a>
+				<div class="xb-dropdown-menu">
+					<div class="xb-dropdown-grid">
+						<div class="xb-dropdown-col">
+							<h6 class="xb-dropdown-title">{translate c='tags.popular_tags'}</h6>
+							<div class="xb-dropdown-tags">
+								{if $tags_sm}
+								{section name=i loop=$tags_sm max=30}
+								<a href="{$relative}/search/tags/{$tags_sm[i].tag}" class="xb-dropdown-tag"><span class="xb-tag-count">{$tags_sm[i].counter}</span> {$tags_sm[i].tag}</a>
+								{/section}
+								{/if}
+							</div>
+							<a href="{$relative}/tags" class="xb-dropdown-view-all">{translate c='global.view_more'} <i class="fas fa-arrow-right"></i></a>
+						</div>
+					</div>
+				</div>
+			</li>
 			{if $photo_module == '1'}
-				<li class="{if $menu == 'albums'}active{/if}"><a href="{$relative}/albums">{translate c='menu.photos'}</a></li>
+				<li class="xb-nav-item {if $menu == 'albums'}active{/if}"><a href="{$relative}/albums" class="xb-nav-link">{translate c='menu.photos'}</a></li>
 			{/if}
 			{if $blog_module == '1'}
-				<li class="{if $menu == 'blogs'}active{/if}"><a href="{$relative}/blogs">{translate c='menu.blogs'}</a></li>
+				<li class="xb-nav-item {if $menu == 'blogs'}active{/if}"><a href="{$relative}/blogs" class="xb-nav-link">{translate c='menu.blogs'}</a></li>
 			{/if}
 			{if $community_module == '1'}
-				<li class="{if $menu == 'community'}active{/if}"><a href="{$relative}/community">{translate c='menu.community'}</a></li>
+				<li class="xb-nav-item {if $menu == 'community'}active{/if}"><a href="{$relative}/community" class="xb-nav-link">{translate c='menu.community'}</a></li>
 			{/if}
 		</ul>
 	</div>

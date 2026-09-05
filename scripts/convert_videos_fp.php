@@ -49,6 +49,19 @@ foreach($encodings as $encoding) {
 postThumbs($vid,$video_path);
 postConversion($vid,$video_path);
 
+// Cleanup on failure: a first pass that produced NO formats never reached
+// insert_q_sp() (which deletes the fp row). Leaving the row at status='1'
+// counts against active_conversions() and FREEZES the whole queue until
+// remove_overdue() purges it (q_timeout hours later). Drop it here so the
+// queue keeps moving, and park the video as inactive for manual reprocess.
+$chk = $conn->execute("SELECT formats FROM video WHERE VID = '".intval($vid)."' LIMIT 1");
+$chkFormats = ($chk && !$chk->EOF) ? trim((string)$chk->fields['formats']) : '';
+if ($chkFormats === '') {
+	$conn->execute("DELETE FROM conversion_queue_fp WHERE VID = '".intval($vid)."' LIMIT 1");
+	$conn->execute("UPDATE video SET active = '0', last_update = '".time()."' WHERE VID = '".intval($vid)."' LIMIT 1");
+	echo "\n[Cleanup] First pass failed (no formats) - removed stuck queue row for VID $vid\n";
+}
+
 // Display :: Encoder Core End
 echo "\n<-- End of Script -->\n\n";
 exit();

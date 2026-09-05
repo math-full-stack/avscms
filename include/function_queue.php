@@ -52,6 +52,7 @@ function check_q() {
 					$conn->execute("UPDATE video SET last_update = '".time()."' WHERE VID = '".intval($video_id)."' LIMIT 1");
 					log_in_back($config['LOG_DIR']. '/' .$video_id. '.log', $cmd);
 					$lg = $config['LOG_DIR']. '/' .$video_id. '.log2';
+					@unlink($lg);  // remove stale log: ">" over a file owned by another user fails silently and the conversion never starts
 					run_in_bg($cmd.' > '.$lg);	
 					return true;
 				} else {
@@ -90,6 +91,7 @@ function check_q() {
 				$conn->execute("UPDATE video SET last_update = '".time()."' WHERE VID = '".intval($video_id)."' LIMIT 1");
 				log_in_back($config['LOG_DIR']. '/' .$video_id. '.log', $cmd);
 				$lg = $config['LOG_DIR']. '/' .$video_id. '.log3';
+				@unlink($lg);  // remove stale log: ">" over a file owned by another user fails silently and the conversion never starts
 				run_in_bg($cmd.' > '.$lg);	
 				return true;
 			} else {
@@ -150,6 +152,7 @@ function pump_conversion_queue() {
         $conn->execute("UPDATE video SET last_update = '" . time() . "' WHERE VID = '" . $video_id . "' LIMIT 1");
         log_in_back($config['LOG_DIR'] . '/' . $video_id . '.log', $cmd);
         $lg = $config['LOG_DIR'] . '/' . $video_id . '.log2';
+        @unlink($lg);  // remove stale log: ">" over a file owned by another user fails silently and the conversion never starts
         run_in_bg($cmd . ' > ' . $lg);
         $started++;
     }
@@ -182,6 +185,7 @@ function pump_conversion_queue() {
         $conn->execute("UPDATE video SET last_update = '" . time() . "' WHERE VID = '" . $video_id . "' LIMIT 1");
         log_in_back($config['LOG_DIR'] . '/' . $video_id . '.log', $cmd);
         $lg = $config['LOG_DIR'] . '/' . $video_id . '.log3';
+        @unlink($lg);  // remove stale log: ">" over a file owned by another user fails silently and the conversion never starts
         run_in_bg($cmd . ' > ' . $lg);
         $started++;
     }

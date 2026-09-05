@@ -10,8 +10,11 @@ defined('_VALID') or die('Restricted Access!');
  * commands byte-for-byte identical.
  *
  * Profile JSON:
- *   {"enabled":1,"opacity":60,"size":10,"margin":12,
+ *   {"enabled":1,"opacity":60,"size":120,"margin":12,
  *    "positions":[{"pos":"top-right","dur":5},{"pos":"bottom-left","dur":5}]}
+ *   - size: logo WIDTH in pixels, FIXED — independent of the video/output
+ *     resolution. Height follows automatically (-2), so the logo keeps its
+ *     aspect ratio and even dimensions at any size.
  *   - One position row (any dur)           -> fixed position for the whole video
  *   - Several rows with dur > 0            -> alternates every `dur` seconds, looping
  *   - A row with dur = 0 (multi-row list)  -> stays there until the end of the cycle
@@ -57,7 +60,8 @@ function wm_normalize($dec) {
 
     return array(
         'opacity'   => max(0, min(100, intval(isset($dec['opacity']) ? $dec['opacity'] : 60))),
-        'size'      => max(1, min(50, intval(isset($dec['size']) ? $dec['size'] : 10))),
+        // size = logo width in PIXELS (fixed, independent of video resolution)
+        'size'      => max(8, min(4096, intval(isset($dec['size']) ? $dec['size'] : 120))),
         'margin'    => max(0, min(200, intval(isset($dec['margin']) ? $dec['margin'] : 12))),
         'positions' => $positions,
     );
@@ -65,6 +69,16 @@ function wm_normalize($dec) {
 
 /**
  * Per-video watermark config (cached per process).
+ *
+ * Resolution order:
+ *   1. video.watermark_cfg — the profile frozen into the row when the mass
+ *      grabber created it (source edits never retro-change already-grabbed
+ *      videos that carry a snapshot).
+ *   2. grabber source by source_url domain — fallback so ANY process that
+ *      converts a video tied to a watermark-configured grabber source burns
+ *      the logo: single-URL grabs, videos grabbed before the snapshot existed,
+ *      and admin reprocesses all resolve the source here.
+ *
  * @param int $vid
  * @return array|null
  */
@@ -77,12 +91,15 @@ function wm_video_config($vid) {
 
     $cfg = null;
     try {
-        $rs = $conn->Execute("SELECT watermark_cfg FROM video WHERE VID = " . $vid . " LIMIT 1");
+        $rs = $conn->Execute("SELECT source_url, watermark_cfg FROM video WHERE VID = " . $vid . " LIMIT 1");
         if ($rs && !$rs->EOF) {
             $raw = trim((string)$rs->fields['watermark_cfg']);
             if ($raw !== '') {
                 $dec = json_decode($raw, true);
                 $cfg = wm_normalize($dec);
+            }
+            if ($cfg === null) {
+                $cfg = wm_source_config_for_url(isset($rs->fields['source_url']) ? (string)$rs->fields['source_url'] : '');
             }
         }
     } catch (Exception $e) {
@@ -91,6 +108,46 @@ function wm_video_config($vid) {
         $cfg = null;
     }
     $cache[$vid] = $cfg;
+    return $cfg;
+}
+
+/**
+ * Resolve the watermark profile of the grabber source whose domain matches the
+ * video's source URL (www. prefix ignored, one-level subdomains allowed).
+ * @param string $url
+ * @return array|null
+ */
+function wm_source_config_for_url($url) {
+    global $conn;
+    static $cache = array();
+
+    $host = strtolower(trim((string)parse_url(trim($url), PHP_URL_HOST)));
+    if ($host === '') return null;
+    if (array_key_exists($host, $cache)) return $cache[$host];
+
+    $plain = preg_replace('/^www\./', '', $host);
+
+    $cfg = null;
+    try {
+        $rs = $conn->Execute(
+            "SELECT watermark_config FROM grabber_sources
+              WHERE watermark_config != ''
+                AND (REPLACE(domain, 'www.', '') = " . $conn->qStr($plain) . "
+                     OR domain LIKE " . $conn->qStr('%.' . $plain) . ")
+              ORDER BY updated_at DESC LIMIT 1"
+        );
+        if ($rs && !$rs->EOF) {
+            $raw = trim((string)$rs->fields['watermark_config']);
+            if ($raw !== '') {
+                $cfg = wm_normalize(json_decode($raw, true));
+            }
+        }
+    } catch (Exception $e) {
+        $cfg = null;
+    } catch (Throwable $e) {
+        $cfg = null;
+    }
+    $cache[$host] = $cfg;
     return $cfg;
 }
 
@@ -181,13 +238,10 @@ function wm_build_args($cfg, $scaleInner, $video_info, $e) {
         return '';
     }
 
-    list($ow, $oh) = wm_out_dims(
-        isset($video_info['width']) ? $video_info['width'] : 0,
-        isset($video_info['height']) ? $video_info['height'] : 0,
-        $e
-    );
-
-    $logoW   = max(16, intval($ow * $cfg['size'] / 100));
+    // Fixed pixel width — independent of the video/output resolution. Height is
+    // derived automatically by the scale filter (-2 = keep aspect AND force an
+    // even dimension), so the logo is never distorted and stays yuv420p-safe.
+    $logoW = max(8, intval($cfg['size']));
     if ($logoW % 2) $logoW++;
 
     $opacity = number_format($cfg['opacity'] / 100, 2, '.', '');
@@ -196,7 +250,7 @@ function wm_build_args($cfg, $scaleInner, $video_info, $e) {
     $bg = ($scaleInner !== '')
         ? '[0:v]' . $scaleInner . ',setsar=1[bg]'
         : '[0:v]setsar=1[bg]';
-    $graph = $bg . ';[1:v]scale=w=' . $logoW . ':h=-1,format=rgba,colorchannelmixer=aa=' . $opacity . '[wm];';
+    $graph = $bg . ';[1:v]scale=w=' . $logoW . ':h=-2,format=rgba,colorchannelmixer=aa=' . $opacity . '[wm];';
 
     $positions = $cfg['positions'];
     $n = count($positions);

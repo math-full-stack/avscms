@@ -79,6 +79,14 @@
 														<option value="private"{if $option.type == 'private'} selected="selected"{/if}>Private</option>
 													</select>												
 												</div>
+											</div>
+											<div class="filter col-xs-12 col-sm-6 col-md-4">
+												<div class="form-group">
+													<div class="checkbox check-default">
+														<input type="checkbox" id="filter_show_thumbs" name="show_thumbs" value="1" {if $option.show_thumbs}checked{/if}>
+														<label for="filter_show_thumbs">Show Thumbnails</label>
+													</div>
+												</div>
 											</div>										
 										</div>
 									</div>
@@ -156,6 +164,7 @@
 														</div>
 														<div class="item-thumb">
 															<div class="thumb-overlay">														
+																{if $option.show_thumbs}
 																{if $videos[i].thumbnail_frames|@count > 1}
 																	<div class="thumb-carousel" id="thumb-carousel-{$videos[i].VID}">
 																		<a id="view_video_{$videos[i].VID}" href="#">
@@ -175,6 +184,7 @@
 																	<a id="view_video_{$videos[i].VID}" href="#">
 																		<img id="thumb-{$videos[i].VID}" src="{insert name=thumb_adm vid=$videos[i].VID thumb=$videos[i].thumb}" class="img-responsive">
 																	</a>
+																{/if}
 																{/if}
 																<div class="item-id">
 																	<b>ID</b> {$videos[i].VID}

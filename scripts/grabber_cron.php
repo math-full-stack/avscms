@@ -155,6 +155,8 @@ if ($available > 0) {
                 description = " . $conn->qStr($description) . ",
                 duration = '" . $duration . "',
                 watermark_cfg = " . $conn->qStr(!empty($source['watermark_config']) ? $source['watermark_config'] : '') . ",
+                cut = " . $conn->qStr(intval(isset($source['cut_in']) ? $source['cut_in'] : 0)) . ",
+                cut_out = " . intval(isset($source['cut_out']) ? $source['cut_out'] : 0) . ",
                 last_update = " . time() . "
                 WHERE VID = " . intval($vid) . " LIMIT 1");
         } else {
@@ -173,6 +175,8 @@ if ($available > 0) {
                     type = 'public',
                     source_url = " . $conn->qStr($sourceUrl) . ",
                     watermark_cfg = " . $conn->qStr(!empty($source['watermark_config']) ? $source['watermark_config'] : '') . ",
+                    cut = " . $conn->qStr(intval(isset($source['cut_in']) ? $source['cut_in'] : 0)) . ",
+                    cut_out = " . intval(isset($source['cut_out']) ? $source['cut_out'] : 0) . ",
                     active = '2'";
             $conn->Execute($sql);
             $vid = intval($conn->Insert_ID());

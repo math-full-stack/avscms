@@ -299,17 +299,17 @@ $caro_select = "v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislik
 $caro_from   = " FROM video AS v, signup AS u WHERE v.UID = u.UID AND v.active = '1' AND v.type = 'public' AND v.VID != " .$vid. " ";
 
 // Em alta (mais vistos)
-$sql         = "SELECT " .$caro_select. $caro_from. " ORDER BY v.viewnumber DESC LIMIT 15";
+$sql         = "SELECT " .$caro_select. $caro_from. " ORDER BY v.viewnumber DESC LIMIT 30";
 $rs          = $conn->execute($sql);
 $caro_trending = $rs->getrows();
 
 // Novos vídeos
-$sql         = "SELECT " .$caro_select. $caro_from. " ORDER BY v.addtime DESC LIMIT 15";
+$sql         = "SELECT " .$caro_select. $caro_from. " ORDER BY v.addtime DESC LIMIT 30";
 $rs          = $conn->execute($sql);
 $caro_new    = $rs->getrows();
 
 // Do mesmo creator
-$sql         = "SELECT " .$caro_select. $caro_from. " AND v.UID = " .(int)$video['UID']. " ORDER BY v.addtime DESC LIMIT 15";
+$sql         = "SELECT " .$caro_select. $caro_from. " AND v.UID = " .(int)$video['UID']. " ORDER BY v.addtime DESC LIMIT 30";
 $rs          = $conn->execute($sql);
 $caro_creator = $rs->getrows();
 
