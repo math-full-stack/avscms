@@ -72,6 +72,7 @@ rsync -a --delete \
     --exclude='./deploy.sh' \
     --exclude='./.gitignore' \
     --exclude='./include/config.local.php' \
+    --exclude='./include/config.db.php' \
     --exclude='./cookies*.txt' \
     "$SCRIPT_DIR/" "$STAGING/"
 # strip all macOS extended attributes + resource-fork files
@@ -116,6 +117,15 @@ else
     rm -f /tmp/cookies.txt.prev
 fi
 
+# Keep the VM's own DB config (host/credentials differ: local uses the
+# prod tunnel 127.0.0.1:3307, the VM talks to its local MariaDB)
+if [ -f "${REMOTE_DIR}/include/config.db.php" ]; then
+    cp -a "${REMOTE_DIR}/include/config.db.php" /tmp/config.db.php.prev
+    echo "Backed up remote include/config.db.php"
+else
+    rm -f /tmp/config.db.php.prev
+fi
+
 # Keep the VM's own GCS config (if any)
 for _gcs in include/config.gcs.php include/gcs-service-account.json; do
     if [ -f "${REMOTE_DIR}/${_gcs}" ]; then
@@ -144,6 +154,23 @@ for _gcs in config.gcs.php gcs-service-account.json; do
         echo "Restored remote include/${_gcs}"
     fi
 done
+# Restore the VM's own DB config (falls back to the local MariaDB if missing)
+if [ -f /tmp/config.db.php.prev ]; then
+    cp -a /tmp/config.db.php.prev "${REMOTE_DIR}/include/config.db.php"
+    echo "Restored remote include/config.db.php"
+elif [ ! -f "${REMOTE_DIR}/include/config.db.php" ]; then
+    cat > "${REMOTE_DIR}/include/config.db.php" <<'EOF'
+<?php
+defined('_VALID') or die('Restricted Access!');
+$config['db_type'] = 'mysqli';
+$config['db_host'] = '127.0.0.1:3306';
+$config['db_user'] = 'avs';
+$config['db_pass'] = '1689909e285ffd93cae8cb2f';
+$config['db_name'] = 'avs';
+?>
+EOF
+    echo "Created include/config.db.php (default VM DB config)"
+fi
 
 # --- Environment-specific patches (idempotent) -----------------------------
 CONFIG_LOCAL="${REMOTE_DIR}/include/config.local.php"
