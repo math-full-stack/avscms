@@ -18,7 +18,46 @@ function thumb_path( vid ) {
 	var path = base_url + '/media/videos/' + tmb_folder;
     return path;
 }
+function xbOrientThumb( $ovl ) {
+	var $img  = $ovl.find('img:first');
+	if ( !$img.length || typeof $img[0].naturalWidth === 'undefined' ) {
+		return;
+	}
+	if ( $img[0].complete && $img[0].naturalWidth === 0 ) {
+		return;
+	}
+	$ovl.removeClass('xb-landscape xb-portrait');
+	if ( $img[0].naturalHeight > $img[0].naturalWidth ) {
+		$ovl.addClass('xb-portrait');
+		$img[0].style.aspectRatio = ( $img[0].naturalWidth / $img[0].naturalHeight ).toFixed(4);
+	} else {
+		$ovl.addClass('xb-landscape');
+		$img[0].style.aspectRatio = '';
+	}
+}
+function xbOrientThumbs() {
+	$('.thumb-overlay').each(function() {
+		var $ovl = $(this);
+		if ( $ovl.data('xb-oriented') ) {
+			return;
+		}
+		$ovl.data('xb-oriented', true);
+		var $img = $ovl.find('img:first');
+		if ( !$img.length ) {
+			return;
+		}
+		if ( $img[0].complete ) {
+			xbOrientThumb( $ovl );
+		} else {
+			$img.on('load', function() {
+				xbOrientThumb( $ovl );
+			});
+		}
+	});
+}
 $(document).ready(function() {
+	
+	xbOrientThumbs();
 	
 	$("body").on('mouseenter', "[id*='playvthumb_']", function(event) {
 		var img = $(this).find('img:first');
@@ -90,4 +129,8 @@ $(document).ready(function() {
 		else
 			$(this).attr('src', thumb_path(video_id) + '/' + video_id + '/1.jpg');
     });
+});
+
+$(window).on('load', function() {
+	xbOrientThumbs();
 });

@@ -387,6 +387,10 @@ a:hover .thumb-overlay {
 	transition: transform .35s ease;
 }
 
+.thumb-overlay.xb-portrait img {
+	aspect-ratio: 9 / 16;
+}
+
 a:hover .thumb-overlay img {
 	transform: scale(1.06);
 }
@@ -785,6 +789,10 @@ a:hover .xb-thumb-meta {
 .xb-hero .xb-hero-main:hover .thumb-overlay img,
 .xb-hero .xb-hero-item:hover .thumb-overlay img {
 	transform: scale(1.05);
+}
+
+.xb-hero .thumb-overlay.xb-portrait img {
+	object-position: center 15%;
 }
 
 .xb-hero .xb-hero-main .thumb-overlay::after {

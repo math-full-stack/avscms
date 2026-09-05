@@ -231,13 +231,16 @@ class GCS
         $url = 'https://storage.googleapis.com/upload/storage/v1/b/'
              . urlencode($this->bucket) . '/o?uploadType=multipart&name=' . urlencode($objectName);
 
+        // A API JSON ignora o header X-Goog-Acl (formato da API XML); o ACL
+        // predefinido vai como parâmetro de query (predefinedAcl=publicRead).
+        if ($acl) {
+            $url .= '&predefinedAcl=' . urlencode($acl);
+        }
+
         $headers = array(
             'Authorization: Bearer ' . $token,
             'Content-Type: multipart/related; boundary=' . $boundary
         );
-        if ($acl) {
-            $headers[] = 'X-Goog-Acl: ' . strtolower($acl);
-        }
 
         $ch = curl_init($url);
         curl_setopt_array($ch, array(
@@ -277,6 +280,11 @@ class GCS
         // Step 1: Initiate resumable session
         $url = 'https://storage.googleapis.com/upload/storage/v1/b/'
              . urlencode($this->bucket) . '/o?uploadType=resumable&name=' . urlencode($objectName);
+
+        // ACL predefinido (ex.: publicRead) vai no pedido de criação da sessão.
+        if ($acl) {
+            $url .= '&predefinedAcl=' . urlencode($acl);
+        }
 
         $meta = array(
             'cacheControl' => $cacheCtrl
@@ -333,9 +341,6 @@ class GCS
             'Content-Type: ' . $mimeType,
             'Content-Length: ' . $fileSize
         );
-        if ($acl) {
-            $headers[] = 'X-Goog-Acl: ' . strtolower($acl);
-        }
 
         $ch = curl_init($uploadUri);
         curl_setopt_array($ch, array(

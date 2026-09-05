@@ -710,6 +710,20 @@ function extract_video_vthumbs_hq($video_path, $video_id, $img_thumbs = true) {
 	if ($clip_w < 2) $clip_w = 2;
 	if ($clip_h < 2) $clip_h = 2;
 
+	$dim_cmd = $config['ffprobe'] . " -v error -select_streams v:0 -show_entries stream=width,height -of default=noprint_wrappers=1:nokey=1 " . escapeshellarg($video_path);
+	@exec($dim_cmd, $dim_out);
+	$src_w = isset($dim_out[0]) ? intval($dim_out[0]) : 0;
+	$src_h = isset($dim_out[1]) ? intval($dim_out[1]) : 0;
+	if ($src_w > 0 && $src_h > $src_w) {
+		$swap   = $clip_w;
+		$clip_w = $clip_h;
+		$clip_h = $swap;
+		$clip_w = (int) floor($clip_w / 2) * 2;
+		$clip_h = (int) floor($clip_h / 2) * 2;
+		if ($clip_w < 2) $clip_w = 2;
+		if ($clip_h < 2) $clip_h = 2;
+	}
+
 	$final_thumbs_folder = get_thumb_dir($video_id);
 
 	@mkdir($final_thumbs_folder, 0777);
