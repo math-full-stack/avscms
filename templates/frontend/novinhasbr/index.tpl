@@ -1,5 +1,59 @@
 <div class="container mt-3 mb-3">
 
+	<div class="xb-section">
+		<span class="xb-section-bar"></span>
+		<h2><i class="fas fa-bolt"></i>Novos vídeos</h2>
+		<a class="xb-section-link" href="{$relative}/videos?o=mr">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
+	</div>
+
+	{if $recent_videos}
+	<div class="row content-row">
+		{section name=i loop=$recent_videos}
+		<div class="col-6 col-sm-6 col-md-4 col-lg-3">
+			<a href="{$relative}/video/{$recent_videos[i].VID}/{$recent_videos[i].title|clean}">					<div class="thumb-overlay" {if $recent_videos[i].vthumbs == '1'} id="playvthumb_{$recent_videos[i].VID}"{/if}>
+						<img src="{insert name=thumb_path vid=$recent_videos[i].VID}/{$recent_videos[i].thumb}.jpg" title="{$recent_videos[i].title|escape:'html'}" alt="{$recent_videos[i].title|escape:'html'}" {if $recent_videos[i].vthumbs == '0'}id="rotate_{$recent_videos[i].VID}_{$recent_videos[i].thumbs}_{$recent_videos[i].thumb}_viewed"{/if} class="img-responsive {if $recent_videos[i].type == 'private'}img-private{/if}"/>
+						{if $recent_videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
+						<span class="xb-thumb-meta">
+							{insert name=views assign=s_views views=$recent_videos[i].viewnumber text='0'}
+							{insert name=views assign=s_views_w views=$recent_videos[i].viewnumber text='w'}
+							<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
+							{if isset($recent_videos[i].username) && $recent_videos[i].username != 'anonymous'}
+							<span class="xb-thumb-user">@{$recent_videos[i].username}</span>
+							{/if}
+							<span class="xb-thumb-title">
+								<span class="xb-thumb-title-inner">
+									<span class="xb-tt">{$recent_videos[i].title|escape:'html'}</span><span class="xb-tt">{$recent_videos[i].title|escape:'html'}</span>
+								</span>
+							</span>
+						</span>
+					<div class="duration">
+						{if $recent_videos[i].hd==1}<span class="hd-text-icon">HD</span>{/if}
+						{insert name=duration assign=duration duration=$recent_videos[i].duration}
+						{$duration}
+					</div>
+				</div>
+			</a>
+			<div class="content-info">
+				<a href="{$relative}/video/{$recent_videos[i].VID}/{$recent_videos[i].title|clean}">
+					<span class="content-title">{$recent_videos[i].title|escape:'html'}</span>
+				</a>
+				{if $recent_videos[i].keywords}
+				<div class="xb-tags">
+					{section name=t loop=$recent_videos[i].keywords max=4}
+						<a href="{$relative}/search/tags/{$recent_videos[i].keywords[t]}">#{$recent_videos[i].keywords[t]}</a>
+					{/section}
+				</div>
+				{/if}
+			</div>
+		</div>
+		{/section}
+	</div>
+	{else}
+	<div class="well well-sm">
+		<span class="text-danger">{t c='videos.no_videos_found'}.</span>
+	</div>
+	{/if}
+
 	{if $hero_videos}
 	<div class="xb-section">
 		<span class="xb-section-bar"></span>
@@ -95,60 +149,6 @@
 				<div class="xb-tags">
 					{section name=t loop=$viewed_videos[i].keywords max=4}
 						<a href="{$relative}/search/tags/{$viewed_videos[i].keywords[t]}">#{$viewed_videos[i].keywords[t]}</a>
-					{/section}
-				</div>
-				{/if}
-			</div>
-		</div>
-		{/section}
-	</div>
-	{else}
-	<div class="well well-sm">
-		<span class="text-danger">{t c='videos.no_videos_found'}.</span>
-	</div>
-	{/if}
-
-	<div class="xb-section">
-		<span class="xb-section-bar"></span>
-		<h2><i class="fas fa-bolt"></i>Novos vídeos</h2>
-		<a class="xb-section-link" href="{$relative}/videos?o=mr">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
-	</div>
-
-	{if $recent_videos}
-	<div class="row content-row">
-		{section name=i loop=$recent_videos}
-		<div class="col-6 col-sm-6 col-md-4 col-lg-3">
-			<a href="{$relative}/video/{$recent_videos[i].VID}/{$recent_videos[i].title|clean}">					<div class="thumb-overlay" {if $recent_videos[i].vthumbs == '1'} id="playvthumb_{$recent_videos[i].VID}"{/if}>
-						<img src="{insert name=thumb_path vid=$recent_videos[i].VID}/{$recent_videos[i].thumb}.jpg" title="{$recent_videos[i].title|escape:'html'}" alt="{$recent_videos[i].title|escape:'html'}" {if $recent_videos[i].vthumbs == '0'}id="rotate_{$recent_videos[i].VID}_{$recent_videos[i].thumbs}_{$recent_videos[i].thumb}_viewed"{/if} class="img-responsive {if $recent_videos[i].type == 'private'}img-private{/if}"/>
-						{if $recent_videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
-						<span class="xb-thumb-meta">
-							{insert name=views assign=s_views views=$recent_videos[i].viewnumber text='0'}
-							{insert name=views assign=s_views_w views=$recent_videos[i].viewnumber text='w'}
-							<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
-							{if isset($recent_videos[i].username) && $recent_videos[i].username != 'anonymous'}
-							<span class="xb-thumb-user">@{$recent_videos[i].username}</span>
-							{/if}
-							<span class="xb-thumb-title">
-								<span class="xb-thumb-title-inner">
-									<span class="xb-tt">{$recent_videos[i].title|escape:'html'}</span><span class="xb-tt">{$recent_videos[i].title|escape:'html'}</span>
-								</span>
-							</span>
-						</span>
-					<div class="duration">
-						{if $recent_videos[i].hd==1}<span class="hd-text-icon">HD</span>{/if}
-						{insert name=duration assign=duration duration=$recent_videos[i].duration}
-						{$duration}
-					</div>
-				</div>
-			</a>
-			<div class="content-info">
-				<a href="{$relative}/video/{$recent_videos[i].VID}/{$recent_videos[i].title|clean}">
-					<span class="content-title">{$recent_videos[i].title|escape:'html'}</span>
-				</a>
-				{if $recent_videos[i].keywords}
-				<div class="xb-tags">
-					{section name=t loop=$recent_videos[i].keywords max=4}
-						<a href="{$relative}/search/tags/{$recent_videos[i].keywords[t]}">#{$recent_videos[i].keywords[t]}</a>
 					{/section}
 				</div>
 				{/if}
