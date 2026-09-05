@@ -5,6 +5,8 @@
 |*|-------------------------------------------------
 |*/	
 
+require_once dirname(__FILE__). '/function_watermark.php';
+
 function scale ($iw, $ih, $rw, $rh) {
 	if (($iw/$ih)<=($rw/$rh)) {
 		$ow = $iw*$rh/$ih;
@@ -170,6 +172,7 @@ function getEncodings() {
 
 function convert ($e, $vid, $video_name, $video_info) {
 	global $config;
+	$wmCfg = wm_video_config($vid);
 	$nl = "=========================================================\n";
 
 	// Output :: Vars
@@ -204,7 +207,7 @@ function convert ($e, $vid, $video_name, $video_info) {
 		} else {
 			$faststart = "";			
 		}
-		if ($e['copyonly'] && ($e['height'] == $video_info['height'] || $e['width'] == $video_info['width']) && $video_info['file_extension'] == "mp4" && strpos($video_info['format_name'], 'mp4') !== false && $video_info['codec_name'] == "h264" && strpos($video_info['codec_long_name'], 'MPEG-4') !== false && strpos($video_info['codec_long_name'], 'AVC') !== false) {
+		if ($e['copyonly'] && !wm_force_reencode($wmCfg) && ($e['height'] == $video_info['height'] || $e['width'] == $video_info['width']) && $video_info['file_extension'] == "mp4" && strpos($video_info['format_name'], 'mp4') !== false && $video_info['codec_name'] == "h264" && strpos($video_info['codec_long_name'], 'MPEG-4') !== false && strpos($video_info['codec_long_name'], 'AVC') !== false) {
 			if ($cut) {
 				$cmd = $config['ffmpeg'].$add_cut." -i ".$src." -acodec copy ".$output."";	
 				modproc($cmd);					
@@ -225,8 +228,11 @@ function convert ($e, $vid, $video_name, $video_info) {
 			} else {
 				$scale = "-vf scale=\"'if(gt(a,4/3),".$e['width'].",-1)':'if(gt(a,4/3),-1,".$e['height'].")'\"";
 			}
+			$scaleInner = preg_replace('/^-vf /', '', $scale);
+			$wmArgs = wm_build_args($wmCfg, $scaleInner, $video_info, $e);
+			$vfilter = ($wmArgs !== '') ? $wmArgs : $scale;
 			$output = $config['H264_DIR']."/".$vid."_".$e['label'].".".$e['format'];
-			$cmd = $config['ffmpeg'].$add_cut." -i ".$src." -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$scale." ".$e['ios']." ".$faststart." ".$output."";	
+			$cmd = $config['ffmpeg'].$add_cut." -i ".$src." -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$vfilter." ".$e['ios']." ".$faststart." ".$output."";	
 			modproc($cmd);
 		}
 		if (file_exists($output) && filesize($output) > 100) {
@@ -257,7 +263,10 @@ function convert ($e, $vid, $video_name, $video_info) {
 			@unlink($output);			
 			$scale = scale($video_info['width'], $video_info['height'], $e['width'], $e['height']);
 			echo "\n"."Retrying using fixed scale: ".$scale."\n";
-			$cmd = $config['ffmpeg'].$add_cut." -i ".$src." -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$scale." ".$e['ios']." ".$faststart." -y ".$output."";
+			$scaleInner = preg_replace('/^-vf /', '', $scale);
+			$wmArgs = wm_build_args($wmCfg, $scaleInner, $video_info, $e);
+			$vfilter = ($wmArgs !== '') ? $wmArgs : $scale;
+			$cmd = $config['ffmpeg'].$add_cut." -i ".$src." -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$vfilter." ".$e['ios']." ".$faststart." -y ".$output."";
 			modproc($cmd);
 			if (file_exists($output) && filesize($output) > 100) {
 				$format_str = $e['height'].".".$e['label'].".".$e['format'];

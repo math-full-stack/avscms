@@ -154,6 +154,7 @@ if ($available > 0) {
                 keyword = " . $conn->qStr($tags) . ",
                 description = " . $conn->qStr($description) . ",
                 duration = '" . $duration . "',
+                watermark_cfg = " . $conn->qStr(!empty($source['watermark_config']) ? $source['watermark_config'] : '') . ",
                 last_update = " . time() . "
                 WHERE VID = " . intval($vid) . " LIMIT 1");
         } else {
@@ -171,6 +172,7 @@ if ($available > 0) {
                     vkey = '" . mt_rand() . "',
                     type = 'public',
                     source_url = " . $conn->qStr($sourceUrl) . ",
+                    watermark_cfg = " . $conn->qStr(!empty($source['watermark_config']) ? $source['watermark_config'] : '') . ",
                     active = '2'";
             $conn->Execute($sql);
             $vid = intval($conn->Insert_ID());

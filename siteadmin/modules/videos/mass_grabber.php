@@ -339,6 +339,7 @@ if ($action === 'save_source') {
         'schedule_value'      => isset($_POST['schedule_value']) ? trim($_POST['schedule_value']) : '02:00',
         'enabled'             => isset($_POST['enabled']) ? intval($_POST['enabled']) : 1,
         'delay_seconds'       => isset($_POST['delay_seconds']) ? intval($_POST['delay_seconds']) : 1,
+        'watermark_config'    => isset($_POST['watermark_config']) ? trim($_POST['watermark_config']) : '',
     );
 
     // Extract domain from URL

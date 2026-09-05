@@ -5,6 +5,8 @@
 |*|-------------------------------------------------
 |*/	
 
+require_once dirname(__FILE__). '/function_watermark.php';
+
 function scale ($iw, $ih, $rw, $rh) {
 	if (($iw/$ih)<=($rw/$rh)) {
 		$ow = $iw*$rh/$ih;
@@ -178,6 +180,7 @@ function getEncodings() {
 
 function convert ($e, $vid, $video_name, $video_info) {
 	global $config;
+	$wmCfg = wm_video_config($vid);
 	$nl = "=========================================================\n";
 
 	// Output :: Vars
@@ -216,7 +219,7 @@ function convert ($e, $vid, $video_name, $video_info) {
 				$faststart = "";			
 			}
 			$copyH264 = ($video_info['file_extension'] == "mp4" && strpos($video_info['format_name'], 'mp4') !== false && $video_info['codec_name'] == "h264" && strpos($video_info['codec_long_name'], 'MPEG-4') !== false && strpos($video_info['codec_long_name'], 'AVC') !== false);
-			if ($e['copyonly'] && $copyH264) {
+			if ($e['copyonly'] && $copyH264 && !wm_force_reencode($wmCfg)) {
 				// Fast path: the source is ALREADY H.264/MP4 (e.g. files from the
 				// Mass Video Grabber / yt-dlp). Re-encoding it is pure CPU waste —
 				// remux to the target with faststart instead (seconds, not minutes).
@@ -232,18 +235,22 @@ function convert ($e, $vid, $video_name, $video_info) {
 					}
 				}
 			} else {
+				$scale = "";
+				$scaleInner = "";
 				if (isset($e['lq']) && $e['lq'] && ($e['height'] > $video_info['height'] || $e['width'] > $video_info['width'])) {
-					$scale ="";
 					if ($e['height'] > 480) {
 						$e['label'] = 'HD';
 					} else {
 						$e['label'] = 'SD';
 					}
 				} else {
+					$scaleInner = "scale='if(gt(a,4/3),".$e['width'].",-1)':'if(gt(a,4/3),-1,".$e['height'].")'";
 					$scale = "-vf scale=\"'if(gt(a,4/3),".$e['width'].",-1)':'if(gt(a,4/3),-1,".$e['height'].")'\"";
 				}
+				$wmArgs = wm_build_args($wmCfg, $scaleInner, $video_info, $e);
+				$vfilter = ($wmArgs !== '') ? $wmArgs : $scale;
 				$output = $config['H264_DIR']."/".$vid."_".$e['label'].".".$e['format'];
-				$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -threads 0 -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$scale." ".$e['ios']." ".$faststart." -y \"".$output."\"";	
+				$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -threads 0 -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$vfilter." ".$e['ios']." ".$faststart." -y \"".$output."\"";	
 				modproc($cmd);
 			}
 			if (file_exists($output) && filesize($output) > 100) {
@@ -275,8 +282,11 @@ function convert ($e, $vid, $video_name, $video_info) {
 				@chmod($output, 0777);
 				@unlink($output);			
 				$scale = scale($video_info['width'], $video_info['height'], $e['width'], $e['height']);
+				$scaleInner = preg_replace('/^-vf /', '', $scale);
+				$wmArgs = wm_build_args($wmCfg, $scaleInner, $video_info, $e);
+				$vfilter = ($wmArgs !== '') ? $wmArgs : $scale;
 				echo "\n"."Retrying using fixed scale: ".$scale."\n";
-				$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -threads 0 -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$scale." ".$e['ios']." ".$faststart." -y \"".$output."\"";
+				$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -threads 0 -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$vfilter." ".$e['ios']." ".$faststart." -y \"".$output."\"";
 				modproc($cmd);
 				if (file_exists($output) && filesize($output) > 100) {
 					$chk_sql = "SELECT formats, lformats FROM video WHERE VID = '".(int)$vid."' LIMIT 1";

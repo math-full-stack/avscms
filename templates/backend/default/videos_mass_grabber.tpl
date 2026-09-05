@@ -225,6 +225,19 @@
                         <div class="col-sm-4"><div class="form-group"><label class="control-label">Discovery Enabled</label><select class="form-control" id="mg_src_discovery"><option value="1">ON</option><option value="0">OFF</option></select></div></div>
                         <div class="col-sm-4"><div class="form-group"><label class="control-label">Enabled</label><select class="form-control" id="mg_src_enabled"><option value="1">ON</option><option value="0">OFF</option></select></div></div>
                     </div>
+                    <hr>
+                    <h5 style="margin-top:0"><i class="fa fa-tint"></i> Watermark <small class="text-muted">burned into every format at conversion (player logo)</small></h5>
+                    <div class="row">
+                        <div class="col-sm-3"><div class="form-group"><label class="control-label">Enabled</label><select class="form-control" id="mg_src_wm_enabled"><option value="0">OFF</option><option value="1">ON</option></select></div></div>
+                        <div class="col-sm-3"><div class="form-group"><label class="control-label">Opacity %</label><input type="number" class="form-control" id="mg_src_wm_opacity" value="60" min="0" max="100"></div></div>
+                        <div class="col-sm-3"><div class="form-group"><label class="control-label">Size % width</label><input type="number" class="form-control" id="mg_src_wm_size" value="10" min="1" max="50"></div></div>
+                        <div class="col-sm-3"><div class="form-group"><label class="control-label">Margin px</label><input type="number" class="form-control" id="mg_src_wm_margin" value="12" min="0" max="200"></div></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">Position Schedule <small class="text-muted">one row = fixed; multiple rows with seconds = alternates (e.g. 5s top-right then 5s bottom-left, looping)</small></label>
+                        <div id="mg_wm_rows"></div>
+                        <button type="button" class="btn btn-xs btn-default" onclick="mgWmAddRow()"><i class="fa fa-plus"></i> Add position</button>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer"><button type="button" class="btn btn-default pull-left" data-dismiss="modal">Cancel</button><button type="button" class="btn btn-success" id="btn_save_source" onclick="mgSaveSource()"><i class="fa fa-check"></i> Save</button></div>
@@ -642,10 +655,24 @@ if (mgCurrentSourceId === 0) {
 }
 
 // SOURCES
+function mgWmRowHtml(pos, dur) {
+    var positions = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'];
+    var opts = '';
+    for (var i = 0; i < positions.length; i++) opts += '<option value="' + positions[i] + '"' + (positions[i] === pos ? ' selected' : '') + '>' + positions[i] + '</option>';
+    return '<div class="mg-wm-row" style="display:flex;margin-bottom:6px;gap:6px">' +
+        '<select class="form-control mg-wm-pos" style="flex:1">' + opts + '</select>' +
+        '<input type="number" class="form-control mg-wm-dur" value="' + (dur || '') + '" min="0" max="3600" placeholder="sec" style="width:90px" title="Seconds in this position (0/empty = until end of cycle)">' +
+        '<button type="button" class="btn btn-xs btn-default" onclick="this.parentNode.parentNode.removeChild(this.parentNode)"><i class="fa fa-times"></i></button>' +
+        '</div>';
+}
+function mgWmAddRow(pos, dur) {
+    document.getElementById('mg_wm_rows').insertAdjacentHTML('beforeend', mgWmRowHtml(pos || 'top-right', dur || 0));
+}
 function mgShowSourceForm(id) {
     id = id || 0; document.getElementById('mg_src_id').value = id;
     document.getElementById('mg_source_modal_title').textContent = id > 0 ? 'Edit Source' : 'Add Source';
     document.getElementById('mg_source_alert').style.display = 'none'; document.getElementById('mg_source_form').reset();
+    document.getElementById('mg_wm_rows').innerHTML = ''; mgWmAddRow('top-right', 0);
     if (typeof jQuery !== 'undefined') jQuery('#mg_source_modal').modal('show');
 }
 function mgEditSource(id) {
@@ -658,6 +685,14 @@ function mgEditSource(id) {
         document.getElementById('mg_src_schedule_value').value = s.schedule_value; document.getElementById('mg_src_max_per_run').value = s.max_per_run;
         document.getElementById('mg_src_max_pages').value = s.max_pages; document.getElementById('mg_src_delay').value = s.delay_seconds;
         document.getElementById('mg_src_discovery').value = s.discovery_enabled; document.getElementById('mg_src_enabled').value = s.enabled;
+        var wm = {}; try { wm = s.watermark_config ? JSON.parse(s.watermark_config) : {}; } catch(e) { wm = {}; }
+        document.getElementById('mg_src_wm_enabled').value = wm.enabled ? 1 : 0;
+        document.getElementById('mg_src_wm_opacity').value = wm.opacity != null ? wm.opacity : 60;
+        document.getElementById('mg_src_wm_size').value = wm.size != null ? wm.size : 10;
+        document.getElementById('mg_src_wm_margin').value = wm.margin != null ? wm.margin : 12;
+        document.getElementById('mg_wm_rows').innerHTML = '';
+        var rows = (wm.positions && wm.positions.length) ? wm.positions : [{pos:'top-right', dur:0}];
+        for (var i = 0; i < rows.length; i++) mgWmAddRow(rows[i].pos, rows[i].dur);
     });
 }
 function mgSaveSource() {
@@ -671,6 +706,18 @@ function mgSaveSource() {
     fd.append('schedule_value', document.getElementById('mg_src_schedule_value').value); fd.append('max_per_run', document.getElementById('mg_src_max_per_run').value);
     fd.append('max_pages', document.getElementById('mg_src_max_pages').value); fd.append('delay_seconds', document.getElementById('mg_src_delay').value);
     fd.append('discovery_enabled', document.getElementById('mg_src_discovery').value); fd.append('enabled', document.getElementById('mg_src_enabled').value);
+    var wmRows = document.querySelectorAll('#mg_wm_rows .mg-wm-row');
+    var wmPositions = [];
+    for (var wi = 0; wi < wmRows.length; wi++) {
+        wmPositions.push({ pos: wmRows[wi].querySelector('.mg-wm-pos').value, dur: parseInt(wmRows[wi].querySelector('.mg-wm-dur').value) || 0 });
+    }
+    fd.append('watermark_config', JSON.stringify({
+        enabled: document.getElementById('mg_src_wm_enabled').value == '1' ? 1 : 0,
+        opacity: parseInt(document.getElementById('mg_src_wm_opacity').value) || 60,
+        size: parseInt(document.getElementById('mg_src_wm_size').value) || 10,
+        margin: parseInt(document.getElementById('mg_src_wm_margin').value) || 12,
+        positions: wmPositions
+    }));
     mgAjax('videos.php?m=mass_grabber&a=save_source', fd, function(err, data) {
         btn.disabled = false; btn.innerHTML = '<i class="fa fa-check"></i> Save';
         if (err || !data || !data.status) { var msg = (data&&data.error)?data.error:(err?err.message:'Error'); alertBox.className='alert alert-danger'; alertBox.innerHTML='<i class="fa fa-exclamation-triangle"></i> '+msg; alertBox.style.display='block'; }
