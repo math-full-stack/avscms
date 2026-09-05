@@ -527,9 +527,26 @@ a:hover .thumb-overlay video {
 	min-width: 0;
 }
 
-/* Em cards pequenos: só o ícone de views + valor (sem @autor e sem a palavra) */
-@container xb-thumb (max-width: 210px) {
-	.xb-thumb-meta .xb-thumb-user,
+/* Prioridade do chip: ícone + quantidade sempre; a palavra some antes do @autor */
+.xb-thumb-views {
+	flex-shrink: 0;
+}
+
+.xb-thumb-views-word,
+.xb-thumb-user {
+	flex-shrink: 1;
+	min-width: 0;
+}
+
+/* Sem espaço p/ o @autor: remove só ele */
+@container xb-thumb (max-width: 290px) {
+	.xb-thumb-meta .xb-thumb-user {
+		display: none;
+	}
+}
+
+/* Sem espaço p/ a palavra "exibições": fica só ícone + quantidade */
+@container xb-thumb (max-width: 215px) {
 	.xb-thumb-meta .xb-thumb-views-word {
 		display: none;
 	}

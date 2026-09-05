@@ -18,7 +18,7 @@
 							{insert name=views assign=s_views views=$videos[i].viewnumber text='0'}
 							{insert name=views assign=s_views_w views=$videos[i].viewnumber text='w'}
 							<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
-							{if isset($videos[i].username)}
+							{if isset($videos[i].username) && $videos[i].username != 'anonymous'}
 							<span class="xb-thumb-user">@{$videos[i].username}</span>
 							{/if}
 							<span class="xb-thumb-title">

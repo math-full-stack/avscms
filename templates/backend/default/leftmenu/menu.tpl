@@ -45,7 +45,7 @@
 	<!-- BEGIN SIDEBAR FOOTER WIDGET -->
 	<div class="footer-widget">
 		<div class="pull-left">
-			Powered by <a href="https://www.avscms.com" target="_blank">AVSCMS</a>
+			{$site_name}
 		</div>	
 		<div class="pull-right">
 			<a href="logout.php"><i class="fa fa-power-off"></i></a>

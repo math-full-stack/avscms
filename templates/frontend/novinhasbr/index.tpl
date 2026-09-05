@@ -16,7 +16,7 @@
 					<span class="xb-hero-title">{$hero_videos[h].title|escape:'html'}</span>
 					<span class="xb-hero-meta">
 						<span><i class="fas fa-eye"></i> {insert name=views assign=s_views views=$hero_videos[h].viewnumber}{$s_views}</span>
-						<span>@{$hero_videos[h].username}</span>
+						{if $hero_videos[h].username != 'anonymous'}<span>@{$hero_videos[h].username}</span>{/if}
 					</span>
 				</span>
 			</a>
@@ -27,7 +27,7 @@
 				</div>
 				<span class="xb-hero-overlay">
 					<span class="xb-hero-title">{$hero_videos[h].title|escape:'html'}</span>
-					<span class="xb-hero-views"><i class="fas fa-eye"></i> {insert name=views assign=s_views views=$hero_videos[h].viewnumber}{$s_views} · @{$hero_videos[h].username}</span>
+					<span class="xb-hero-views"><i class="fas fa-eye"></i> {insert name=views assign=s_views views=$hero_videos[h].viewnumber}{$s_views}{if $hero_videos[h].username != 'anonymous'} · @{$hero_videos[h].username}{/if}</span>
 				</span>
 			</a>
 			{/if}
@@ -52,7 +52,7 @@
 							{insert name=views assign=s_views views=$viewed_videos[i].viewnumber text='0'}
 							{insert name=views assign=s_views_w views=$viewed_videos[i].viewnumber text='w'}
 							<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
-							{if isset($viewed_videos[i].username)}
+							{if isset($viewed_videos[i].username) && $viewed_videos[i].username != 'anonymous'}
 							<span class="xb-thumb-user">@{$viewed_videos[i].username}</span>
 							{/if}
 							<span class="xb-thumb-title">
@@ -106,7 +106,7 @@
 							{insert name=views assign=s_views views=$recent_videos[i].viewnumber text='0'}
 							{insert name=views assign=s_views_w views=$recent_videos[i].viewnumber text='w'}
 							<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
-							{if isset($recent_videos[i].username)}
+							{if isset($recent_videos[i].username) && $recent_videos[i].username != 'anonymous'}
 							<span class="xb-thumb-user">@{$recent_videos[i].username}</span>
 							{/if}
 							<span class="xb-thumb-title">

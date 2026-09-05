@@ -4,7 +4,7 @@
 		<!-- BEGIN PAGE TITLE -->
 		<div class="page-title">
 			<i class="icon-custom-left"></i>
-			<h3>Settings - <span class="semi-bold">AVSCMS Updates</span></h3>
+			<h3>Settings - <span class="semi-bold">{} Updates</span></h3>
 		</div>
 		{include file="errmsg.tpl"}
 		<!-- END PAGE TITLE -->
