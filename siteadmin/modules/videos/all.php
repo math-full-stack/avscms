@@ -5,7 +5,7 @@ Auth::checkAdmin();
 
 require $config['BASE_DIR']. '/include/function_video.php';
 require $config['BASE_DIR']. '/include/function_smarty.php';
-require $config['BASE_DIR']. '/include/function_thumbs.php';
+require_once $config['BASE_DIR']. '/include/function_thumbs.php';
 require $config['BASE_DIR']. '/classes/pagination.class.php';
 
 if (isset($_POST['delete_selected_videos'])) {
