@@ -680,7 +680,7 @@ function extract_video_vthumbs_hq($video_path, $video_id, $img_thumbs = true) {
 	$webm_cmd = $config['ffmpeg'] . $cmd_parts
 		. ' -filter_complex "' . $filter . '"'
 		. ' -map "[vout]"'
-		. ' -c:v libvpx-vp9 -crf 33 -b:v 0 -deadline good -cpu-used 2 -row-mt 1 -pix_fmt yuv420p -g 60 -an'
+		. ' -c:v libvpx-vp9 -crf 33 -b:v 0 -deadline good -cpu-used 4 -row-mt 1 -pix_fmt yuv420p -g 60 -an'
 		. ' -y ' . escapeshellarg($copy_webm);
 
 	@exec($mp4_cmd);
