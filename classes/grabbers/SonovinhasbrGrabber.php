@@ -33,14 +33,10 @@ class SonovinhasbrGrabber extends AbstractGrabber {
             );
         }
 
-        // Fetch the video page HTML
+        // Fetch the video page HTML. Quando a página não carrega (proteção) ou
+        // não expõe o player no HTML, o fallback via yt-dlp abaixo cobre o caso.
         $html = $this->fetchHtml($url);
-        if (!$html) {
-            return array(
-                'status' => false,
-                'error'  => 'Não foi possível acessar a página do vídeo.'
-            );
-        }
+        $html = ($html === false) ? '' : $html;
 
         $title       = '';
         $description = '';
@@ -94,6 +90,40 @@ class SonovinhasbrGrabber extends AbstractGrabber {
         $streamUrl = '';
         if (!empty($embedUrl)) {
             $streamUrl = $this->extractStreamUrl($embedUrl);
+        }
+
+        // Fallback: página sem player exposto no HTML (bloqueada ou player
+        // renderizado via JS). Extrai via yt-dlp — o mesmo mecanismo usado no
+        // download, que conhece o player real do site e funciona atrás de
+        // proteções. Também preenche metadados que a página não revelou.
+        if (empty($embedUrl) && empty($streamUrl)) {
+            $data = $this->probeYtdlp($url, 120);
+            if (is_array($data)) {
+                if ($title === '') {
+                    $title = isset($data['title']) ? $this->sanitizeText(trim($data['title'])) : '';
+                }
+                if ($thumbnail === '') {
+                    $thumbnail = isset($data['thumbnail']) ? $data['thumbnail'] : '';
+                }
+                if ($duration == 0) {
+                    $duration = isset($data['duration']) ? (int) $data['duration'] : 0;
+                }
+                if ($videoId === '') {
+                    $videoId = isset($data['id']) ? (string) $data['id'] : '';
+                }
+                if (empty($tags) && !empty($data['tags']) && is_array($data['tags'])) {
+                    $tags = array_filter($data['tags']);
+                }
+                $streamUrl = $this->pickBestMuxedUrl($data);
+            }
+        }
+
+        // Nada reproduzível (nem HTML nem yt-dlp): falha com mensagem clara.
+        if ($title === '' && $embedUrl === '' && $streamUrl === '') {
+            return array(
+                'status' => false,
+                'error'  => 'Não foi possível extrair o vídeo (página bloqueada ou player protegido).'
+            );
         }
 
         $tagsStr = implode(', ', array_slice($tags, 0, 15));

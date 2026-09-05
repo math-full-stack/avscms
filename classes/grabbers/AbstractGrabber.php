@@ -128,6 +128,92 @@ abstract class AbstractGrabber implements GrabberInterface {
         return $output;
     }
 
+    /**
+     * Executa o yt-dlp em modo info (dump JSON) e devolve o JSON decodificado.
+     *
+     * Usado por grabbers cujos sites exigem o perfil TLS/extração do yt-dlp
+     * (ex.: XFree e SonovinhasBR atrás de proteção) — o fetch de HTML via curl
+     * pode ser bloqueado onde o yt-dlp consegue extrair o player.
+     *
+     * @param string $url
+     * @param int    $timeoutSeconds
+     * @return array|null JSON decodificado; null em falha/timeout/resposta inválida
+     */
+    protected function probeYtdlp($url, $timeoutSeconds = 120)
+    {
+        $cmd = sprintf(
+            '%s %s --dump-single-json --no-warnings --skip-download --socket-timeout 30 %s 2>&1',
+            escapeshellarg($this->pythonBinary),
+            escapeshellarg($this->ytdlpScript),
+            escapeshellarg($url)
+        );
+
+        $output = $this->runWithTimeout($cmd, $timeoutSeconds);
+        if (!$output) {
+            return null;
+        }
+
+        // O yt-dlp pode misturar warnings no output; extrair o trecho JSON.
+        $jsonStart = strpos($output, '{');
+        $jsonEnd   = strrpos($output, '}');
+        if ($jsonStart === false || $jsonEnd === false) {
+            return null;
+        }
+
+        $data = json_decode(substr($output, $jsonStart, $jsonEnd - $jsonStart + 1), true);
+
+        return is_array($data) ? $data : null;
+    }
+
+    /**
+     * Escolhe a melhor URL progressiva (muxada) do JSON do yt-dlp para o
+     * player HTML5 — prefere o mp4 muxado de maior altura e cai para a URL
+     * principal quando não há lista de formats.
+     *
+     * @param array $data JSON do yt-dlp (dump-single-json)
+     * @return string
+     */
+    protected function pickBestMuxedUrl($data)
+    {
+        if (!is_array($data)) {
+            return '';
+        }
+
+        $fallbackUrl = '';
+        if (!empty($data['url'])) {
+            $fallbackUrl = (string) $data['url'];
+        } elseif (!empty($data['requested_downloads'][0]['url'])) {
+            $fallbackUrl = (string) $data['requested_downloads'][0]['url'];
+        }
+
+        if (empty($data['formats']) || !is_array($data['formats'])) {
+            return $fallbackUrl;
+        }
+
+        $bestMuxed  = null;
+        $bestHeight = -1;
+        foreach ($data['formats'] as $fmt) {
+            if (empty($fmt['url']) || !isset($fmt['vcodec']) || $fmt['vcodec'] === 'none') {
+                continue;
+            }
+            if (strpos($fmt['url'], 'https://') !== 0) {
+                continue;
+            }
+            $h      = isset($fmt['height']) ? (int) $fmt['height'] : 0;
+            $isMp4  = (isset($fmt['ext']) && $fmt['ext'] === 'mp4');
+            if ($h > $bestHeight || ($h === $bestHeight && $isMp4 && $bestMuxed && (!isset($bestMuxed['ext']) || $bestMuxed['ext'] !== 'mp4'))) {
+                $bestHeight = $h;
+                $bestMuxed  = $fmt;
+            }
+        }
+
+        if ($bestMuxed && !empty($bestMuxed['url'])) {
+            return (string) $bestMuxed['url'];
+        }
+
+        return $fallbackUrl;
+    }
+
     public function downloadThumbnail($thumbUrl, $targetPath) {
         if (empty($thumbUrl)) {
             return false;

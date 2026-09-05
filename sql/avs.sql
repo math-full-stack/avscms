@@ -655,6 +655,8 @@ CREATE TABLE `player` (
   `profile` varchar(255) NOT NULL DEFAULT '',
   `engine` enum('videojs','mediabunny') NOT NULL DEFAULT 'videojs',
   `autoplay` enum('0','1') NOT NULL DEFAULT '0',
+  `start_muted` enum('0','1') NOT NULL DEFAULT '1',
+  `quick_controls` enum('0','1') NOT NULL DEFAULT '1',
   `resolution` enum('low','high') NOT NULL DEFAULT 'low',
   `timeline_preview` enum('0','1') NOT NULL DEFAULT '1',
   `logo` enum('0','1') NOT NULL DEFAULT '0',
@@ -672,10 +674,10 @@ CREATE TABLE `player` (
 -- Dumping data for table `player`
 --
 
-INSERT INTO `player` (`id`, `profile`, `autoplay`, `resolution`, `timeline_preview`, `logo`, `logo_redirect`, `logo_position`, `logo_link`, `logo_opacity`, `pause_adv`, `vast_vpaid_adv`, `timeline_adv`, `status`) VALUES
-(1, 'Main', '0', 'high', '1', '1', '1', 'top-right', '', 40, '1', '0', '1', '1'),
-(2, 'Embed', '0', 'low', '1', '1', '1', 'top-right', '', 40, '1', '0', '0', '1'),
-(3, 'Blog/Comment', '0', 'low', '0', '0', '0', 'top-right', '', 40, '0', '0', '0', '1'),
+INSERT INTO `player` (`id`, `profile`, `engine`, `autoplay`, `start_muted`, `quick_controls`, `resolution`, `timeline_preview`, `logo`, `logo_redirect`, `logo_position`, `logo_link`, `logo_opacity`, `pause_adv`, `vast_vpaid_adv`, `timeline_adv`, `status`) VALUES
+(1, 'Main', 'videojs', '0', '1', '1', 'high', '1', '1', '1', 'top-right', '', 40, '1', '0', '1', '1'),
+(2, 'Embed', 'videojs', '0', '1', '1', 'low', '1', '1', '1', 'top-right', '', 40, '1', '0', '0', '1'),
+(3, 'Blog/Comment', 'videojs', '0', '1', '1', 'low', '0', '0', '0', 'top-right', '', 40, '0', '0', '0', '1'),
 (4, 'Admin', '0', 'low', '0', '0', '0', 'top-right', '', 40, '0', '0', '0', '0');
 
 -- --------------------------------------------------------
@@ -979,6 +981,7 @@ CREATE TABLE `video` (
   `embed` varchar(8) NOT NULL DEFAULT 'enabled',
   `embed_code` text,
   `thumb` tinyint(1) UNSIGNED NOT NULL DEFAULT '1',
+  `thumbnails_opt` varchar(100) NOT NULL DEFAULT '',
   `thumbs` tinyint(2) UNSIGNED NOT NULL DEFAULT '20',
   `vthumbs` enum('0','1') NOT NULL DEFAULT '0',
   `voter_id` varchar(200) NOT NULL DEFAULT '',

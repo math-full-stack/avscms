@@ -33,49 +33,20 @@ class XfreeGrabber extends AbstractGrabber {
             );
         }
 
-        // Usar yt-dlp com extractor nativo do xfree.com (melhor que generic)
-        $cmd = sprintf(
-            '%s %s --dump-single-json --no-warnings --skip-download --socket-timeout 30 %s 2>&1',
-            escapeshellarg($this->pythonBinary),
-            escapeshellarg($this->ytdlpScript),
-            escapeshellarg($url)
-        );
-
-        $output = $this->runWithTimeout($cmd, 120);
-        if (!$output) {
+        // Usar yt-dlp com extractor nativo do xfree.com (melhor que generic).
+        // O dump JSON e a escolha do mp4 muxado vêm dos helpers compartilhados
+        // do AbstractGrabber (mesma lógica usada pelos demais grabbers).
+        $data = $this->probeYtdlp($url, 120);
+        if ($data === null) {
             return array(
                 'status' => false,
                 'error'  => 'Não foi possível extrair dados do vídeo. Verifique o link.'
             );
         }
 
-        // yt-dlp pode misturar warnings no output; extrair JSON
-        $jsonStart = strpos($output, '{');
-        $jsonEnd   = strrpos($output, '}');
-        if ($jsonStart === false || $jsonEnd === false) {
-            return array(
-                'status' => false,
-                'error'  => 'Resposta inválida: ' . substr($output, 0, 300)
-            );
-        }
-
-        $jsonStr = substr($output, $jsonStart, ($jsonEnd - $jsonStart + 1));
-        $data = json_decode($jsonStr, true);
-
-        if (!$data) {
-            return array(
-                'status' => false,
-                'error'  => 'Erro ao decodificar dados do vídeo.'
-            );
-        }
-
-        // Verificar se tem URL direta
-        $videoUrl = isset($data['url']) ? $data['url'] : '';
-        if (empty($videoUrl) && !empty($data['requested_downloads'])) {
-            $videoUrl = $data['requested_downloads'][0]['url'] ?? '';
-        }
-
-        if (empty($videoUrl)) {
+        // Verificar se tem URL direta (melhor formato progressivo/muxado)
+        $videoUrl = $this->pickBestMuxedUrl($data);
+        if ($videoUrl === '') {
             return array(
                 'status' => false,
                 'error'  => 'Não foi possível encontrar a URL do vídeo.'
@@ -134,28 +105,8 @@ class XfreeGrabber extends AbstractGrabber {
             }
         }
 
-        // Usar melhor formato progressivo (muxado) para stream_url
-        if (!empty($data['formats']) && is_array($data['formats'])) {
-            $bestMuxed = null;
-            $bestHeight = -1;
-            foreach ($data['formats'] as $fmt) {
-                if (empty($fmt['url']) || !isset($fmt['vcodec']) || $fmt['vcodec'] === 'none') {
-                    continue;
-                }
-                if (strpos($fmt['url'], 'https://') !== 0) {
-                    continue;
-                }
-                $h = isset($fmt['height']) ? (int)$fmt['height'] : 0;
-                $isMp4 = (isset($fmt['ext']) && $fmt['ext'] === 'mp4');
-                if ($h > $bestHeight || ($h === $bestHeight && $isMp4 && $bestMuxed && $bestMuxed['ext'] !== 'mp4')) {
-                    $bestHeight = $h;
-                    $bestMuxed = $fmt;
-                }
-            }
-            if ($bestMuxed && !empty($bestMuxed['url'])) {
-                $videoUrl = $bestMuxed['url'];
-            }
-        }
+        // $videoUrl já é o melhor formato progressivo (muxado) — resolvido em
+        // pickBestMuxedUrl() no início deste método.
 
         // Embed URL
         $videoId = '';

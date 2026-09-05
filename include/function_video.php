@@ -260,6 +260,30 @@ function get_video_duration($video_path, $video_id)
 }
 
 /**
+ * Probe simples da duração de um arquivo de mídia (ffprobe).
+ *
+ * Usado para validar os clipes gerados: fontes corrompidas (ex.: conversão
+ * interrompida com "Invalid NAL unit size") fazem o ffmpeg abortar cedo e
+ * deixar um arquivo minúsculo que passa no check de filesize, mas não tem a
+ * duração da montagem planejada.
+ *
+ * @param string $file Caminho do arquivo
+ * @return float Duração em segundos (0 quando não foi possível ler)
+ */
+function probe_video_duration($file)
+{
+    global $config;
+
+    if (empty($file) || !file_exists($file)) {
+        return 0;
+    }
+
+    $cmd = $config['ffprobe'] . " -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 " . escapeshellarg($file);
+    @exec($cmd, $output);
+    return isset($output[0]) ? floatval($output[0]) : 0;
+}
+
+/**
  * Computes the output size for a thumbnail so it keeps the source aspect
  * ratio inside the target box (fit) and never upscales a small source.
  *
@@ -657,7 +681,14 @@ function extract_video_vthumbs($video_path, $video_id, $img_thumbs = true) {
 	}
 	@exec($thumb_command);
 
-	if( file_exists($copy_webm) && filesize($copy_webm)>100 && file_exists($copy_mp4) && filesize($copy_mp4)>100  ) {			
+	// Mesma validação de duração do caminho HQ: fonte corrompida aborta o
+	// ffmpeg cedo e deixaria um clipe-lixo que passa no check de filesize.
+	$expected_dur = ($full) ? max(0.5, $duration - 3) : 16.0; // 8 cortes x 2s
+	$dur_mp4  = probe_video_duration($copy_mp4);
+	$dur_webm = probe_video_duration($copy_webm);
+
+	if( file_exists($copy_webm) && filesize($copy_webm)>100 && file_exists($copy_mp4) && filesize($copy_mp4)>100
+	    && $dur_mp4 >= $expected_dur * 0.5 && $dur_webm >= $expected_dur * 0.5  ) {			
 		if(file_exists($dst_webm)) @chmod($dst_webm,0777);
 		if(file_exists($dst_mp4)) @chmod($dst_mp4,0777);
 
@@ -772,7 +803,10 @@ function extract_video_vthumbs_hq($video_path, $video_id, $img_thumbs = true) {
 		$filter .= '[vc30]split=2[bgsrc][fgsrc];';
 		$filter .= '[bgsrc]scale=' . $clip_w . ':' . $clip_h . ':force_original_aspect_ratio=increase,crop=' . $clip_w . ':' . $clip_h . ',boxblur=20:4[bg];';
 		$filter .= '[fgsrc]scale=' . $clip_w . ':' . $clip_h . ':force_original_aspect_ratio=decrease[fg];';
-		$filter .= '[bg][fg]overlay=(W-w)/2:(H-h)/2:fps=30[vout]';
+		// O fps do overlay vem do próprio [vc30] (fps=30 acima). A opção 'fps'
+		// do filtro overlay foi REMOVIDA no FFmpeg 9 ("Option not found"), o que
+		// quebrava o clipe de vídeos verticais em silêncio (vthumbs ficava 0).
+		$filter .= '[bg][fg]overlay=(W-w)/2:(H-h)/2[vout]';
 	} else {
 		$filter .= '[vc]scale=' . $clip_w . ':' . $clip_h . ':force_original_aspect_ratio=increase,crop=' . $clip_w . ':' . $clip_h . ',fps=30,setpts=PTS-STARTPTS[vout]';
 	}
@@ -816,7 +850,17 @@ function extract_video_vthumbs_hq($video_path, $video_id, $img_thumbs = true) {
 		@exec($thumb_command);
 	}
 
-	if (file_exists($copy_webm) && filesize($copy_webm) > 100 && file_exists($copy_mp4) && filesize($copy_mp4) > 100) {
+	// Valida a duração real dos encodes: fonte corrompida aborta o ffmpeg cedo
+	// e deixa arquivos pequenos que passariam no check de filesize acima. A
+	// montagem deve ter ~segs x seg_len segundos; tolerância de 50% cobre
+	// cortes de GOP sem aceitar lixo (ex.: clipe de 0.4s para 16s esperados).
+	$expected_dur = max(0.5, $segs * $seg_len);
+	$dur_mp4  = probe_video_duration($copy_mp4);
+	$dur_webm = probe_video_duration($copy_webm);
+
+	if (file_exists($copy_webm) && filesize($copy_webm) > 100
+	    && file_exists($copy_mp4) && filesize($copy_mp4) > 100
+	    && $dur_mp4 >= $expected_dur * 0.5 && $dur_webm >= $expected_dur * 0.5) {
 		if (file_exists($dst_webm)) @chmod($dst_webm, 0777);
 		if (file_exists($dst_mp4)) @chmod($dst_mp4, 0777);
 

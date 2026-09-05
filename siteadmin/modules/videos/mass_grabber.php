@@ -179,6 +179,69 @@ if ($action === 'get_discovered') {
     exit();
 }
 
+// ============================================================================
+// Helpers de preview — resolução única de player para TODOS os sources.
+// Embeds instantâneos (YouTube/Vimeo/Dailymotion e XFree por ID) não fazem
+// fetch; os demais providers delegam ao grabber do próprio site (fonte única
+// de parsing), que conhece a estrutura real de cada página/player.
+// ============================================================================
+
+/**
+ * Resolve um player reproduzível (embed ou stream) para a URL de um vídeo.
+ *
+ * @param string $url URL canônica do vídeo (source_url do discovery)
+ * @return array ['embed_url' => string, 'stream_url' => string]
+ */
+function mg_resolve_media($url)
+{
+    global $config;
+
+    $media = array('embed_url' => '', 'stream_url' => '');
+    $url = trim((string) $url);
+    if ($url === '') {
+        return $media;
+    }
+
+    // --- Embeds instantâneos (sem network) ---
+    // YouTube
+    if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/', $url, $m)) {
+        $media['embed_url'] = 'https://www.youtube-nocookie.com/embed/' . $m[1] . '?autoplay=1&rel=0';
+    }
+    // Vimeo
+    elseif (preg_match('/vimeo\.com\/(\d+)/', $url, $m)) {
+        $media['embed_url'] = 'https://player.vimeo.com/video/' . $m[1] . '?autoplay=1';
+    }
+    // Dailymotion
+    elseif (preg_match('/dailymotion\.com\/video\/([a-zA-Z0-9]+)/', $url, $m)) {
+        $media['embed_url'] = 'https://www.dailymotion.com/embed/video/' . $m[1] . '?autoplay=1';
+    }
+    // XFree — embed oficial por ID (rápido, sem fetch/Cloudflare no servidor)
+    elseif (strpos($url, 'xfree.com') !== false) {
+        if (preg_match('/[?&]id=(\d+)/', $url, $m)) {
+            $media['embed_url'] = 'https://www.xfree.com/embed/' . $m[1];
+        } elseif (preg_match('/\/video[\/-](\d+)/', $url, $m)) {
+            $media['embed_url'] = 'https://www.xfree.com/embed/' . $m[1];
+        }
+    }
+
+    // --- Sem embed direto: delega ao grabber do site (XFree sem ID no URL,
+    // SonovinhasBR, Pornolandia etc.) — mesmo parser usado pelo grabber/micro
+    // e pelos jobs de download, evitando duplicar regra de site no admin.
+    if ($media['embed_url'] === '' && $media['stream_url'] === '') {
+        require_once $config['BASE_DIR'] . '/classes/grabbers/GrabberManager.php';
+        $grabber = GrabberManager::getGrabberForUrl($url);
+        if ($grabber && method_exists($grabber, 'fetchInfo')) {
+            $info = $grabber->fetchInfo($url);
+            if (is_array($info) && !empty($info['status'])) {
+                $media['embed_url']  = !empty($info['embed_url'])  ? $info['embed_url']  : '';
+                $media['stream_url'] = !empty($info['stream_url']) ? $info['stream_url'] : '';
+            }
+        }
+    }
+
+    return $media;
+}
+
 // --- AJAX: Get video preview info ---
 if ($action === 'get_video_preview') {
     header('Content-Type: application/json; charset=utf-8');
@@ -201,55 +264,14 @@ if ($action === 'get_video_preview') {
         exit();
     }
 
-    $embedUrl = '';
-    $streamUrl = '';
-    $host = strtolower(parse_url($sourceUrl, PHP_URL_HOST) ?: '');
-
-    // YouTube
-    if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/', $sourceUrl, $m)) {
-        $embedUrl = 'https://www.youtube-nocookie.com/embed/' . $m[1] . '?autoplay=1&rel=0';
-    }
-    // Vimeo
-    elseif (preg_match('/vimeo\.com\/(\d+)/', $sourceUrl, $m)) {
-        $embedUrl = 'https://player.vimeo.com/video/' . $m[1] . '?autoplay=1';
-    }
-    // Dailymotion
-    elseif (preg_match('/dailymotion\.com\/video\/([a-zA-Z0-9]+)/', $sourceUrl, $m)) {
-        $embedUrl = 'https://www.dailymotion.com/embed/video/' . $m[1] . '?autoplay=1';
-    }
-    // XFree - embed URL pattern: https://www.xfree.com/embed/{id}
-    elseif (strpos($host, 'xfree') !== false) {
-        if (preg_match('/[?&]id=(\d+)/', $sourceUrl, $m)) {
-            $embedUrl = 'https://www.xfree.com/embed/' . $m[1];
-        } elseif (preg_match('/\/video[\/-](\d+)/', $sourceUrl, $m)) {
-            $embedUrl = 'https://www.xfree.com/embed/' . $m[1];
-        }
-        // Fallback: try to get video ID from page HTML
-        if (empty($embedUrl)) {
-            $html = @file_get_contents($sourceUrl);
-            if ($html && preg_match('/"id"\s*:\s*"?(\d+)/', $html, $m)) {
-                $embedUrl = 'https://www.xfree.com/embed/' . $m[1];
-            }
-        }
-    }
-    // Sonovinhasbr - get embed from page HTML
-    elseif (strpos($host, 'sonovinhasbr') !== false) {
-        $html = @file_get_contents($sourceUrl);
-        if ($html) {
-            if (preg_match('/<iframe[^>]+src="(https?:\/\/[^"]*player\.php[^"]*)"/i', $html, $m)) {
-                $embedUrl = str_replace('&amp;', '&', $m[1]);
-            } elseif (preg_match('/"embedUrl"\s*:\s*"([^"]+)"/i', $html, $m)) {
-                $embedUrl = $m[1];
-            }
-        }
-    }
+    $media = mg_resolve_media($sourceUrl);
 
     $previewData = array(
         'title'      => $video['title'],
         'thumbnail'  => $video['thumbnail_url'],
         'duration'   => $video['duration'],
-        'embed_url'  => $embedUrl,
-        'stream_url' => $streamUrl,
+        'embed_url'  => $media['embed_url'],
+        'stream_url' => $media['stream_url'],
         'source_url' => $sourceUrl,
     );
 

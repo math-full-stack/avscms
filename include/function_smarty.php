@@ -496,27 +496,28 @@ function insert_gcs_thumbs_base($options)
 
 function insert_thumb_adm($options)
 {
-	global $config;
+	global $config, $conn;
 	
-	$vid 	= $options['vid'];
+	$vid 	= intval($options['vid']);
 	$thumb	= $options['thumb'];
 
-	$index = intval( ($vid - 1) / $config['max_thumb_folders'] );
-	$tmb_folder = 'tmb';
-	if ($index !== 0) {
-		$tmb_folder = 'tmb'.$index;
-	}	
+	// Fonte única de verdade: bucket GCS para vídeos remotos, local caso contrário.
+	require_once $config['BASE_DIR']. '/include/function_thumbs.php';
+	$base = get_video_thumb_base($vid);
 
-	$path = $config['BASE_URL'].'/media/videos/'.$tmb_folder.'/'.$vid;
-	$path_dir = $config['BASE_DIR'].'/media/videos/'.$tmb_folder.'/'.$vid;
-	
-	$output = array();
-
-	$tmb = $path_dir.'/'.$thumb.'.jpg';
-	$tmb_url = $path.'/'.$thumb.'.jpg';
 	$tmb_url_def = $config['BASE_URL'].'/media/videos/tmb/default.jpg';
+
+	// Se o vídeo está vinculado a um servidor GCS, a capa vive no bucket
+	// (thumbs/{VID}) por design — servir da URL pública sem depender do local.
+	if (strpos($base, 'storage.googleapis.com') !== false) {
+		return $base.'/'.$thumb.'.jpg';
+	}
+
+	// Vídeo local: só usa a capa se o arquivo de fato existir; senão fallback.
+	$path_dir = get_thumb_dir($vid);
+	$tmb = $path_dir.'/'.$thumb.'.jpg';
 	if (file_exists($tmb) && is_file($tmb)) {
-		return $tmb_url;	
+		return $base.'/'.$thumb.'.jpg';
 	} else {
 		return $tmb_url_def;
 	}

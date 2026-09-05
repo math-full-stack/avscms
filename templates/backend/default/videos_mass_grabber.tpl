@@ -1039,21 +1039,24 @@ function mgPreviewVideo(videoId, evt) {
 
         var p = data.preview;
 
-        if (p.embed_url) {
-            // iframe player (YouTube, Vimeo, etc)
-            contentDiv.innerHTML = '<iframe src="' + p.embed_url + '" style="width:100%;height:100%;border:0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>';
-        } else if (p.stream_url) {
-            // HTML5 video player (XFree, etc)
+        if (p.stream_url) {
+            // HTML5 video player — stream direto resolvido pelo grabber do site
+            // (XFree, SonovinhasBR, Pornolandia, etc). Preferido ao iframe por
+            // não depender de X-Frame-Options/CORS do provider.
+            var isHls = /\.m3u8(\?|#|$)/i.test(p.stream_url);
             var thumbAttr = p.thumbnail ? ' poster="' + p.thumbnail + '"' : '';
             contentDiv.innerHTML = '<video id="mg_preview_player" class="video-js vjs-16-9 vjs-big-play-centered" controls autoplay preload="auto" playsinline webkit-playsinline style="width:100%;height:100%"' + thumbAttr + '>' +
-                '<source src="' + p.stream_url + '" type="video/mp4">' +
+                '<source src="' + p.stream_url + '" type="' + (isHls ? 'application/x-mpegURL' : 'video/mp4') + '">' +
                 '<p>Seu navegador n\u00e3o suporta v\u00eddeo HTML5.</p></video>';
             // Init video.js if available
             if (typeof videojs !== 'undefined') {
                 videojs('mg_preview_player', {controls: true, autoplay: true, preload: 'auto'});
             }
+        } else if (p.embed_url) {
+            // iframe player (YouTube, Vimeo, Dailymotion, XFree, etc)
+            contentDiv.innerHTML = '<iframe src="' + p.embed_url + '" style="width:100%;height:100%;border:0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>';
         } else {
-            // No player available - show link
+            // No player available - show link (último recurso)
             var thumb = p.thumbnail ? '<img src="' + p.thumbnail + '" style="max-width:100%;max-height:350px;border-radius:4px">' : '';
             contentDiv.innerHTML = '<div style="padding:20px;text-align:center;color:#fff;background:#111;min-height:100%">' + thumb +
                 '<br><a href="' + (p.source_url || '#') + '" target="_blank" class="btn btn-primary btn-lg" style="margin-top:15px"><i class="fa fa-external-link"></i> Abrir v\u00eddeo no site</a></div>';
