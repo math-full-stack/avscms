@@ -9,7 +9,7 @@
 		<link href="/media/player/videojs/plugins/videojs-resolution-switcher-master/lib/videojs-resolution-switcher.css" rel="stylesheet">		
 		<link href="/media/player/videojs/plugins/videojs-logobrand-master/src/videojs.logobrand.css" rel="stylesheet">
 		<link href="/media/player/videojs/plugins/videojs-thumbnails-master/videojs.thumbnails.css" rel="stylesheet">
-		<link href="/media/player/videojs/video-js-custom.css" rel="stylesheet">					
+		<link href="/media/player/videojs/video-js-custom.css?ver=1.0.6" rel="stylesheet">					
 		{if $vast_vpaid && $player.vast_vpaid_adv}
 			<link href="{$baseurl}/media/player/videojs/plugins/videojs-vast-vpaid-master/bin/videojs.vast.vpaid.css" rel="stylesheet">			
 		{/if}
@@ -77,7 +77,7 @@
 		</div>
 	{else}
 	<div class="video-container">
-		<video id="video" class="video-js vjs-16-9 vjs-big-play-centered vjs-sublime-skin" preload="auto" controls="true" playsinline webkit-playsinline poster="{insert name=thumb_path vid=$video.VID}/default.jpg" data-setup='{
+		<video id="video" class="video-js vjs-16-9 vjs-big-play-centered vjs-sublime-skin" preload="auto" controls="true" playsinline webkit-playsinline {if $player.start_muted == '1'}muted{/if} poster="{insert name=thumb_path vid=$video.VID}/default.jpg" data-setup='{
 		  "autoplay": {if $player.autoplay}true{else}false{/if}{if $vast_vpaid && $player.vast_vpaid_adv},
 		  "plugins": {
 		  "vastClient": {
@@ -109,7 +109,7 @@
 	</center>
 {/if}
 {if !$video.embed_code}
-	<script src="/media/player/videojs/video-js-events.js"></script>
+	<script src="/media/player/videojs/video-js-events.js?ver=1.1.0"></script>
 {/if}
 </body>
 </html>

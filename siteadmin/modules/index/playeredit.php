@@ -22,6 +22,8 @@ if ( isset($_POST['submit_settings']) && !$errors ) {
 
 	//General Settings
 	$autoplay 			= intval($_POST['autoplay']);
+	$start_muted        = intval($_POST['start_muted']);
+	$quick_controls     = intval($_POST['quick_controls']);
 	$resolution 		= trim($_POST['resolution']);
 	$timeline_preview   = intval($_POST['timeline_preview']);
 	$engine             = ( isset($_POST['engine']) && $_POST['engine'] == 'mediabunny' ) ? 'mediabunny' : 'videojs';
@@ -40,6 +42,8 @@ if ( isset($_POST['submit_settings']) && !$errors ) {
 
 	$sql   = "UPDATE player SET engine = " .$conn->qStr($engine). ", 
 								autoplay = " .$conn->qStr($autoplay). ", 
+								start_muted = " .$conn->qStr($start_muted). ", 
+								quick_controls = " .$conn->qStr($quick_controls). ", 
 								resolution = " .$conn->qStr($resolution). ", 
 								timeline_preview = " .$conn->qStr($timeline_preview). ", 
 								logo = " .$conn->qStr($logo). ", 

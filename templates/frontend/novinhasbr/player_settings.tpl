@@ -1,5 +1,7 @@
 <script type="text/javascript">
 	var player_autoplay = "{$player.autoplay}";
+	var player_start_muted = "{$player.start_muted}";
+	var player_quick_controls = "{$player.quick_controls}";	
 	var player_resolution = "{$player.resolution}";	
 	var player_timeline_preview = "{$player.timeline_preview}";		
 	var player_sprite = "{$player.sprite}";

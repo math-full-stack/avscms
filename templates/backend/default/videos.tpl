@@ -229,7 +229,7 @@
 															</div>
 															<div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
 																<div class="d-label">Date</div>
-																{$videos[i].adddate|date_format}													
+																{$videos[i].addtime|date_format:"%d/%m/%Y %H:%M"}													
 															</div>
 															<div class="col-xs-6 col-sm-2 col-md-1 col-lg-1">
 																<div class="d-label"><i class="fa fa-comments"></i></div>

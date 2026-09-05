@@ -51,7 +51,7 @@ if ( isset($_POST['video_id']) && isset($_POST['move']) && isset($_POST['page'])
     $total          = ( $total > 80 ) ? 80 : $total;
     $pagination     = new Pagination(8, $page);
     $limit          = $pagination->getLimit($total);
-    $sql            = "SELECT VID, title, duration, addtime, rate, likes, dislikes, viewnumber, type, thumb, thumbs, hd
+    $sql            = "SELECT VID, title, duration, addtime, rate, likes, dislikes, viewnumber, type, thumb, thumbs, thumbnails_opt, hd
 	                   FROM video 
                        WHERE channel = '" .intval($video['channel']). "' AND VID != " .$vid. "
 					   AND active = '1'" .$type. "
@@ -59,6 +59,7 @@ if ( isset($_POST['video_id']) && isset($_POST['move']) && isset($_POST['page'])
                        ORDER BY addtime DESC LIMIT " .$limit;
     $rs             = $conn->execute($sql);
     $videos         = $rs->getrows();
+    video_apply_cover_rotation($videos);
     $code           = array();
     $total_pages    = $pagination->getTotalPages();
     $page           = ( $page >= $total_pages ) ? $total_pages : $page;

@@ -208,12 +208,15 @@ if ( $total_related > 32 ) {
 }
 $pagination     = new Pagination(8, 'p_related_videos_' .$video['VID']. '_');
 $limit          = $pagination->getLimit($total_related);
-$sql            = "SELECT v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.vthumbs, v.hd, v.keyword, u.username FROM video AS v, signup AS u
+$sql            = "SELECT v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.hd, v.keyword, u.username FROM video AS v, signup AS u
                    WHERE v.UID = u.UID AND v.active = '1' AND v.channel = '" .$video['channel']. "' AND v.VID != " .$vid. "
                    AND ( v.title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")
                    ORDER BY v.addtime DESC LIMIT " .$limit;
 $rs             = $conn->execute($sql);
 $videos         = $rs->getrows();
+
+// Rotação de capas (frames marcados em thumbnails_opt)
+video_apply_cover_rotation($videos);
 
 // Normaliza keywords para arrays (mesmo formato da home)
 foreach ( $videos as $k => $v ) {
@@ -268,7 +271,7 @@ if ($new_permisions['watch_normal_videos'] == 0) {
 $video['total_subscribers'] = get_user_total_subscribers($video['UID']);	
 
 // ---- Carousels estilo Netflix (seções abaixo do player) ----
-$caro_select = "v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.vthumbs, v.hd, u.username";
+$caro_select = "v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.hd, u.username";
 $caro_from   = " FROM video AS v, signup AS u WHERE v.UID = u.UID AND v.active = '1' AND v.type = 'public' AND v.VID != " .$vid. " ";
 
 // Em alta (mais vistos)
@@ -285,6 +288,11 @@ $caro_new    = $rs->getrows();
 $sql         = "SELECT " .$caro_select. $caro_from. " AND v.UID = " .(int)$video['UID']. " ORDER BY v.addtime DESC LIMIT 15";
 $rs          = $conn->execute($sql);
 $caro_creator = $rs->getrows();
+
+// Rotação de capas (frames marcados em thumbnails_opt)
+video_apply_cover_rotation($caro_trending);
+video_apply_cover_rotation($caro_new);
+video_apply_cover_rotation($caro_creator);
 
 $smarty->assign('caro_trending', $caro_trending);
 $smarty->assign('caro_new', $caro_new);

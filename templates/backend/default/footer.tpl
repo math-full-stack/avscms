@@ -67,7 +67,7 @@
 {elseif $sub_menu == 'manage-videos'}
 	<script src="{$relative_tpl}/assets/plugins/jquery-notifications/js/messenger.min.js" type="text/javascript"></script>
 	<script src="{$relative_tpl}/assets/plugins/jquery-notifications/js/messenger-theme-future.js" type="text/javascript"></script>
-	<script src="{$relative_tpl}/assets/js/admin/jquery.manage-videos.js?v=2" type="text/javascript"></script>
+	<script src="{$relative_tpl}/assets/js/admin/jquery.manage-videos.js?v=3" type="text/javascript"></script>
 	<script src="{$relative_tpl}/assets/js/admin/jquery.comments.js" type="text/javascript"></script>	
 	<script type="text/javascript">
 		var conf_remove_bb = "{$thumbnail_remove_bb}";

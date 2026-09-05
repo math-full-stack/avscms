@@ -69,6 +69,7 @@ if ( $subscriptions ) {
                            ORDER BY v.VID DESC LIMIT " .$limit;
         $rs                 = $conn->execute($sql_videos);
         $videos             = $rs->getrows();
+        video_apply_cover_rotation($videos);
         foreach ( $videos as $video ) {
             $feeds[]    = array(
                 'time' => $video['addtime'],

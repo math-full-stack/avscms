@@ -13,7 +13,7 @@ if ( $config['show_private_videos'] == '0' ) {
 
 $sql_add       .= $sql_delim. " v.active = '1'";  
 
-$video_select   = "v.VID, v.title, v.duration, v.addtime, v.thumb, v.thumbs, v.vthumbs, v.viewnumber, v.rate, v.likes, v.dislikes, v.type, v.hd, v.keyword, v.UID, u.username";
+$video_select   = "v.VID, v.title, v.duration, v.addtime, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.viewnumber, v.rate, v.likes, v.dislikes, v.type, v.hd, v.keyword, v.UID, u.username";
 $video_from     = " FROM video AS v, signup AS u WHERE v.UID = u.UID" .$sql_add;
 
 $sql            = "SELECT " .$video_select. $video_from. " ORDER BY v.viewtime DESC LIMIT " .$config['watched_per_page'];
@@ -28,6 +28,11 @@ $recent_videos  = $rs->getrows();
 $sql            = "SELECT " .$video_select. $video_from. " ORDER BY v.viewnumber DESC, v.viewtime DESC LIMIT 7";
 $rs             = $conn->execute($sql);
 $hero_videos    = $rs->getrows();
+
+// Rotação de capas (frames marcados em thumbnails_opt)
+video_apply_cover_rotation($viewed_videos);
+video_apply_cover_rotation($recent_videos);
+video_apply_cover_rotation($hero_videos);
 
 // Creators: usuários com mais vídeos
 $sql            = "SELECT UID, username, photo, gender, total_videos FROM signup

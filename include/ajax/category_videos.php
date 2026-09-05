@@ -27,12 +27,13 @@ if ( isset($_POST['category_id']) && isset($_POST['move']) && isset($_POST['page
     $total          = $rsc->fields['total_category_videos'];
     $pagination     = new Pagination(2, $page);
     $limit          = $pagination->getLimit($total);
-    $sql            = "SELECT VID, title, duration, addtime, rate, viewnumber, type, thumb, thumbs
+    $sql            = "SELECT VID, title, duration, addtime, rate, viewnumber, type, thumb, thumbs, thumbnails_opt
 					   FROM video
                        WHERE active = '1' AND channel = " .$category . $type. "
                        ORDER BY addtime DESC LIMIT " .$limit;
     $rs             = $conn->execute($sql);
     $videos         = $rs->getrows();
+    video_apply_cover_rotation($videos);
     $code           = array();
     $total_pages    = $pagination->getTotalPages();
     $page           = ( $page >= $total_pages ) ? $total_pages : $page;

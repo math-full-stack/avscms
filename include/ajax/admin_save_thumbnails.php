@@ -15,7 +15,26 @@ $filter = new VFilter();
 $vid    = $filter->get('video_id', 'INTEGER');
 $thumb  = $filter->get('thumbnails_default', 'INTEGER');
 
-$sql = "UPDATE video SET thumb = " .$conn->qStr($thumb). "
+// Capas selecionadas para rotação nos cards (frames 1..thumbs, separados por vírgula)
+$opt_raw = (string)$filter->get('thumbnails_opt', 'STRING');
+
+$sql_max = "SELECT thumbs FROM video WHERE VID = " .$conn->qStr($vid). " LIMIT 1";
+$rs_max  = $conn->execute($sql_max);
+$max     = ( $conn->Affected_Rows() == 1 ) ? (int)$rs_max->fields['thumbs'] : 20;
+$max     = ( $max > 0 ) ? $max : 20;
+
+$covers = array();
+foreach ( explode(',', $opt_raw) as $c ) {
+	$c = (int)$c;
+	if ( $c >= 1 && $c <= $max && !in_array($c, $covers, true) ) {
+		$covers[] = $c;
+	}
+}
+
+$opt_str = implode(',', $covers);
+$thumb   = ( $thumb >= 1 && $thumb <= $max ) ? $thumb : ( count($covers) > 0 ? $covers[0] : 1 );
+
+$sql = "UPDATE video SET thumb = " .$conn->qStr($thumb). ", thumbnails_opt = " .$conn->qStr($opt_str). "
 		WHERE VID = " .$conn->qStr($vid). " LIMIT 1";
 $conn->execute($sql);
 $response['status'] = 1;

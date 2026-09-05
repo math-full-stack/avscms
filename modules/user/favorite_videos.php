@@ -23,6 +23,7 @@ $sql            = "SELECT v.* FROM video AS v, favourite AS f
                    WHERE f.UID = " .$uid. " AND f.VID = v.VID ORDER BY v.VID DESC LIMIT " .$limit;
 $rs             = $conn->execute($sql);
 $favorites      = $rs->getrows();
+video_apply_cover_rotation($favorites);
 $page_link      = $pagination->getPagination('user/' .$username. '/favorite/videos');
 $start_num      = $pagination->getStartItem();
 $end_num        = $pagination->getEndItem();

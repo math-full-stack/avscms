@@ -24,6 +24,64 @@ function get_request_arg($search, $type = 'INT')
     return ( $type == 'INT' ) ? intval($arg) : $arg;
 }
 
+/**
+ * Rotação de capas: dado um vídeo, devolve o frame a mostrar como capa.
+ *
+ * Se o vídeo tem cover(s) escolhidos em `thumbnails_opt` (lista separada por
+ * vírgula, frames 1..thumbs), escolhe um deles de forma "aleatória mas estável
+ * por request" — ou seja, a cada página carregada o card pode exibir uma capa
+ * diferente entre as selecionadas. Sem lista, mantém o comportamento legado
+ * (usa sempre `thumb`).
+ *
+ * @param array $video Linha da tabela video (precisa de VID, thumb, thumbs, thumbnails_opt)
+ * @return int Índice do frame a exibir
+ */
+function video_rotate_cover($video)
+{
+    static $rot_seed = null;
+    if ($rot_seed === null) {
+        $rot_seed = mt_rand(0, 100000);
+    }
+
+    $thumb = (int)$video['thumb'];
+    $max   = ( isset($video['thumbs']) && (int)$video['thumbs'] > 0 ) ? (int)$video['thumbs'] : 20;
+    $opt   = ( isset($video['thumbnails_opt']) ) ? trim($video['thumbnails_opt']) : '';
+
+    if ($opt === '') {
+        return $thumb;
+    }
+
+    $covers = array_values(array_unique(array_map('intval', explode(',', $opt))));
+    $covers = array_values(array_filter($covers, function ($c) use ($max) {
+        return $c >= 1 && $c <= $max;
+    }));
+
+    if ( count($covers) === 0 ) {
+        return $thumb;
+    }
+
+    $idx = ($rot_seed + (int)$video['VID']) % count($covers);
+    return (int)$covers[$idx];
+}
+
+/**
+ * Aplica video_rotate_cover() a uma lista de vídeos (arrays associativos),
+ * sobrescrevendo `thumb` com a capa sorteada para o request corrente.
+ *
+ * @param array|null $videos Lista de linhas de video (referência)
+ */
+function video_apply_cover_rotation(&$videos)
+{
+    if ( !is_array($videos) ) {
+        return;
+    }
+    foreach ( $videos as $k => $v ) {
+        if ( is_array($v) && isset($v['thumb']) && isset($v['VID']) ) {
+            $videos[$k]['thumb'] = video_rotate_cover($v);
+        }
+    }
+}
+
 function get_categories()
 {
     global $conn;

@@ -4,7 +4,7 @@
 	<meta charset="utf-8">
 	<title>{$title|escape:'html'}</title>
 	<link href="{$baseurl}/media/player/videojs/video-js.css" rel="stylesheet">	
-	<link href="{$baseurl}/media/player/videojs/video-js-custom.css" rel="stylesheet">
+	<link href="{$baseurl}/media/player/videojs/video-js-custom.css?ver=1.0.6" rel="stylesheet">
 	<script src="{$baseurl}/media/player/videojs/video.js"></script>
 	<style>
 		html, body {

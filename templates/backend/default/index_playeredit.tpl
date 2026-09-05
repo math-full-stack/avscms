@@ -33,18 +33,44 @@
 											</div>
 											<div class="clearfix"></div>
 										</div>
-										<div class="form-group">
-											<label class="col-lg-4 control-label">Autoplay</label>
-											<div class="col-lg-8">
-												<div class="radio p-t-9">
-													<input id="autoplay_e" type="radio" name="autoplay" value="1" {if $player.autoplay == '1'}checked="checked"{/if} class="radio-enabled">
-													<label for="autoplay_e">Enabled</label>
-													<input id="autoplay_d" type="radio" name="autoplay" value="0" {if $player.autoplay == '0'}checked="checked"{/if} class="radio-disabled">
-													<label for="autoplay_d">Disabled</label>												
-												</div>
+<div class="form-group">
+										<label class="col-lg-4 control-label">Autoplay</label>
+										<div class="col-lg-8">
+											<div class="radio p-t-9">
+												<input id="autoplay_e" type="radio" name="autoplay" value="1" {if $player.autoplay == '1'}checked="checked"{/if} class="radio-enabled">
+												<label for="autoplay_e">Enabled</label>
+												<input id="autoplay_d" type="radio" name="autoplay" value="0" {if $player.autoplay == '0'}checked="checked"{/if} class="radio-disabled">
+												<label for="autoplay_d">Disabled</label>												
 											</div>
-											<div class="clearfix"></div>
 										</div>
+										<div class="clearfix"></div>
+									</div>
+									<div class="form-group">
+										<label class="col-lg-4 control-label">Start Muted</label>
+										<div class="col-lg-8">
+											<div class="radio p-t-9">
+												<input id="start_muted_e" type="radio" name="start_muted" value="1" {if $player.start_muted == '1'}checked="checked"{/if} class="radio-enabled">
+												<label for="start_muted_e">Enabled</label>
+												<input id="start_muted_d" type="radio" name="start_muted" value="0" {if $player.start_muted == '0'}checked="checked"{/if} class="radio-disabled">
+												<label for="start_muted_d">Disabled</label>												
+											</div>
+											<span class="help">Start the video muted every time a page is loaded.</span>
+										</div>
+										<div class="clearfix"></div>
+									</div>
+									<div class="form-group">
+										<label class="col-lg-4 control-label">Quick Controls Card</label>
+										<div class="col-lg-8">
+											<div class="radio p-t-9">
+												<input id="quick_controls_e" type="radio" name="quick_controls" value="1" {if $player.quick_controls == '1'}checked="checked"{/if} class="radio-enabled">
+												<label for="quick_controls_e">Enabled</label>
+												<input id="quick_controls_d" type="radio" name="quick_controls" value="0" {if $player.quick_controls == '0'}checked="checked"{/if} class="radio-disabled">
+												<label for="quick_controls_d">Disabled</label>												
+											</div>
+											<span class="help">Show the card in the bottom-right corner with play, video speed and +5 seconds shortcuts.</span>
+										</div>
+										<div class="clearfix"></div>
+									</div>
 										<div class="form-group">
 											<label class="col-lg-4 control-label">Default Resolution</label>
 											<div class="col-lg-8">

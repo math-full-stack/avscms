@@ -66,6 +66,90 @@ function thumbsReLoaded(video_id) {
 	}
 }
 
+// ----- Múltiplas capas (rotação nos cards) -----
+
+function thumbTileId(tile) {
+	var m = ($(tile).attr('id') || '').match(/^tb_(\d+)$/);
+	return m ? parseInt(m[1], 10) : null;
+}
+
+function thumbTileHtml(i, src) {
+	var d = new Date();
+	return '<div id="tb_' + i + '" class="col-xs-6 col-sm-3 col-md-5ths thumb-block">'
+		+ '<a href="#" class="thumb-main-star" data-tile="' + i + '" title="Definir como capa principal"><i class="fa fa-star"></i></a>'
+		+ '<span class="thumb-frame-num">' + i + '</span>'
+		+ '<span class="thumb-block-opt-badge"><i class="fa fa-check"></i></span>'
+		+ '<img src="' + src + '?' + d.getTime() + '" class="img-responsive" title="Frame ' + i + ' - clique para alternar como capa" alt="Frame ' + i + '" />'
+		+ '</div>';
+}
+
+function thumbPlayerHtml(src) {
+	var d = new Date();
+	return '<div id="tb-player" class="col-sm-6 col-sm-offset-3 col-md-6 col-md-offset-3 thumb-block thumb-block-player">'
+		+ '<span class="thumb-block-source-label">Poster do player</span>'
+		+ '<img src="' + src + '?' + d.getTime() + '" class="img-responsive" alt="Poster do player" />'
+		+ '</div>';
+}
+
+function thumbOptListFromTiles() {
+	var list = [];
+	$("#thumbnailsModal .thumb-block-opt").each(function(){
+		var id = thumbTileId(this);
+		if (id !== null) {
+			list.push(id);
+		}
+	});
+	return list;
+}
+
+function thumbOptUpdateHidden() {
+	var list = thumbOptListFromTiles();
+	$('#thumbnails-opt').val(list.join(','));
+	$('#thumbnails-opt-count').text(list.length);
+}
+
+function thumbMainRender() {
+	var main = parseInt($('#thumbnails-default').val(), 10);
+	if (isNaN(main) || main < 1) {
+		main = 1;
+	}
+	$("#thumbnailsModal .thumb-block[id^='tb_']").each(function(){
+		var id = thumbTileId(this);
+		if (id === null) {
+			return;
+		}
+		if (id === main) {
+			$(this).addClass('thumb-block-active');
+		} else {
+			$(this).removeClass('thumb-block-active');
+		}
+	});
+	$("#thumbnailsModal .thumb-main-star").removeClass('active');
+	$('#thumbnails-default').val(main);
+	var star = $("#thumbnailsModal .thumb-main-star[data-tile='" + main + "']");
+	if (star.length) {
+		star.addClass('active');
+	}
+}
+
+function thumbOptRender(response) {
+	var covers = response.opt || [];
+	$('#thumbnails-opt').val(covers.join(','));
+	$("#thumbnailsModal .thumb-block[id^='tb_']").each(function(){
+		var id = thumbTileId(this);
+		if (id === null) {
+			return;
+		}
+		$(this).removeClass('thumb-block-opt');
+		if ($.inArray(id, covers) !== -1) {
+			$(this).addClass('thumb-block-opt');
+		}
+	});
+	$('#thumbnails-default').val(response.thumb);
+	thumbMainRender();
+	thumbOptUpdateHidden();
+}
+
 $(document).ready(function(){
 		
 	$("#filter_active").select2();
@@ -670,26 +754,14 @@ $(document).ready(function(){
 						$('#thumbnails-keep-ar').attr('checked', true);
 					}
 					var thumb_block = '';
-					var active_class = '';
 					//Load Thumbs
-					d = new Date();						
 					for (i = 1; i <= response.count; i++) {
-						if (i == response.thumb) {
-							active_class = 'thumb-block-active';
-						} else {
-							active_class = '';
-						}
-						thumb_block = '<div id="tb_' + i + '" class="col-xs-6 col-sm-3 col-md-5ths thumb-block ' + active_class + '"><img src="' + response['thumbnails'][i] + '?' + d.getTime() + '" class="img-responsive" title="Main: ' + i + '" alt="Main: ' + i + '" /></div>';
-						$("#thumbnails-container").append(thumb_block);
+						$("#thumbnails-container").append(thumbTileHtml(i, response['thumbnails'][i]));
 					}
 					if (response.player) {
-						thumb_block = '<div id="tb-player" class="col-sm-6 col-sm-offset-3 col-md-6 col-md-offset-3 thumb-block thumb-block-player"><img src="' + response.player + '?' + d.getTime() + '" class="img-responsive" title="Player Thumbnail" alt="Player Thumbnail" /></div>';
-						$("#thumbnails-container").append(thumb_block);					
+						$("#thumbnails-container").append(thumbPlayerHtml(response.player));
 					}
-					if (response.source) {
-						thumb_block = '<div id="tb-source" class="col-sm-6 col-sm-offset-3 col-md-6 col-md-offset-3 thumb-block thumb-block-source"><img src="' + response.source + '?' + d.getTime() + '" class="img-responsive" title="Source Thumbnail" alt="Source Thumbnail" /><div class="thumb-block-source-label">Source</div></div>';
-						$("#thumbnails-container").append(thumb_block);					
-					}
+					thumbOptRender(response);
 					thumbsLoaded(video_id);
 				} else {
 					Messenger().post({
@@ -725,26 +797,14 @@ $(document).ready(function(){
 						$('#thumbnails-keep-ar').attr('checked', true);
 					}
 					var thumb_block = '';
-					var active_class = '';
 					//Load Thumbs
-					d = new Date();	
 					for (i = 1; i <= response.count; i++) {
-						if (i == response.thumb) {
-							active_class = 'thumb-block-active';
-						} else {
-							active_class = '';
-						}
-						thumb_block = '<div id="tb_' + i + '" class="col-xs-6 col-sm-3 col-md-5ths thumb-block ' + active_class + '"><img src="' + response['thumbnails'][i] + '?' + d.getTime() + '" class="img-responsive" title="Main: ' + i + '" alt="Main: ' + i + '" /></div>';
-						$("#thumbnails-container-rel").append(thumb_block);
+						$("#thumbnails-container-rel").append(thumbTileHtml(i, response['thumbnails'][i]));
 					}
 					if (response.player) {
-						thumb_block = '<div id="tb-player" class="col-sm-6 col-sm-offset-3 col-md-6 col-md-offset-3 thumb-block thumb-block-player"><img src="' + response.player + '?' + d.getTime() + '" class="img-responsive" title="Player Thumbnail" alt="Player Thumbnail" /></div>';
-						$("#thumbnails-container-rel").append(thumb_block);					
+						$("#thumbnails-container-rel").append(thumbPlayerHtml(response.player));
 					}
-					if (response.source) {
-						thumb_block = '<div id="tb-source" class="col-sm-6 col-sm-offset-3 col-md-6 col-md-offset-3 thumb-block thumb-block-source"><img src="' + response.source + '?' + d.getTime() + '" class="img-responsive" title="Source Thumbnail" alt="Source Thumbnail" /><div class="thumb-block-source-label">Source</div></div>';
-						$("#thumbnails-container-rel").append(thumb_block);					
-					}
+					thumbOptRender(response);
 					thumbsReLoaded(video_id);
 				} else {
 					Messenger().post({
@@ -784,26 +844,14 @@ $(document).ready(function(){
 						$('#thumbnails-id').val(video_id);					
 						$('#thumbnails-default').val(response.thumb);
 						var thumb_block = '';
-						var active_class = '';
 						//Load Thumbs
-						d = new Date();	
 						for (i = 1; i <= response.count; i++) {
-							if (i == response.thumb) {
-								active_class = 'thumb-block-active';
-							} else {
-								active_class = '';
-							}
-							thumb_block = '<div id="tb_' + i + '" class="col-xs-6 col-sm-3 col-md-5ths thumb-block ' + active_class + '"><img src="' + response['thumbnails'][i] + '?' + d.getTime() + '" class="img-responsive" title="Main: ' + i + '" alt="Main: ' + i + '" /></div>';
-							$("#thumbnails-container-rel").append(thumb_block);
+							$("#thumbnails-container-rel").append(thumbTileHtml(i, response['thumbnails'][i]));
 						}
 						if (response.player) {
-							thumb_block = '<div id="tb-player" class="col-sm-6 col-sm-offset-3 col-md-6 col-md-offset-3 thumb-block thumb-block-player"><img src="' + response.player + '?' + d.getTime() + '" class="img-responsive" title="Player Thumbnail" alt="Player Thumbnail" /></div>';
-							$("#thumbnails-container-rel").append(thumb_block);					
+							$("#thumbnails-container-rel").append(thumbPlayerHtml(response.player));
 						}
-						if (response.source) {
-							thumb_block = '<div id="tb-source" class="col-sm-6 col-sm-offset-3 col-md-6 col-md-offset-3 thumb-block thumb-block-source"><img src="' + response.source + '?' + d.getTime() + '" class="img-responsive" title="Source Thumbnail" alt="Source Thumbnail" /><div class="thumb-block-source-label">Source</div></div>';
-							$("#thumbnails-container-rel").append(thumb_block);					
-						}
+						thumbOptRender(response);
 						thumbsReLoaded(video_id);
 					} else {
 						Messenger().post({
@@ -821,11 +869,13 @@ $(document).ready(function(){
 	//Thumbnails Save
 	$("body").on('click', "button[id='thumbnails-save']", function(event) {		
 		event.preventDefault();
+		thumbMainRender();
 		var video_id = $('#thumbnails-id').val();
-		var thumbnails_default = $('#thumbnails-default').val();		
+		var thumbnails_default = $('#thumbnails-default').val();
+		var thumbnails_opt = $('#thumbnails-opt').val();		
 		//save code	
 		$('#thumb__video_' + video_id).html('<i class="small-loader"></i>');
-		$.post(base_url + '/ajax.php?module=admin_save_thumbnails', { video_id: video_id, thumbnails_default: thumbnails_default },
+		$.post(base_url + '/ajax.php?module=admin_save_thumbnails', { video_id: video_id, thumbnails_default: thumbnails_default, thumbnails_opt: thumbnails_opt },
 			function (response) {					
 				$('#thumbnailsModal').modal('hide');
 				if (response.status) {						
@@ -845,22 +895,45 @@ $(document).ready(function(){
 		}, "json");	
 	});
 	
-	
-    $("body").on('click', "div[id*='tb_']", function(event) {
-        event.preventDefault();
-		var id = $(this).attr('id');
-		var split = id.split('_');
-		var thumb_id = split[1];
-		for (i = 1; i <= 20; i++) {
-			if (i != thumb_id) {
-				if ($("#tb_" + i).hasClass('thumb-block-active')) {
-					$("#tb_" + i).removeClass('thumb-block-active');
-				}
-			} else {
-				$("#tb_" + i).addClass('thumb-block-active');
-			}
+	//Aplicar rotacao: clique no frame alterna como capa
+	$("#thumbnailsModal").on('click', "div[id^='tb_']", function(event) {
+		event.preventDefault();
+		var id = thumbTileId(this);
+		if (id === null) {
+			return;
 		}
-		$('#thumbnails-default').val(thumb_id);
+		$(this).toggleClass('thumb-block-opt');
+		thumbOptUpdateHidden();
+	});
+
+	//Clique na estrela define a capa principal
+	$("#thumbnailsModal").on('click', ".thumb-main-star", function(event) {
+		event.preventDefault();
+		event.stopPropagation();
+		var id = parseInt($(this).attr('data-tile'), 10);
+		if (isNaN(id)) {
+			return;
+		}
+		$('#thumbnails-default').val(id);
+		thumbMainRender();
+	});
+
+	//Selecionar todas as capas
+	$("body").on('click', "#thumbnails-opt-all", function(event) {
+		event.preventDefault();
+		$("#thumbnailsModal div[id^='tb_']").each(function(){
+			if (thumbTileId(this) !== null) {
+				$(this).addClass('thumb-block-opt');
+			}
+		});
+		thumbOptUpdateHidden();
+	});
+
+	//Limpar selecao de capas
+	$("body").on('click', "#thumbnails-opt-clear", function(event) {
+		event.preventDefault();
+		$("#thumbnailsModal div[id^='tb_']").removeClass('thumb-block-opt');
+		thumbOptUpdateHidden();
 	});		
 	
 	//Close Thumbnails Modal

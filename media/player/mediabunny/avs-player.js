@@ -98,6 +98,8 @@ import {
 
     const context2d = canvas.getContext('2d');
     const autoplay = player.dataset.autoplay === '1';
+    const startMuted = (typeof window.player_start_muted !== 'undefined') ? window.player_start_muted === '1' : true;
+    const quickControls = (typeof window.player_quick_controls !== 'undefined') ? window.player_quick_controls === '1' : true;
     const poster = player.dataset.poster || '';
     if (poster) {
         posterImg.src = poster;
@@ -123,6 +125,7 @@ import {
         fallbackVideo.className = 'avs-fallback-video';
         fallbackVideo.controls = true;
         fallbackVideo.playsInline = true;
+        fallbackVideo.muted = startMuted;
         if (poster) fallbackVideo.poster = poster;
         player.insertBefore(fallbackVideo, player.firstChild);
         posterImg.style.display = 'none';
@@ -154,6 +157,12 @@ import {
     let asyncId = 0;
     let volume = 0.8;
     let volumeMuted = false;
+    let playbackRate = 1;
+
+    // Start muted (configurable in admin playeredit)
+    if (startMuted) {
+        volumeMuted = true;
+    }
     let seeking = false;
     let endedFired = false;
     const queuedAudioNodes = new Set();
@@ -343,12 +352,13 @@ import {
             const node = audioContext.createBufferSource();
             node.buffer = buffer;
             node.connect(gainNode);
-            let start = audioContextStartTime + timestamp - playbackTimeAtStart;
+            node.playbackRate.value = playbackRate;
+            let start = audioContextStartTime + (timestamp - playbackTimeAtStart) / playbackRate;
             start = Math.round(audioContext.sampleRate * start) / audioContext.sampleRate;
             if (start >= audioContext.currentTime) {
                 node.start(start);
             } else {
-                node.start(audioContext.currentTime, audioContext.currentTime - start);
+                node.start(audioContext.currentTime, (audioContext.currentTime - start) * playbackRate);
             }
             queuedAudioNodes.add(node);
             node.onended = () => queuedAudioNodes.delete(node);
@@ -367,7 +377,7 @@ import {
     // ------------------------------------------------------------------
     const getPlaybackTime = () => {
         if (playing) {
-            return audioContext.currentTime - audioContextStartTime + playbackTimeAtStart;
+            return playbackTimeAtStart + (audioContext.currentTime - audioContextStartTime) * playbackRate;
         }
         return playbackTimeAtStart;
     };
@@ -486,7 +496,7 @@ import {
         // autoplay-next, logo) must NOT toggle the content — their own
         // handlers deal with them (avoids a double-toggle that would pause
         // playback right after resume/skip).
-        if (e.target.closest('.avs-controls, .avs-ad, .avs-pause-ad, .avs-logo, #autoplay-overlay, .avs-error')) return;
+        if (e.target.closest('.avs-controls, .avs-ad, .avs-pause-ad, .avs-logo, #autoplay-overlay, .avs-error, .avs-quick-controls')) return;
         togglePlay();
     });
 
@@ -539,6 +549,104 @@ import {
         }
         e.preventDefault();
     });
+
+    // ------------------------------------------------------------------
+    // 8.1 Quick controls card (play / speed / +5s) in the bottom-right corner
+    // ------------------------------------------------------------------
+    const applyFallbackRate = (rate) => {
+        if (fallbackVideo) fallbackVideo.playbackRate = rate;
+    };
+
+    const applyRate = (rate) => {
+        playbackRate = rate;
+        applyFallbackRate(rate);
+        // Re-sync the audio pipeline when the rate changes mid-playback
+        if (playing && !fallbackVideo && audioSink) {
+            if (audioBufferIterator) audioBufferIterator.return();
+            audioBufferIterator = audioSink.buffers(getPlaybackTime());
+            void runAudioIterator();
+        }
+    };
+
+    const seekBy = (delta) => {
+        if (fallbackVideo) {
+            fallbackVideo.currentTime = Math.max(0, Math.min(
+                fallbackVideo.duration || 0,
+                fallbackVideo.currentTime + delta
+            ));
+            return;
+        }
+        void seekToTime(getPlaybackTime() + delta);
+    };
+
+    let quickControlsEl = null;
+    if (quickControls) {
+        quickControlsEl = document.createElement('div');
+        quickControlsEl.className = 'avs-quick-controls';
+        quickControlsEl.innerHTML =
+            '<button type="button" class="avs-qc-btn avs-qc-play" title="Play / Pause">&#9654;</button>' +
+            '<button type="button" class="avs-qc-btn avs-qc-speed" title="Playback speed">1x</button>' +
+            '<button type="button" class="avs-qc-btn avs-qc-back" title="-5 seconds">-5</button>' +
+            '<button type="button" class="avs-qc-btn avs-qc-forward" title="+5 seconds">+5</button>';
+        player.appendChild(quickControlsEl);
+
+        const qcPlay = quickControlsEl.querySelector('.avs-qc-play');
+        const qcSpeed = quickControlsEl.querySelector('.avs-qc-speed');
+        const qcBack = quickControlsEl.querySelector('.avs-qc-back');
+        const qcFwd = quickControlsEl.querySelector('.avs-qc-forward');
+
+        const qcSpeeds = [1, 1.25, 1.5, 2, 0.75, 0.5];
+        let qcSpeedIndex = 0;
+
+        qcPlay.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (fallbackVideo) {
+                if (fallbackVideo.paused) {
+                    void fallbackVideo.play().catch(() => {});
+                } else {
+                    fallbackVideo.pause();
+                }
+            } else {
+                togglePlay();
+            }
+        });
+
+        qcSpeed.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            qcSpeedIndex = (qcSpeedIndex + 1) % qcSpeeds.length;
+            applyRate(qcSpeeds[qcSpeedIndex]);
+            qcSpeed.textContent = qcSpeeds[qcSpeedIndex] + 'x';
+        });
+
+        qcBack.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            seekBy(-5);
+        });
+
+        qcFwd.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            seekBy(5);
+        });
+
+        const syncQcPlay = () => {
+            if (!qcPlay) return;
+            const paused = fallbackVideo ? fallbackVideo.paused : !playing;
+            qcPlay.innerHTML = paused ? '&#9654;' : '&#10074;&#10074;';
+        };
+
+        if (fallbackVideo) {
+            fallbackVideo.addEventListener('play', syncQcPlay);
+            fallbackVideo.addEventListener('pause', syncQcPlay);
+        } else {
+            const mo = new MutationObserver(syncQcPlay);
+            mo.observe(player, { attributes: true, attributeFilter: ['class'] });
+        }
+        syncQcPlay();
+    }
 
     // ------------------------------------------------------------------
     // 9. Player profile features (parity with the original Video.js player)

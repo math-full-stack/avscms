@@ -137,6 +137,7 @@ function get_user_playlist( $uid, $prefs, $is_friend, $limit=4 )
                        WHERE p.UID = " .intval($uid). " AND p.VID = v.VID ORDER by v.viewtime DESC LIMIT " .$limit;
         $rs         = $conn->execute($sql);
         $playlist   = $rs->getrows();
+        video_apply_cover_rotation($playlist);
     }
     
     return $playlist;
@@ -161,6 +162,7 @@ function get_user_favorites( $uid, $prefs, $is_friend, $limit=4 )
                        WHERE f.UID = " .intval($uid). " AND f.VID = v.VID ORDER by v.viewtime DESC LIMIT " .$limit;
         $rs         = $conn->execute($sql);
         $favorites  = $rs->getrows();
+        video_apply_cover_rotation($favorites);
     }
     
     return $favorites;
@@ -231,7 +233,9 @@ function get_user_videos( $uid, $limit=4 )
                WHERE UID = " .$uid. " AND active = '1'
                ORDER BY addtime DESC LIMIT " .$limit;
     $rs     = $conn->execute($sql);
-    return $rs->getrows();
+    $videos = $rs->getrows();
+    video_apply_cover_rotation($videos);
+    return $videos;
 }
 
 function get_user_albums( $uid, $limit=4 )

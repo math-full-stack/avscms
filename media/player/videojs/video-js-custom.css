@@ -329,3 +329,66 @@ img#vjs-logobrand-image-top-left, img#vjs-logobrand-image-top-right, img#vjs-log
 	max-height: 46px;
 	width: auto;
 }
+
+/* ---- Quick controls card (play / speed / +5s) ---- */
+.vjs-quick-controls {
+	position: absolute;
+	right: 16px;
+	bottom: 56px;
+	z-index: 1100;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 8px;
+	background-color: rgba(20, 20, 20, 0.72);
+	border: 1px solid rgba(255, 255, 255, 0.18);
+	border-radius: 9px;
+	backdrop-filter: blur(2px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+	font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	user-select: none;
+}
+
+.vjs-quick-controls .qc-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 34px;
+	height: 30px;
+	padding: 0 8px;
+	margin: 0;
+	border: 0;
+	border-radius: 6px;
+	background-color: rgba(255, 255, 255, 0.14);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1;
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.vjs-quick-controls .qc-btn:hover {
+	background-color: rgba(255, 255, 255, 0.28);
+	color: #fff;
+}
+
+.vjs-quick-controls .qc-btn.qc-play {
+	background-color: #e50914;
+	font-size: 14px;
+}
+
+.vjs-quick-controls .qc-btn.qc-play:hover {
+	background-color: #f6121d;
+}
+
+.vjs-quick-controls .qc-btn.qc-speed {
+	min-width: 44px;
+	font-size: 13px;
+}
+
+.vjs-quick-controls .qc-seek {
+	min-width: 30px;
+	padding: 0 4px;
+	font-size: 12px;
+}

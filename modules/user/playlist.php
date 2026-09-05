@@ -16,12 +16,13 @@ $rsc            = $conn->execute($sql);
 $total          = $rsc->fields['total_videos'];
 $pagination     = new Pagination(24);
 $limit          = $pagination->getLimit($total);
-$sql            = "SELECT v.VID, v.title, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.duration, v.type, v.thumb, v.thumbs, v.hd
+$sql            = "SELECT v.VID, v.title, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.duration, v.type, v.thumb, v.thumbs, v.thumbnails_opt, v.hd
                    FROM video AS v, playlist AS p
                    WHERE p.UID = " .$uid. " AND p.VID = v.VID AND v.active = '1'
 				   ORDER BY v.VID DESC LIMIT " .$limit;
 $rs             = $conn->execute($sql);
 $playlist       = $rs->getrows();
+video_apply_cover_rotation($playlist);
 $page_link      = $pagination->getPagination('user/' .$username. '/playlist');
 $start_num      = $pagination->getStartItem();
 $end_num        = $pagination->getEndItem();

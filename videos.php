@@ -136,6 +136,9 @@ $sql            = "SELECT v.*, u.username FROM video AS v LEFT JOIN signup AS u 
 $rs             = $conn->execute($sql);
 $videos         = $rs->getrows();
 
+// Rotação de capas (frames marcados em thumbnails_opt)
+video_apply_cover_rotation($videos);
+
 // Normaliza keywords para arrays (mesmo formato da página inicial)
 foreach ( $videos as $k => $v ) {
     $videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));

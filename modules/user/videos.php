@@ -12,6 +12,7 @@ $sql            = "SELECT * FROM video
                    WHERE UID = " .$uid. " AND active = '1' ORDER BY VID DESC LIMIT " .$limit;
 $rs             = $conn->execute($sql);
 $videos         = $rs->getrows();
+video_apply_cover_rotation($videos);
 $page_link      = $pagination->getPagination('user/' .$username. '/videos');
 $start_num      = $pagination->getStartItem();
 $end_num        = $pagination->getEndItem();

@@ -121,6 +121,7 @@ $limit          = $pagination->getLimit($total);
 $sql            = "SELECT * FROM video WHERE active = '1'". $sql_add. " LIMIT " .$limit;
 $rs             = $conn->execute($sql);
 $videos         = $rs->getrows();
+video_apply_cover_rotation($videos);
 
 if ($slug) {
 	$page_link      = $pagination->getPagination('search/videos/'.$search_query.'/'.$slug);

@@ -7,7 +7,7 @@
 	{if $player.engine == 'mediabunny'}
 		{include file='video_mbplayer.tpl'}
 	{else}
-		<video id="video" class="video-js vjs-16-9 vjs-big-play-centered vjs-sublime-skin" preload="auto" controls="true" playsinline webkit-playsinline poster="{insert name=thumb_path vid=$video.VID}/default.jpg" data-setup='{
+		<video id="video" class="video-js vjs-16-9 vjs-big-play-centered vjs-sublime-skin" preload="auto" controls="true" playsinline webkit-playsinline {if $player.start_muted == '1'}muted{/if} poster="{insert name=thumb_path vid=$video.VID}/default.jpg" data-setup='{
 		  "autoplay": {if $smarty.get.autoplay == '1'}true{elseif $player.autoplay}true{else}false{/if}{if $vast_vpaid && $player.vast_vpaid_adv},
 		  "plugins": {
 		  "vastClient": {

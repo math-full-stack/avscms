@@ -8795,16 +8795,127 @@ i.loader {
 	box-shadow: 0px 0px 0px 3px #77b300;
 }
 
-.thumb-block:not(.thumb-block-active):not(.thumb-block-player):not(.thumb-block-source) img{
-	cursor: pointer;
-}
-
-.thumb-block-source {
+.thumb-block-opt {
 	position: relative;
 }
 
-.thumb-block-source img {
-	border: 2px dashed #999;
+.thumb-block-opt .thumb-block-opt-badge {
+	display: block;
+}
+
+.thumb-block-opt-badge {
+	display: none;
+	position: absolute;
+	top: 5px;
+	left: 9px;
+	width: 20px;
+	height: 20px;
+	line-height: 18px;
+	text-align: center;
+	border-radius: 50%;
+	background-color: #337ab7;
+	color: #fff;
+	font-size: 12px;
+	font-weight: bold;
+	z-index: 5;
+}
+
+.thumb-block-opt img{
+	-webkit-box-shadow: 0px 0px 0px 3px #337ab7;
+	-moz-box-shadow: 0px 0px 0px 3px #337ab7;
+	box-shadow: 0px 0px 0px 3px #337ab7;
+}
+
+.thumb-block-opt.thumb-block-active img{
+	-webkit-box-shadow: 0px 0px 0px 3px #77b300;
+	-moz-box-shadow: 0px 0px 0px 3px #77b300;
+	box-shadow: 0px 0px 0px 3px #77b300;
+}
+
+.thumb-block-player {
+	position: relative;
+}
+
+.thumb-main-star {
+	position: absolute;
+	top: 5px;
+	right: 9px;
+	z-index: 6;
+	width: 20px;
+	height: 20px;
+	line-height: 20px;
+	text-align: center;
+	border-radius: 50%;
+	background-color: rgba(0, 0, 0, 0.5);
+	color: #999;
+	font-size: 11px;
+	cursor: pointer;
+}
+
+.thumb-main-star:hover {
+	color: #ffc107;
+}
+
+.thumb-main-star.active {
+	color: #fff;
+	background-color: #77b300;
+}
+
+.thumb-frame-num {
+	position: absolute;
+	bottom: 15px;
+	left: 9px;
+	z-index: 5;
+	background-color: rgba(0, 0, 0, 0.6);
+	color: #fff;
+	padding: 1px 6px;
+	font-size: 11px;
+	font-weight: bold;
+	border-radius: 3px;
+}
+
+.thumb-legend {
+	padding: 8px 15px;
+	background-color: #f5f5f5;
+	border: 1px dashed #ddd;
+	border-radius: 3px;
+	color: #666;
+	font-size: 12px;
+}
+
+.thumb-legend-item {
+	display: inline-block;
+	vertical-align: middle;
+}
+
+.thumb-legend-dot {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	line-height: 12px;
+	text-align: center;
+	vertical-align: middle;
+	border-radius: 50%;
+	color: #fff;
+	font-size: 9px;
+	margin-right: 4px;
+}
+
+.thumb-legend-dot.main {
+	background-color: #77b300;
+}
+
+.thumb-legend-dot.opt {
+	background-color: #337ab7;
+}
+
+.thumb-legend-star {
+	color: #77b300;
+	margin-right: 4px;
+}
+
+.thumb-block:not(.thumb-block-active):not(.thumb-block-player) img{
+	cursor: pointer;
 }
 
 .thumb-block-source-label {

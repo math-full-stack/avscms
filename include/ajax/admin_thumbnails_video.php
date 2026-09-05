@@ -9,7 +9,7 @@ require $config['BASE_DIR']. '/include/function_video.php';
 require $config['BASE_DIR']. '/classes/auth.class.php';
 Auth::checkAdmin();
 
-$response = array('status' => 0, 'thumbnails' => array(), 'player' => false, 'thumb' => 1, 'count' => 20);
+$response = array('status' => 0, 'thumbnails' => array(), 'player' => false, 'thumb' => 1, 'count' => 20, 'opt' => array());
 
 $filter     = new VFilter();
 $vid        = $filter->get('video_id', 'INTEGER');
@@ -50,12 +50,13 @@ if (!$found) {
 	die();	
 }
 
-$sql = "SELECT thumb, thumbs from video WHERE VID = " .$conn->qStr($vid). " LIMIT 1";
+$sql = "SELECT thumb, thumbs, thumbnails_opt from video WHERE VID = " .$conn->qStr($vid). " LIMIT 1";
 $rs = $conn->execute($sql);
 if ( $conn->Affected_Rows() == 1 ) {
 	$response['thumb'] = $rs->fields('thumb');
 	$count = $rs->fields('thumbs');	
 	$response['count'] = $count;
+	$response['opt']   = array_values(array_filter(array_map('intval', explode(',', (string)$rs->fields['thumbnails_opt']))));
 }
 
 for ($i = 1; $i <= $count; $i++) {

@@ -251,7 +251,7 @@ if (defined('_ADMIN')) {
 	$smarty->assign('n_total', $n_total);	
 	
 } else {	
-	$sql            = "SELECT VID, title, duration, addtime, thumb, thumbs, vthumbs, viewnumber, rate, likes, dislikes, type, hd
+	$sql            = "SELECT VID, title, duration, addtime, thumb, thumbs, thumbnails_opt, vthumbs, viewnumber, rate, likes, dislikes, type, hd
 					   FROM video WHERE featured='yes' ORDER BY RAND() DESC LIMIT 8";
 	$rs             = $conn->execute($sql);
 	$featured       = $rs->getrows();
