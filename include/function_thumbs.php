@@ -35,12 +35,7 @@ function get_thumb_url_local($vid)
  */
 function get_gcs_thumbs_base()
 {
-	global $conn, $config;
-
-	// Quando BASE_URL aponta para localhost, não usa GCS.
-	if (strpos($config['BASE_URL'], 'localhost') !== false) {
-		return '';
-	}
+	global $conn;
 
 	static $base = null;
 	if ($base !== null) {
@@ -82,12 +77,6 @@ function get_video_thumb_base($vid)
 
 	$vid = intval($vid);
 	if (array_key_exists($vid, $cache)) {
-		return $cache[$vid];
-	}
-
-	// Quando BASE_URL aponta para localhost, serve thumbs do disco local.
-	if (strpos($config['BASE_URL'], 'localhost') !== false) {
-		$cache[$vid] = get_thumb_url_local($vid);
 		return $cache[$vid];
 	}
 

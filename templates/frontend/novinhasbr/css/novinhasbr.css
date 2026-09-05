@@ -388,7 +388,11 @@ a:hover .thumb-overlay {
 }
 
 .thumb-overlay.xb-portrait img {
-	aspect-ratio: 9 / 16;
+	object-fit: contain;
+}
+
+.thumb-overlay.xb-portrait video {
+	object-fit: contain;
 }
 
 a:hover .thumb-overlay img {
@@ -792,7 +796,7 @@ a:hover .xb-thumb-meta {
 }
 
 .xb-hero .thumb-overlay.xb-portrait img {
-	object-position: center 15%;
+	object-fit: contain;
 }
 
 .xb-hero .xb-hero-main .thumb-overlay::after {

@@ -29,10 +29,10 @@ function xbOrientThumb( $ovl ) {
 	$ovl.removeClass('xb-landscape xb-portrait');
 	if ( $img[0].naturalHeight > $img[0].naturalWidth ) {
 		$ovl.addClass('xb-portrait');
-		$img[0].style.aspectRatio = ( $img[0].naturalWidth / $img[0].naturalHeight ).toFixed(4);
+		$ovl.css('background-image', 'url("' + $img[0].src + '")');
 	} else {
 		$ovl.addClass('xb-landscape');
-		$img[0].style.aspectRatio = '';
+		$ovl.css('background-image', '');
 	}
 }
 function xbOrientThumbs() {
