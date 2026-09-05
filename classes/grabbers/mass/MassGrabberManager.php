@@ -137,17 +137,23 @@ class MassGrabberManager {
         self::$providers = array();
 
         // Auto-load provider classes from providers/ directory
+        // (skips abstract base classes so only concrete providers register)
         $providerDir = dirname(__FILE__) . '/providers';
         if (is_dir($providerDir)) {
             $files = glob($providerDir . '/*.php');
             foreach ($files as $file) {
                 $className = basename($file, '.php');
                 require_once $file;
-                if (class_exists($className)) {
-                    $provider = new $className();
-                    if ($provider instanceof DiscoveryProvider) {
-                        self::$providers[] = $provider;
-                    }
+                if (!class_exists($className)) {
+                    continue;
+                }
+                $reflection = new ReflectionClass($className);
+                if ($reflection->isAbstract()) {
+                    continue;
+                }
+                $provider = new $className();
+                if ($provider instanceof DiscoveryProvider) {
+                    self::$providers[] = $provider;
                 }
             }
         }

@@ -187,4 +187,5 @@ INSERT INTO `grabber_sources` (`name`, `slug`, `domain`, `provider`, `enabled`, 
 ('PornHub', 'pornhub', 'pornhub.com', 'PornHub', 1, 0, 1, 'https://www.pornhub.com/videos?o=cm', 'best', 5, 3, 'daily', '04:00', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
 ('Vimeo', 'vimeo', 'vimeo.com', 'Vimeo', 1, 0, 1, 'https://vimeo.com/channels/popular', 'best', 5, 3, 'daily', '04:30', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
 ('DailyMotion', 'dailymotion', 'dailymotion.com', 'DailyMotion', 1, 0, 1, 'https://www.dailymotion.com/popular/videos', 'best', 5, 3, 'daily', '05:00', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
-('SonovinhasBR', 'sonovinhasbr', 'sonovinhasbr.com', 'SonovinhasBR', 1, 0, 1, 'https://www.sonovinhasbr.com/category/novinhas-gostosas/', 'best', 5, 3, 'daily', '05:30', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP());
+('SonovinhasBR', 'sonovinhasbr', 'sonovinhasbr.com', 'SonovinhasBR', 1, 0, 1, 'https://www.sonovinhasbr.com/category/novinhas-gostosas/', 'best', 5, 3, 'daily', '05:30', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
+('Pornolandia', 'pornolandia', 'pornolandia.xxx', 'Pornolandia', 1, 0, 1, 'https://www.pornolandia.xxx/videos?page=1', 'best', 5, 3, 'daily', '06:00', 1, '', UNIX_TIMESTAMP(), UNIX_TIMESTAMP());

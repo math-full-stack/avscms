@@ -1,7 +1,7 @@
 <?php
 defined('_VALID') or die('Restricted Access!');
 
-require_once dirname(__FILE__) . '/GrabberInterface.php';
+require_once dirname(__FILE__) . '/AbstractGrabber.php';
 
 /**
  * XfreeGrabber - Extrator de vídeos do xfree.com
@@ -9,40 +9,11 @@ require_once dirname(__FILE__) . '/GrabberInterface.php';
  * Utiliza o extractor "generic" do yt-dlp (já existente no AVS)
  * para extrair metadados e baixar vídeos de xfree.com.
  */
-class XfreeGrabber implements GrabberInterface {
-
-    private $pythonBinary = null;
-    private $ytdlpScript = null;
+class XfreeGrabber extends AbstractGrabber {
 
     public function __construct() {
-        global $config;
-
-        $this->ytdlpScript = $config['BASE_DIR'] . '/scripts/yt-dlp';
-        $this->detectPython();
-    }
-
-    private function detectPython() {
-        $candidates = array(
-            '/opt/homebrew/bin/python3',
-            '/usr/local/bin/python3',
-            '/usr/bin/python3',
-            'python3'
-        );
-
-        foreach ($candidates as $bin) {
-            $check = @shell_exec("$bin --version 2>&1");
-            if ($check && stripos($check, 'Python 3') !== false) {
-                // Verificar se a versão é >= 3.10 (requisito do yt-dlp)
-                if (preg_match('/Python 3\.(\d+)/', $check, $m) && (int)$m[1] >= 10) {
-                    $this->pythonBinary = $bin;
-                    break;
-                }
-            }
-        }
-
-        if (!$this->pythonBinary) {
-            $this->pythonBinary = 'python3';
-        }
+        $this->referer = 'https://www.xfree.com/';
+        parent::__construct();
     }
 
     public function getSiteName() {
@@ -50,7 +21,7 @@ class XfreeGrabber implements GrabberInterface {
     }
 
     public function canHandle($url) {
-        return (bool) preg_match('/xfree\.com/i', $url);
+        return (bool) preg_match('/xfree\\.com/i', $url);
     }
 
     public function fetchInfo($url) {
@@ -188,7 +159,7 @@ class XfreeGrabber implements GrabberInterface {
 
         // Embed URL
         $videoId = '';
-        if (preg_match('/[?&]id=(\d+)/', $url, $m)) {
+        if (preg_match('/[?&]id=(\\d+)/', $url, $m)) {
             $videoId = $m[1];
         }
         $embedUrl = $videoId ? ('https://www.xfree.com/embed/' . $videoId) : '';
@@ -215,7 +186,6 @@ class XfreeGrabber implements GrabberInterface {
 
     public function downloadVideo($url, $targetPath, $quality = 'best') {
         $url = trim($url);
-        global $config;
 
         // Configuração de formato do yt-dlp
         if ($quality === 'best' || empty($quality)) {
@@ -225,16 +195,7 @@ class XfreeGrabber implements GrabberInterface {
             $formatSelector = "best[height<={$h}][ext=mp4]/best[height<={$h}]/best[ext=mp4]/best";
         }
 
-        $cmd = sprintf(
-            '%s %s -f %s --no-warnings --socket-timeout 30 -o %s %s 2>&1',
-            escapeshellarg($this->pythonBinary),
-            escapeshellarg($this->ytdlpScript),
-            escapeshellarg($formatSelector),
-            escapeshellarg($targetPath),
-            escapeshellarg($url)
-        );
-
-        $output = $this->runWithTimeout($cmd, 300);
+        $output = $this->downloadWithYtdlp($url, $targetPath, $formatSelector);
 
         if (file_exists($targetPath) && filesize($targetPath) > 1024) {
             return array(
@@ -246,165 +207,19 @@ class XfreeGrabber implements GrabberInterface {
 
         // Fallback: tentar download direto via URL extraída
         $info = $this->fetchInfo($url);
-        if ($info['status'] && !empty($info['stream_url'])) {
-            $dir = dirname($targetPath);
-            if (!is_dir($dir)) @mkdir($dir, 0777, true);
-
-            $ch = curl_init($info['stream_url']);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-            curl_setopt($ch, CURLOPT_REFERER, 'https://www.xfree.com/');
-            curl_setopt($ch, CURLOPT_TIMEOUT, 300);
-            $data = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($httpCode == 200 && !empty($data) && file_put_contents($targetPath, $data) !== false) {
-                return array(
-                    'status'    => true,
-                    'file_path' => $targetPath,
-                    'size'      => filesize($targetPath)
-                );
-            }
-        }
-
-        $fullLog = $output;
-        if (strlen($fullLog) > 3000) {
-            $fullLog = substr($fullLog, 0, 1500) . "\n... [truncado] ...\n" . substr($fullLog, -1500);
+        if ($info['status'] && !empty($info['stream_url'])
+            && $this->downloadDirect($info['stream_url'], $targetPath)
+            && file_exists($targetPath) && filesize($targetPath) > 1024) {
+            return array(
+                'status'    => true,
+                'file_path' => $targetPath,
+                'size'      => filesize($targetPath)
+            );
         }
 
         return array(
             'status' => false,
-            'error'  => 'Falha ao baixar vídeo do XFree: ' . $fullLog
+            'error'  => 'Falha ao baixar vídeo do XFree: ' . $this->truncateLog($output)
         );
-    }
-
-    public function downloadThumbnail($thumbUrl, $targetPath) {
-        if (empty($thumbUrl)) {
-            return false;
-        }
-
-        $ch = curl_init($thumbUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36');
-        curl_setopt($ch, CURLOPT_REFERER, 'https://www.xfree.com/');
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        $imageData = curl_exec($ch);
-        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode == 200 && !empty($imageData)) {
-            $dir = dirname($targetPath);
-            if (!is_dir($dir)) {
-                @mkdir($dir, 0777, true);
-            }
-            return (bool) file_put_contents($targetPath, $imageData);
-        }
-
-        return false;
-    }
-
-    /**
-     * Remove emojis e caracteres de 4 bytes que podem causar problemas
-     * com bancos MySQL em charset utf8 (3 bytes)
-     */
-    private function sanitizeText($text) {
-        // Remove emojis e símbolos Unicode de 4 bytes (U+1F000 a U+1FFFF)
-        $text = preg_replace('/[\x{1F000}-\x{1FFFF}]/u', '', $text);
-        // Remove outros caracteres de 4 bytes residuais
-        $text = preg_replace('/[\x{20000}-\x{2FFFF}]/u', '', $text);
-        // Remove variation selectors e combiners
-        $text = preg_replace('/[\x{FE00}-\x{FE0F}\x{200D}\x{20E3}]/u', '', $text);
-        return trim($text);
-    }
-
-    private function formatDuration($seconds) {
-        $seconds = (int)$seconds;
-        $hours   = floor($seconds / 3600);
-        $mins    = floor(($seconds % 3600) / 60);
-        $secs    = $seconds % 60;
-
-        if ($hours > 0) {
-            return sprintf('%02d:%02d:%02d', $hours, $mins, $secs);
-        } else {
-            return sprintf('%02d:%02d', $mins, $secs);
-        }
-    }
-
-    /**
-     * Executa um comando com timeout total em segundos.
-     * Retorna a saída ou false se timeout/error.
-     */
-    private function runWithTimeout($cmd, $timeoutSeconds = 300) {
-        $descriptors = array(
-            0 => array('pipe', 'r'),
-            1 => array('pipe', 'w'),
-            2 => array('pipe', 'w'),
-        );
-
-        $process = proc_open($cmd, $descriptors, $pipes);
-        if (!is_resource($process)) {
-            return false;
-        }
-
-        fclose($pipes[0]);
-
-        $output = '';
-        $start = time();
-
-        while (true) {
-            $read = array($pipes[1], $pipes[2]);
-            $write = null;
-            $except = null;
-            $ready = @stream_select($read, $write, $except, 1);
-
-            if ($ready === false) {
-                break;
-            }
-
-            if (time() - $start >= $timeoutSeconds) {
-                // Timeout — kill process
-                proc_terminate($process, 9);
-                proc_close($process);
-                fclose($pipes[1]);
-                fclose($pipes[2]);
-                return false;
-            }
-
-            foreach ($read as $stream) {
-                $chunk = @fread($stream, 8192);
-                if ($chunk !== false && $chunk !== '') {
-                    $output .= $chunk;
-                }
-            }
-
-            // Command finished (all streams at EOF): stop instead of spinning
-            // until the timeout. EOF on stdout usually means the process exited.
-            $status = proc_get_status($process);
-            if (!$status['running']) {
-                // Drain whatever is still buffered, then stop.
-                foreach (array($pipes[1], $pipes[2]) as $stream) {
-                    $chunk = @stream_get_contents($stream);
-                    if ($chunk !== false && $chunk !== '') {
-                        $output .= $chunk;
-                    }
-                    @fclose($stream);
-                }
-                proc_close($process);
-                return $output;
-            }
-        }
-
-        // Loop ended without the process exiting (select error) - fall through
-        // with whatever output was captured.
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        proc_close($process);
-
-        return $output;
     }
 }
