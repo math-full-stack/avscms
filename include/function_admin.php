@@ -615,15 +615,13 @@ function upload_video_ftp( $video_id )
 
 function get_vid_server($srv)
 {
-    global $conn;
-	$sql = "SELECT * FROM servers WHERE video_url = '".$srv."'";
-	$rs  = $conn->execute($sql);
-	if ($conn->Affected_Rows()) {
-		$servers = $rs->getrows();
-		return $servers[0];
-	} else {
-		die('Failed to find a active server! Please check your settings!');
-	}
+    global $config;
+    require_once $config['BASE_DIR']. '/include/function_server.php';
+    $server = get_server_by_video_url($srv);
+    if (!$server) {
+        die('Failed to find a active server! Please check your settings!');
+    }
+    return $server;
 }
 
 function delete_video_ftp( $video_id, $srv )

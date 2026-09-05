@@ -167,35 +167,58 @@ function upload_video_formats_ftp($vid, $formats, $server)
 }
 
 /**
- * Upload via Google Cloud Storage
+ * Resolve o cliente GCS para uma linha de servidor.
+ *
+ * Fonte única do padrão "resolve caminho absoluto da chave + instancia GCS"
+ * usado por todos os helpers de upload/delete de mídia abaixo.
+ *
+ * @param array $server Linha da tabela servers (server_type = 'gcs')
+ * @return GCS|false
  */
-function upload_video_formats_gcs($vid, $formats, $server)
+function gcs_get_client($server)
 {
-    global $config, $conn;
+    global $config;
 
-    $keyPath = $server['gcs_key_path'];
-    $bucket  = $server['gcs_bucket'];
-
-    if (empty($keyPath) || empty($bucket)) {
-        echo "\n[Multi-Server-GCS] Configuração incompleta: key_path ou bucket não definidos.\n";
+    if (empty($server['gcs_key_path']) || empty($server['gcs_bucket'])) {
         return false;
     }
 
-    // Resolver caminho absoluto da chave
+    $keyPath = $server['gcs_key_path'];
+
+    // Resolver caminho absoluto da chave (relativo ao BASE_DIR quando preciso)
     if (!file_exists($keyPath)) {
-        // Tentar relativo ao BASE_DIR
         $keyPathRelative = $config['BASE_DIR'] . '/' . $keyPath;
         if (file_exists($keyPathRelative)) {
             $keyPath = $keyPathRelative;
         } else {
-            echo "\n[Multi-Server-GCS] Arquivo de chave não encontrado: " . $keyPath . "\n";
             return false;
         }
     }
 
     require_once $config['BASE_DIR'] . '/classes/gcs.class.php';
 
-    $gcs = new GCS($keyPath, $bucket);
+    return new GCS($keyPath, $server['gcs_bucket']);
+}
+
+/**
+ * Upload via Google Cloud Storage
+ */
+function upload_video_formats_gcs($vid, $formats, $server)
+{
+    global $config, $conn;
+
+    $bucket = isset($server['gcs_bucket']) ? $server['gcs_bucket'] : '';
+
+    if (empty($server['gcs_key_path']) || empty($bucket)) {
+        echo "\n[Multi-Server-GCS] Configuração incompleta: key_path ou bucket não definidos.\n";
+        return false;
+    }
+
+    $gcs = gcs_get_client($server);
+    if (!$gcs) {
+        echo "\n[Multi-Server-GCS] Arquivo de chave não encontrado: " . $server['gcs_key_path'] . "\n";
+        return false;
+    }
 
     if (is_string($formats)) {
         $formats = explode(',', $formats);
@@ -252,6 +275,10 @@ function upload_video_formats_gcs($vid, $formats, $server)
         $conn->execute("UPDATE video SET server = " . $conn->qStr($videoUrl) . " WHERE VID = " . intval($vid) . " LIMIT 1");
         update_server($server);
         echo "\n[Multi-Server-GCS] Vídeo ID " . $vid . " vinculado ao bucket: gs://" . $bucket . "\n";
+
+        // Mídia derivada (thumbs, sprite, miniclips) acompanha o vídeo no bucket.
+        upload_video_thumbs_gcs($vid, $server);
+
         return true;
     }
 
@@ -259,11 +286,192 @@ function upload_video_formats_gcs($vid, $formats, $server)
 }
 
 /**
+ * Envia TODA a mídia derivada de um vídeo (thumbnails, sprite e miniclips de
+ * hover) para o bucket GCS, sob o prefixo público thumbs/{VID}/.
+ *
+ * Os objetos ficam publicRead — mesma exposição que os thumbs locais de hoje
+ * (media/videos/tmb*), permitindo cache em browser/CDN e o hover-preview com
+ * URLs simples. Os vídeos principais continuam privados (V4 signed URLs).
+ *
+ * Idempotente: pode rodar quantas vezes for preciso (upload substitui o objeto).
+ *
+ * @param int         $vid      ID do vídeo (VID)
+ * @param array       $server   Linha da tabela servers (server_type = 'gcs')
+ * @param string|null $onlyFile Sincroniza apenas um arquivo (ex.: 'sprite.jpg')
+ * @param bool        $silent   Suprime o log de progresso (contexto web/JSON)
+ * @return bool
+ */
+function upload_video_thumbs_gcs($vid, $server, $onlyFile = null, $silent = false)
+{
+    global $config;
+
+    $log = function ($msg) use ($silent) {
+        if (!$silent) {
+            echo $msg;
+        }
+    };
+
+    $gcs = gcs_get_client($server);
+    if (!$gcs) {
+        $log("\n[Multi-Server-GCS] Thumbs: chave ou bucket não resolvidos.\n");
+        return false;
+    }
+
+    require_once $config['BASE_DIR'] . '/include/function_thumbs.php';
+    $thumbDir = get_thumb_dir(intval($vid));
+    if (!is_dir($thumbDir)) {
+        $log("\n[Multi-Server-GCS] Thumbs do vídeo " . intval($vid) . " não encontrados localmente (nada a sincronizar).\n");
+        return true;
+    }
+
+    // Arquivos a enviar: um único (sprite, por exemplo) ou a pasta inteira.
+    $files = array();
+    if ($onlyFile !== null) {
+        if (file_exists($thumbDir . '/' . $onlyFile) && is_file($thumbDir . '/' . $onlyFile)) {
+            $files[] = $onlyFile;
+        }
+    } else {
+        $handle = @opendir($thumbDir);
+        if ($handle) {
+            while (($entry = readdir($handle)) !== false) {
+                if ($entry === '.' || $entry === '..') {
+                    continue;
+                }
+                $full = $thumbDir . '/' . $entry;
+                if (is_file($full)) {
+                    $files[] = $entry;
+                }
+            }
+            closedir($handle);
+            sort($files);
+        }
+    }
+
+    if (empty($files)) {
+        $log("\n[Multi-Server-GCS] Nenhum arquivo de mídia para sincronizar no vídeo " . intval($vid) . ".\n");
+        return true;
+    }
+
+    $vid     = intval($vid);
+    $success = true;
+    $mimeMap = array(
+        'jpg'  => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png'  => 'image/png',
+        'gif'  => 'image/gif',
+        'webp' => 'image/webp',
+        'mp4'  => 'video/mp4',
+        'webm' => 'video/webm'
+    );
+
+    foreach ($files as $file) {
+        $localPath = $thumbDir . '/' . $file;
+        $object    = 'thumbs/' . $vid . '/' . $file;
+        $ext       = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+        $mime      = isset($mimeMap[$ext]) ? $mimeMap[$ext] : 'application/octet-stream';
+
+        $log("\n[Multi-Server-GCS] Thumb: " . $file . " (" . round(filesize($localPath) / 1024, 1) . " KB) -> gs://" . $server['gcs_bucket'] . "/" . $object);
+
+        $gsUri = $gcs->upload($localPath, $object, $mime, array(
+            'acl' => 'publicRead',
+            // Mídia derivada é imutável por vídeo: cache longo em browser/CDN.
+            'cacheControl' => 'public, max-age=604800'
+        ));
+
+        if ($gsUri !== false) {
+            $log(" [OK]\n");
+        } else {
+            $log(" [FALHA] " . $gcs->getError() . "\n");
+            $success = false;
+        }
+    }
+
+    return $success;
+}
+
+/**
+ * Busca a linha de servidor vinculada a uma URL de vídeo (video.server), com
+ * cache por request — usada pelos helpers de mídia e pelo sync.
+ *
+ * @param string $videoUrl Valor de video.server (ex.: https://storage.googleapis.com/bucket)
+ * @return array|false
+ */
+function get_server_by_video_url($videoUrl)
+{
+    global $conn;
+
+    static $cache = array();
+
+    $videoUrl = trim((string) $videoUrl);
+    if ($videoUrl === '') {
+        return false;
+    }
+
+    if (array_key_exists($videoUrl, $cache)) {
+        return $cache[$videoUrl];
+    }
+
+    $sql = "SELECT * FROM servers WHERE video_url = " . $conn->qStr($videoUrl) . " LIMIT 1";
+    $rs  = $conn->execute($sql);
+    $cache[$videoUrl] = ($conn->Affected_Rows() == 1) ? $rs->fields : false;
+
+    return $cache[$videoUrl];
+}
+
+/**
+ * Sincroniza a mídia derivada (thumbs/sprite/miniclips) de um vídeo com o
+ * bucket GCS, quando o vídeo estiver vinculado a um servidor GCS.
+ *
+ * No-op para vídeos locais/FTP. Usada pelos fluxos de regeneração (admin),
+ * pelo sprite on-demand e pelo backfill.
+ *
+ * @param int         $vid      ID do vídeo
+ * @param string|null $onlyFile Sincroniza apenas um arquivo (ex.: 'sprite.jpg')
+ * @param bool        $silent   Suprime o log de progresso (contexto web/JSON)
+ * @return bool
+ */
+function sync_video_thumbs($vid, $onlyFile = null, $silent = false)
+{
+    global $conn;
+
+    $vid = intval($vid);
+    if ($vid <= 0) {
+        return false;
+    }
+
+    $sql = "SELECT server FROM video WHERE VID = " . $vid . " LIMIT 1";
+    $rs  = $conn->execute($sql);
+    if ($conn->Affected_Rows() != 1 || empty($rs->fields['server'])) {
+        return false;
+    }
+
+    $server = get_server_by_video_url($rs->fields['server']);
+    if (!$server || !isset($server['server_type']) || $server['server_type'] !== 'gcs') {
+        return false;
+    }
+
+    return upload_video_thumbs_gcs($vid, $server, $onlyFile, $silent);
+}
+
+/**
+ * Mantém o sprite do timeline preview do bucket em dia (gerado sob demanda na
+ * primeira visita ao player). No-op para vídeos locais/FTP.
+ *
+ * @param int  $vid    ID do vídeo
+ * @param bool $silent Suprime o log de progresso (contexto web)
+ * @return bool
+ */
+function sync_video_sprite($vid, $silent = false)
+{
+    return sync_video_thumbs($vid, 'sprite.jpg', $silent);
+}
+
+/**
  * Remove do bucket GCS todos os objetos de um vídeo.
  *
- * Apaga o layout atual (h264/{VID}/{label}.{ext} — pasta por vídeo) e também
- * o layout plano legado (h264/{VID}_{label}.{ext}, anterior ao
- * scripts/gcs_reorganize.php). Falhas de API/credencial não matam o request:
+ * Apaga os vídeos (layout atual h264/{VID}/{label}.{ext} e o plano legado
+ * h264/{VID}_{label}.{ext}) e a mídia derivada (thumbs/{VID}/ — thumbs,
+ * sprite e miniclips). Falhas de API/credencial não matam o request:
  * o registro local é removido mesmo que o bucket não possa ser alcançado.
  *
  * @param int   $video_id ID do vídeo (VID)
@@ -272,28 +480,15 @@ function upload_video_formats_gcs($vid, $formats, $server)
  */
 function delete_video_gcs( $video_id, $server )
 {
-    global $config;
-
-    $keyPath = isset($server['gcs_key_path']) ? $server['gcs_key_path'] : '';
-    $bucket  = isset($server['gcs_bucket']) ? $server['gcs_bucket'] : '';
-
-    if (empty($keyPath) || empty($bucket)) {
+    if (empty($server['gcs_key_path']) || empty($server['gcs_bucket'])) {
         return false;
     }
 
-    // Resolver caminho absoluto da chave (igual ao upload GCS)
-    if (!file_exists($keyPath)) {
-        $keyPathRelative = $config['BASE_DIR'] . '/' . $keyPath;
-        if (file_exists($keyPathRelative)) {
-            $keyPath = $keyPathRelative;
-        } else {
-            return false;
-        }
+    $gcs = gcs_get_client($server);
+    if (!$gcs) {
+        return false;
     }
 
-    require_once $config['BASE_DIR'] . '/classes/gcs.class.php';
-
-    $gcs      = new GCS($keyPath, $bucket);
     $video_id = intval($video_id);
     $deleted  = 0;
     $objects  = array();
@@ -310,9 +505,43 @@ function delete_video_gcs( $video_id, $server )
         $objects = array_merge($objects, $list);
     }
 
+    // Mídia derivada: thumbs/{VID}/
+    $list = $gcs->listObjects('thumbs/' . $video_id . '/');
+    if (is_array($list)) {
+        $objects = array_merge($objects, $list);
+    }
+
     foreach (array_unique($objects) as $object) {
         if ($gcs->deleteObject($object)) {
             ++$deleted;
+        }
+    }
+
+    return $deleted;
+}
+
+/**
+ * Remove do bucket GCS apenas a mídia derivada de um vídeo (thumbs/{VID}/).
+ *
+ * @param int   $video_id ID do vídeo (VID)
+ * @param array $server   Linha da tabela servers (server_type = 'gcs')
+ * @return int|false Número de objetos removidos; false se nada pôde ser feito
+ */
+function delete_video_thumbs_gcs( $video_id, $server )
+{
+    $gcs = gcs_get_client($server);
+    if (!$gcs) {
+        return false;
+    }
+
+    $video_id = intval($video_id);
+    $deleted  = 0;
+    $list     = $gcs->listObjects('thumbs/' . $video_id . '/');
+    if (is_array($list)) {
+        foreach ($list as $object) {
+            if ($gcs->deleteObject($object)) {
+                ++$deleted;
+            }
         }
     }
 

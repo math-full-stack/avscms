@@ -5,6 +5,11 @@ function changeThumb( id, url )
         document.getElementById(id).src = url;
 }
 function thumb_path( vid ) {
+	// Thumbs em CDN (GCS): thumb_cdn_base = https://.../thumbs; os callers
+	// montam thumb_cdn_base + '/' + vid + '/' + arquivo.
+	if ( typeof thumb_cdn_base !== 'undefined' && thumb_cdn_base !== '' ) {
+		return thumb_cdn_base;
+	}
 	var index = parseInt( (vid - 1) / max_thumb_folders );
 	var tmb_folder = 'tmb';
 	if ( index !== 0 ) {

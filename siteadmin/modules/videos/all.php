@@ -87,8 +87,8 @@ if (isset($_POST['reprocess_selected_videos'])) {
                         ++$skipped;
                         continue;
                     }
-                    // Set active=2 (downloading) and launch worker
-                    $conn->execute("UPDATE video SET active = '2', last_update = " .time(). " WHERE VID = " .$vid. " LIMIT 1");
+                    // Set active=2 (downloading), reset formats, and launch worker
+                    $conn->execute("UPDATE video SET active = '2', formats = NULL, lformats = NULL, last_update = " .time(). " WHERE VID = " .$vid. " LIMIT 1");
                     $encodedUrl   = base64_encode($sourceUrl);
                     $encodedThumb = base64_encode('');
                     $worker       = $config['BASE_DIR'] . '/scripts/grabber_worker.php';

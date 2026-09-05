@@ -218,13 +218,25 @@ function convert($e, $vid, $video_name, $video_info, $skip) {
 		} else {
 			$faststart = "";			
 		}
-		if ($e['copyonly'] && ($e['height'] == $video_info['height'] || $e['width'] == $video_info['width']) && $video_info['file_extension'] == "mp4" && strpos($video_info['format_name'], 'mp4') !== false && $video_info['codec_name'] == "h264" && strpos($video_info['codec_long_name'], 'MPEG-4') !== false && strpos($video_info['codec_long_name'], 'AVC') !== false) {
+
+		// Preset otimizado para etapa 2: resoluções secundárias (fallback/mobile)
+		// se o preset for medium/slow, acelerar com faster/fast para ganho massivo de velocidade
+		$preset = $e['preset'];
+		if (in_array($preset, array('medium', 'slow', 'slower', 'veryslow'))) {
+			$preset = (intval($e['height']) >= 720) ? 'fast' : 'faster';
+		}
+
+		$copyH264 = ($video_info['file_extension'] == "mp4" && strpos($video_info['format_name'], 'mp4') !== false && $video_info['codec_name'] == "h264" && strpos($video_info['codec_long_name'], 'MPEG-4') !== false && strpos($video_info['codec_long_name'], 'AVC') !== false);
+		if ($e['copyonly'] && $copyH264 && ($e['height'] == $video_info['height'] || $e['width'] == $video_info['width'])) {
 			if ($cut) {
-				$cmd = $config['ffmpeg'].$add_cut." -i ".$src." -acodec copy -y ".$output."";	
+				$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -c copy -y \"".$output."\"";	
 				modproc($cmd);					
+			} elseif ($e['faststart']) {
+				$cmd = $config['ffmpeg']." -i \"".$src."\" -c copy -movflags +faststart -y \"".$output."\"";
+				modproc($cmd);
 			} else {
 				if (@copy($src,$output)) {
-					echo "\n"."COPY ONLY: Output resolution/format is the same with the input resloution/format!\n\n";
+					echo "\n"."COPY ONLY: source is already H.264 MP4 — copied instead of re-encoded!\n\n";
 				}
 			}
 		} else {
@@ -239,30 +251,53 @@ function convert($e, $vid, $video_name, $video_info, $skip) {
 				$scale = "-vf scale=\"'if(gt(a,4/3),".$e['width'].",-1)':'if(gt(a,4/3),-1,".$e['height'].")'\"";
 			}
 			$output = $config['H264_DIR']."/".$vid."_".$e['label'].".".$e['format'];
-			$cmd = $config['ffmpeg'].$add_cut." -i ".$src." -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$scale." ".$e['ios']." ".$faststart." -y ".$output."";	
+			$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -threads 0 -c:v libx264 -preset ".$preset." -crf ".$e['crf']." ".$scale." -c:a copy ".$e['ios']." ".$faststart." -y \"".$output."\"";	
 			modproc($cmd);
 		}
 		if (file_exists($output) && filesize($output) > 100) {
-			$sql = "UPDATE video SET formats = IF(formats IS NULL, '".$e['height'].".".$e['label'].".".$e['format']."', CONCAT(formats, ',".$e['height'].".".$e['label'].".".$e['format']."')) WHERE VID = '".(int)$vid."'";
-			executeQuery($sql);
-			echo "\n".$nl."SQL:\n".$nl.$sql."\n\n";
-			$sql = "UPDATE video SET lformats = IF(lformats IS NULL, '".$e['label']."', CONCAT(lformats, ', ".$e['label']."')) WHERE VID = '".(int)$vid."'";
+			$format_str = $e['height'].".".$e['label'].".".$e['format'];
+			$chk_sql = "SELECT formats, lformats FROM video WHERE VID = '".(int)$vid."' LIMIT 1";
+			$chk_rs = selectQuery($chk_sql);
+			$f_arr = !empty($chk_rs['formats']) ? array_filter(array_map('trim', explode(',', $chk_rs['formats']))) : array();
+			if (!in_array($format_str, $f_arr)) {
+				$f_arr[] = $format_str;
+			}
+			$new_formats = implode(',', array_unique($f_arr));
+
+			$lf_arr = !empty($chk_rs['lformats']) ? array_filter(array_map('trim', explode(',', $chk_rs['lformats']))) : array();
+			if (!in_array($e['label'], $lf_arr)) {
+				$lf_arr[] = $e['label'];
+			}
+			$new_lformats = implode(', ', array_unique($lf_arr));
+
+			$sql = "UPDATE video SET formats = '".$new_formats."', lformats = '".$new_lformats."' WHERE VID = '".(int)$vid."'";
 			executeQuery($sql);
 			echo "\n".$nl."SQL:\n".$nl.$sql."\n\n";	
 			$config['encode_height'] = $e['height'];
-
-			
 		} else {
 			@chmod($output, 0777);
 			@unlink($output);			
 			$scale = scale($video_info['width'], $video_info['height'], $e['width'], $e['height']);
 			echo "\n"."Retrying using fixed scale: ".$scale."\n";
-			$cmd = $config['ffmpeg'].$add_cut." -i ".$src." -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$scale." ".$e['ios']." ".$faststart." -y ".$output."";
+			$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -threads 0 -c:v libx264 -preset ".$preset." -crf ".$e['crf']." ".$scale." -c:a aac -b:a 128k ".$e['ios']." ".$faststart." -y \"".$output."\"";
 			modproc($cmd);
 			if (file_exists($output) && filesize($output) > 100) {
-				$sql = "UPDATE video SET formats = IF(formats IS NULL, '".$e['height'].".".$e['label'].".".$e['format']."', CONCAT(formats, ',".$e['height'].".".$e['label'].".".$e['format']."')) WHERE VID = '".(int)$vid."'";
-				executeQuery($sql);
-				$sql = "UPDATE video SET lformats = IF(lformats IS NULL, '".$e['label']."', CONCAT(lformats, ', ".$e['label']."')) WHERE VID = '".(int)$vid."'";
+				$format_str = $e['height'].".".$e['label'].".".$e['format'];
+				$chk_sql = "SELECT formats, lformats FROM video WHERE VID = '".(int)$vid."' LIMIT 1";
+				$chk_rs = selectQuery($chk_sql);
+				$f_arr = !empty($chk_rs['formats']) ? array_filter(array_map('trim', explode(',', $chk_rs['formats']))) : array();
+				if (!in_array($format_str, $f_arr)) {
+					$f_arr[] = $format_str;
+				}
+				$new_formats = implode(',', array_unique($f_arr));
+
+				$lf_arr = !empty($chk_rs['lformats']) ? array_filter(array_map('trim', explode(',', $chk_rs['lformats']))) : array();
+				if (!in_array($e['label'], $lf_arr)) {
+					$lf_arr[] = $e['label'];
+				}
+				$new_lformats = implode(', ', array_unique($lf_arr));
+
+				$sql = "UPDATE video SET formats = '".$new_formats."', lformats = '".$new_lformats."' WHERE VID = '".(int)$vid."'";
 				executeQuery($sql);
 				echo "\n".$nl."SQL:\n".$nl.$sql."\n\n";	
 				$config['encode_height'] = $e['height'];
@@ -282,9 +317,9 @@ function postConversion($vid,$src) {
 	executeQuery($sql);
 	echo "\n".$nl."SQL:\n".$nl.$sql."\n\n";
 
-	$sql  	     = "SELECT formats, active FROM video WHERE VID = '" .$vid. "' LIMIT 1";
+	$sql  	     = "SELECT formats, lformats, active FROM video WHERE VID = '" .$vid. "' LIMIT 1";
 	$rs 	     = selectQuery($sql);
-    $formats     = explode(',', $rs['formats']);
+    $formats     = array_values(array_unique(array_filter(array_map('trim', explode(',', $rs['formats'])))));
     $status      = $rs['active'];	
 	
 	$hd          = 0;	
@@ -293,7 +328,7 @@ function postConversion($vid,$src) {
 		$active = 0;
 	} elseif ($status == '1') {
 		$active = 1;
-	} elseif ($config['approve'] == '0' && $rs['formats']!='') {
+	} elseif ($config['approve'] == '0' && !empty($formats)) {
 		$active = 1;
 	} else {
 		$active = 0;
@@ -359,6 +394,16 @@ function postConversion($vid,$src) {
 		@rename($src.'.bak', $src);
 	}		
 		
+	// Multi-Server Transfer (GCS / FTP)
+	if (isset($config['multi_server']) && $config['multi_server'] == '1') {
+		require_once $config['BASE_DIR'] . '/include/function_server.php';
+		$server = get_server();
+		if ($server) {
+			echo "\n[Multi-Server] Iniciando transferencia para o servidor secundario ID #" . $server['server_id'] . " (" . $server['server_ip'] . ")...\n";
+			upload_video_formats($vid, $formats, $server);
+		}
+	}
+
 	// Delete original video?
 	if ($config['del_original_video'] == 1) {
 		@chmod($src, 0777);

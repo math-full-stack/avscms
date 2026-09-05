@@ -3,19 +3,25 @@ defined('_VALID') or die('Restricted Access!');
 require_once ($config['BASE_DIR']. '/include/function_thumbs.php');
 require $config['BASE_DIR']. '/classes/image.class.php';
 
+if (!function_exists('file_url_exists')) {
 function file_url_exists($url){
+    if (empty($url)) return false;
     $ch = curl_init($url);    
-    curl_setopt($ch, CURLOPT_NOBODY, true);
+    if (strpos($url, 'X-Goog-') !== false || strpos($url, 'X-Amz-') !== false) {
+        curl_setopt($ch, CURLOPT_HTTPGET, true);
+        curl_setopt($ch, CURLOPT_RANGE, '0-0');
+    } else {
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+    }
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-    if($code == 200){
-       $status = true;
-    }else{
-      $status = false;
-    }
     curl_close($ch);
-   return $status;
+    return ($code == 200 || $code == 206);
+}
 }
 
 function compareColors($colorA, $colorB, $threshold) {
@@ -27,54 +33,105 @@ function compareColors($colorA, $colorB, $threshold) {
 function video_files($vid, $all=false) {
 	global $config, $conn;
 	
-	$sql     	 = "SELECT formats, hd_filename, ipod_filename, vdoname, flvdoname, server FROM video WHERE VID = " .$conn->qStr($vid). " LIMIT 1";
-	$rs  	 	 = $conn->execute($sql);
-	$formats 	 = $rs->fields['formats'];
-	$sd_file 	 = $rs->fields['ipod_filename'];
-	$hd_file 	 = $rs->fields['hd_filename'];
-	$flv_file	 = $rs->fields['flvdoname'];	
-	$video_name	 = $rs->fields['vdoname'];	
-	$server  	 = $rs->fields['server'];
-	
+	$vf = array('dir' => array(), 'url' => array());
+	$sql = "SELECT * FROM video WHERE VID = " .$conn->qStr($vid). " LIMIT 1";
+	$rs  = $conn->execute($sql);
+	if (!$rs || $conn->Affected_Rows() != 1) {
+		return $vf;
+	}
+	$video_row   = $rs->fields;
+	$formats 	 = $video_row['formats'];
+	$sd_file 	 = $video_row['ipod_filename'];
+	$hd_file 	 = $video_row['hd_filename'];
+	$flv_file	 = $video_row['flvdoname'];	
+	$video_name	 = $video_row['vdoname'];	
+	$server  	 = $video_row['server'];
+
+	$formats_arr = array();
 	if ($formats) {
-		$formats_arr = explode(',', $formats);
-	}	
+		$formats_arr = array_unique(array_filter(array_map('trim', explode(',', $formats))));
+	}
+
+	// 1. Sempre verificar se existem arquivos locais primeiro
+	if (!empty($formats_arr)) {		
+		foreach ($formats_arr as $format) {
+			$f = explode('.', $format);
+			if (count($f) >= 3) {
+				$local_f = $config['H264_DIR'].'/'.$vid."_".$f[1].".".$f[2];
+				if (file_exists($local_f) && filesize($local_f) > 100) {
+					$vf['dir'][] = $local_f;
+				}
+			}
+		}
+	}
+	if ($hd_file && file_exists($config['HD_DIR']."/".$sd_file)) {		
+		$vf['dir'][] = $config['HD_DIR']."/".$sd_file;
+	}
+	if ($sd_file && file_exists($config['IPHONE_DIR']."/".$hd_file)) {
+		$vf['dir'][] = $config['IPHONE_DIR']."/".$hd_file;
+	}
+
+	// 2. Se o vídeo foi para servidor secundário (GCS ou FTP)
 	if ($server != '') {
-		if ($formats) {
-			foreach ($formats_arr as $format) {
-				 unset($f);
-				 $f    		   				= explode('.', $format);
-				 $vf['url'][]  				= $server.'/h264/'.$vid."_".$f[1].".".$f[2];	//New Formats - Server
-				 $vf['server_h264_fn'][]	= $vid."_".$f[1].".".$f[2];					//New Formats - Server - File Name
+		// Usar get_video_sources que é a fonte de verdade para GCS e Multi-server
+		$sources = get_video_sources($video_row);
+		if (!empty($sources['files'])) {
+			// Ordenar preferindo resoluções médias/leves (ex: 720p ou 480p) para thumbs mais rápidas
+			$preferred = array();
+			$others = array();
+			foreach ($sources['files'] as $sf) {
+				$h = intval($sf['height']);
+				if ($h >= 360 && $h <= 720) {
+					$preferred[] = $sf;
+				} else {
+					$others[] = $sf;
+				}
+			}
+			$all_sources = array_merge($preferred, $others);
+			foreach ($all_sources as $sf) {
+				if (!empty($sf['url'])) {
+					$vf['url'][] = $sf['url'];
+					$vf['server_h264_fn'][] = $sf['file'];
+				}
+			}
+		} else {
+			// Fallback legado caso get_video_sources não tenha retornado arquivos
+			if (!empty($formats_arr)) {
+				foreach ($formats_arr as $format) {
+					$f = explode('.', $format);
+					if (count($f) >= 3) {
+						$vf['url'][] = $server.'/h264/'.$vid."_".$f[1].".".$f[2];
+						$vf['server_h264_fn'][] = $vid."_".$f[1].".".$f[2];
+					}
+				}
 			}
 		}
 		if ($hd_file) {			
-			$vf['url'][] 			= $server."/iphone/".$sd_file;							//HD File - Server
-			$vf['server_hd_fn']     = $vid.".mp4";											//HD File - Server - File Name
+			$vf['url'][] = $server."/iphone/".$sd_file;
+			$vf['server_hd_fn'] = $vid.".mp4";
 		}
 		if ($sd_file) {
-			$vf['url'][] 			= $server."/hd/".$hd_file;								//SD File - Server
-			$vf['server_sd_fn'] 	= $vid.".mp4";											//HD File - Server - File Name			
-		}	
+			$vf['url'][] = $server."/hd/".$hd_file;
+			$vf['server_sd_fn'] = $vid.".mp4";
+		}
 	} else {
-		if ($formats) {		
+		// Local: caso nenhum arquivo local tenha sido encontrado ainda no passo 1
+		if (empty($vf['dir']) && !empty($formats_arr)) {
 			foreach ($formats_arr as $format) {
-				 unset($f);
-				 $f    		  = explode('.', $format);
-				 $vf['dir'][] = $config['H264_DIR'].'/'.$vid."_".$f[1].".".$f[2]; 			//New Formats
+				$f = explode('.', $format);
+				if (count($f) >= 3) {
+					$vf['dir'][] = $config['H264_DIR'].'/'.$vid."_".$f[1].".".$f[2];
+				}
 			}
 		}
-		if ($hd_file) {		
-			$vf['dir'][] = $config['HD_DIR']."/".$sd_file;									// HD File
-		}
-		if ($sd_file) {
-			$vf['dir'][] = $config['IPHONE_DIR']."/".$hd_file;								// SD File	
-		}
 	}
+
 	if ($all) {
-		$vf['dir'][] = $config['VDO_DIR']."/".$video_name;									// Original Video	
-		if ($flv_file) {
-			$vf['dir'][] = $config['FLVDO_DIR']."/".$flv_file;								// FLV File
+		if (file_exists($config['VDO_DIR']."/".$video_name)) {
+			$vf['dir'][] = $config['VDO_DIR']."/".$video_name;
+		}
+		if ($flv_file && file_exists($config['FLVDO_DIR']."/".$flv_file)) {
+			$vf['dir'][] = $config['FLVDO_DIR']."/".$flv_file;
 		}
 	}
 	return $vf;
@@ -186,12 +243,20 @@ function process_thumb($src, $dst_w, $dst_h, $keep_ar = true) {
 
 function get_video_duration($video_path, $video_id)
 {
-    global $config;
-    $cmd = $config['ffprobe']. " -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 " .$video_path;
+    global $config, $conn;
+    $cmd = $config['ffprobe']. " -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 " . escapeshellarg($video_path);
     log_conversion($config['LOG_DIR']. '/' .$video_id. '.log', $cmd);
     exec($cmd, $output);
     log_conversion($config['LOG_DIR']. '/' .$video_id. '.log', implode("\n", $output));
-	return floatval($output[0]);
+	$dur = isset($output[0]) ? floatval($output[0]) : 0;
+	if ($dur <= 0 && $video_id > 0) {
+		$d_sql = "SELECT duration FROM video WHERE VID = " . intval($video_id) . " LIMIT 1";
+		$d_rs  = $conn->execute($d_sql);
+		if ($d_rs && !empty($d_rs->fields['duration'])) {
+			$dur = floatval($d_rs->fields['duration']);
+		}
+	}
+	return $dur;
 }
 
 /**
@@ -239,7 +304,7 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 	$duration = get_video_duration($video_path, $video_id);
 
 	// Get video width for automatic thumbnail sizing
-	$ffprobe_cmd = $config['ffprobe']." -v error -select_streams v:0 -show_entries stream=width,height -of default=noprint_wrappers=1:nokey=1 ".$video_path;
+	$ffprobe_cmd = $config['ffprobe']." -v error -select_streams v:0 -show_entries stream=width,height -of default=noprint_wrappers=1:nokey=1 " . escapeshellarg($video_path);
 	exec($ffprobe_cmd, $width_out);
 	$video_width = isset($width_out[0]) ? (int)$width_out[0] : 0;
 	$video_height = isset($width_out[1]) ? (int)$width_out[1] : 0;
@@ -357,10 +422,10 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 			// Thumbnails extraction commands
 			if ( $config['thumbs_tool'] == 'ffmpeg' ) {
 				// FFMPEG Command
-				$cmd = $config['ffmpeg']." -ss ".$seek." -i '".$video_path."' -frames:v 1 -an -q:v 2 -vcodec mjpeg -y ".$temp_thumbs;
+				$cmd = $config['ffmpeg']." -ss ".$seek." -i ".escapeshellarg($video_path)." -frames:v 1 -an -q:v 2 -vcodec mjpeg -y ".escapeshellarg($temp_thumbs);
 			} else {      
 				// Mplayer Command
-				$cmd = $config['mplayer']." -zoom ".$video_path." -ss ".$seek." -nosound -frames 1 -vf scale=-1:-1 -vo jpeg:outdir=".$temp_thumbs_folder;
+				$cmd = $config['mplayer']." -zoom ".escapeshellarg($video_path)." -ss ".$seek." -nosound -frames 1 -vf scale=-1:-1 -vo jpeg:outdir=".escapeshellarg($temp_thumbs_folder);
 			}
 
 			// Send data to logfile
@@ -372,6 +437,30 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 			// Send data to logfile
 			log_conversion($logfile, implode("\n", $output));
 
+			// Fallback resiliente: se for URL remota e o primeiro frame não gerou (ex: timeout de rede no streaming direto),
+			// baixa o arquivo para TMP_DIR uma única vez e extrai dele
+			if (!file_exists($temp_thumb_file) && (strpos($video_path, 'http://') === 0 || strpos($video_path, 'https://') === 0)) {
+				$dl_temp = $config['TMP_DIR'] . '/thumb_dl_' . $video_id . '.mp4';
+				if (!file_exists($dl_temp) || filesize($dl_temp) < 100) {
+					$fp = @fopen($dl_temp, 'w+');
+					if ($fp) {
+						$ch = curl_init($video_path);
+						curl_setopt($ch, CURLOPT_FILE, $fp);
+						curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+						curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+						curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+						curl_exec($ch);
+						curl_close($ch);
+						fclose($fp);
+					}
+				}
+				if (file_exists($dl_temp) && filesize($dl_temp) > 100) {
+					$video_path = $dl_temp;
+					$cmd = $config['ffmpeg']." -ss ".$seek." -i ".escapeshellarg($video_path)." -frames:v 1 -an -q:v 2 -vcodec mjpeg -y ".escapeshellarg($temp_thumbs);
+					exec($cmd, $output);
+				}
+			}
+
 			// Check if file exists
 			if (file_exists($temp_thumb_file)) {
 				copy($temp_thumb_file, $final_thumbnail);
@@ -379,6 +468,11 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 				@chmod($temp_thumb_file,0777);				
 			}
 
+		}
+
+		// Delete Temporary Downloaded Video if created
+		if (isset($dl_temp) && file_exists($dl_temp)) {
+			@unlink($dl_temp);
 		}
 
 		// Delete Temporary Thumbnail

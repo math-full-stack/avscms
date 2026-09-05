@@ -35,6 +35,10 @@ if (file_exists($temp_thumb_file)) {
 	copy($temp_thumb_file, $final_thumb_file);
 }
 
+// Mantém o bucket GCS em dia com os thumbs salvos
+require_once $config['BASE_DIR']. '/include/function_server.php';
+sync_video_thumbs($vid, null, true);
+
 $response['src'] = get_thumb_url($vid).'/'.$thumb.'.jpg';
 
 echo json_encode($response);

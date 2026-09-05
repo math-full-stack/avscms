@@ -65,7 +65,8 @@ function check_q() {
 
 	remove_overdue('conversion_queue_sp');
 
-	if (active_conversions('conversion_queue_sp') < 1) {
+	$sp_limit = max(1, intval(isset($config['q_limit']) ? $config['q_limit'] : 1));
+	if (active_conversions('conversion_queue_sp') < $sp_limit) {
 
 		$sql = "SELECT * FROM conversion_queue_sp WHERE STATUS = '0' ORDER BY addtime LIMIT 1";
 		$rs = $conn->execute($sql);	
@@ -113,10 +114,12 @@ function pump_conversion_queue() {
         return 0;
     }
     remove_overdue('conversion_queue_fp');
+    remove_overdue('conversion_queue_sp');
 
     $limit = max(1, intval(isset($config['q_limit']) ? $config['q_limit'] : 1));
     $started = 0;
 
+    // 1. Pump first pass queue (conversion_queue_fp)
     while ($started < $limit) {
         if (active_conversions('conversion_queue_fp') >= $limit) {
             break;
@@ -150,6 +153,39 @@ function pump_conversion_queue() {
         run_in_bg($cmd . ' > ' . $lg);
         $started++;
     }
+
+    // 2. Pump second pass queue (conversion_queue_sp)
+    while (active_conversions('conversion_queue_sp') < $limit) {
+        $rs = $conn->execute("SELECT * FROM conversion_queue_sp WHERE status = '0' ORDER BY addtime ASC LIMIT 1");
+        if ($conn->Affected_Rows() < 1) {
+            break;
+        }
+        $video = $rs->fields;
+        $video_name = $video['video_name'];
+        $video_id   = intval($video['VID']);
+        $video_path = $video['video_path'];
+        $skip       = $video['skip'];
+
+        $chk = $conn->execute("SELECT active FROM video WHERE VID = '" . $video_id . "' LIMIT 1");
+        if ($conn->Affected_Rows() != 1 || $chk->fields['active'] == '0') {
+            $conn->execute("DELETE FROM conversion_queue_sp WHERE VID = '" . $video_id . "' LIMIT 1");
+            continue;
+        }
+        if (!file_exists($video_path)) {
+            $conn->execute("DELETE FROM conversion_queue_sp WHERE VID = '" . $video_id . "' LIMIT 1");
+            continue;
+        }
+
+        $script = $config['BASE_DIR'] . "/scripts/convert_videos_sp.php";
+        $cmd = $config['phppath'] . " " . $script . " " . $video_name . " " . $video_id . " " . $video_path . " " . $skip;
+        $conn->execute("UPDATE conversion_queue_sp SET status='1', start = '" . time() . "' WHERE VID = '" . $video_id . "' LIMIT 1");
+        $conn->execute("UPDATE video SET last_update = '" . time() . "' WHERE VID = '" . $video_id . "' LIMIT 1");
+        log_in_back($config['LOG_DIR'] . '/' . $video_id . '.log', $cmd);
+        $lg = $config['LOG_DIR'] . '/' . $video_id . '.log3';
+        run_in_bg($cmd . ' > ' . $lg);
+        $started++;
+    }
+
     return $started;
 }
 

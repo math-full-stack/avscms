@@ -40,6 +40,10 @@ if (!$found) {
 	die();	
 }
 
+// Mantém o bucket GCS em dia com os thumbs regenerados
+require_once $config['BASE_DIR']. '/include/function_server.php';
+sync_video_thumbs($vid, null, true);
+
 $sql 	= "SELECT thumb FROM video WHERE VID = " .$vid. " LIMIT 1";
 $rs 	= $conn->execute($sql);
 $thumb 	= $rs->fields['thumb'];

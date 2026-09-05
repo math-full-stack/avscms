@@ -243,7 +243,7 @@ function convert ($e, $vid, $video_name, $video_info) {
 					$scale = "-vf scale=\"'if(gt(a,4/3),".$e['width'].",-1)':'if(gt(a,4/3),-1,".$e['height'].")'\"";
 				}
 				$output = $config['H264_DIR']."/".$vid."_".$e['label'].".".$e['format'];
-				$cmd = $config['ffmpeg'].$add_cut." -i ".$src." -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$scale." ".$e['ios']." ".$faststart." -y ".$output."";	
+				$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -threads 0 -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$scale." ".$e['ios']." ".$faststart." -y \"".$output."\"";	
 				modproc($cmd);
 			}
 			if (file_exists($output) && filesize($output) > 100) {
@@ -251,20 +251,22 @@ function convert ($e, $vid, $video_name, $video_info) {
 				$chk_sql = "SELECT formats, lformats FROM video WHERE VID = '".(int)$vid."' LIMIT 1";
 				$chk_rs = selectQuery($chk_sql);
 				$format_str = $e['height'].".".$e['label'].".".$e['format'];
-				if (isset($chk_rs['formats']) && $chk_rs['formats'] && strpos($chk_rs['formats'], $format_str) !== false) {
-					echo "\n"."Format already exists: ".$format_str." - Skipping\n\n";
-				} else {
-					$sql = "UPDATE video SET formats = IF(formats IS NULL, '".$e['height'].".".$e['label'].".".$e['format']."', CONCAT(formats, ',".$e['height'].".".$e['label'].".".$e['format']."')) WHERE VID = '".(int)$vid."'";
-					executeQuery($sql);
-					echo "\n".$nl."SQL:\n".$nl.$sql."\n\n";
+				$f_arr = !empty($chk_rs['formats']) ? array_filter(array_map('trim', explode(',', $chk_rs['formats']))) : array();
+				if (!in_array($format_str, $f_arr)) {
+					$f_arr[] = $format_str;
 				}
-				if (!isset($chk_rs['lformats']) || !$chk_rs['lformats'] || strpos($chk_rs['lformats'], $e['label']) === false) {
-					$sql = "UPDATE video SET lformats = IF(lformats IS NULL, '".$e['label']."', CONCAT(lformats, ', ".$e['label']."')) WHERE VID = '".(int)$vid."'";
-					executeQuery($sql);
-					echo "\n".$nl."SQL:\n".$nl.$sql."\n\n";
-				} else {
-					echo "\n"."Label already exists: ".$e['label']." - Skipping\n\n";
+				$new_formats = implode(',', array_unique($f_arr));
+
+				$lf_arr = !empty($chk_rs['lformats']) ? array_filter(array_map('trim', explode(',', $chk_rs['lformats']))) : array();
+				if (!in_array($e['label'], $lf_arr)) {
+					$lf_arr[] = $e['label'];
 				}
+				$new_lformats = implode(', ', array_unique($lf_arr));
+
+				$sql = "UPDATE video SET formats = '".$new_formats."', lformats = '".$new_lformats."' WHERE VID = '".(int)$vid."'";
+				executeQuery($sql);
+				echo "\n".$nl."SQL:\n".$nl.$sql."\n\n";
+
 				$config['encode_height'] = $e['height'];
 				echo "\n".$nl."Sending to queue - second pass: VID:".$vid.", Skip:".$e['height']."\n\n";	
 				insert_q_sp($vid,$e['height'],$video_info);
@@ -274,25 +276,28 @@ function convert ($e, $vid, $video_name, $video_info) {
 				@unlink($output);			
 				$scale = scale($video_info['width'], $video_info['height'], $e['width'], $e['height']);
 				echo "\n"."Retrying using fixed scale: ".$scale."\n";
-				$cmd = $config['ffmpeg'].$add_cut." -i ".$src." -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$scale." ".$e['ios']." ".$faststart." -y ".$output."";
+				$cmd = $config['ffmpeg'].$add_cut." -i \"".$src."\" -threads 0 -c:v libx264 -preset ".$e['preset']." -crf ".$e['crf']." ".$scale." ".$e['ios']." ".$faststart." -y \"".$output."\"";
 				modproc($cmd);
 				if (file_exists($output) && filesize($output) > 100) {
 					$chk_sql = "SELECT formats, lformats FROM video WHERE VID = '".(int)$vid."' LIMIT 1";
 					$chk_rs = selectQuery($chk_sql);
 					$format_str = $e['height'].".".$e['label'].".".$e['format'];
-					if (!isset($chk_rs['formats']) || !$chk_rs['formats'] || strpos($chk_rs['formats'], $format_str) === false) {
-						$sql = "UPDATE video SET formats = IF(formats IS NULL, '".$e['height'].".".$e['label'].".".$e['format']."', CONCAT(formats, ',".$e['height'].".".$e['label'].".".$e['format']."')) WHERE VID = '".(int)$vid."'";
-						executeQuery($sql);
-					} else {
-						echo "\n"."Format already exists: ".$format_str." - Skipping\n\n";
+					$f_arr = !empty($chk_rs['formats']) ? array_filter(array_map('trim', explode(',', $chk_rs['formats']))) : array();
+					if (!in_array($format_str, $f_arr)) {
+						$f_arr[] = $format_str;
 					}
-					if (!isset($chk_rs['lformats']) || !$chk_rs['lformats'] || strpos($chk_rs['lformats'], $e['label']) === false) {
-						$sql = "UPDATE video SET lformats = IF(lformats IS NULL, '".$e['label']."', CONCAT(lformats, ', ".$e['label']."')) WHERE VID = '".(int)$vid."'";
-						executeQuery($sql);
-						echo "\n".$nl."SQL:\n".$nl.$sql."\n\n";
-					} else {
-						echo "\n"."Label already exists: ".$e['label']." - Skipping\n\n";
+					$new_formats = implode(',', array_unique($f_arr));
+
+					$lf_arr = !empty($chk_rs['lformats']) ? array_filter(array_map('trim', explode(',', $chk_rs['lformats']))) : array();
+					if (!in_array($e['label'], $lf_arr)) {
+						$lf_arr[] = $e['label'];
 					}
+					$new_lformats = implode(', ', array_unique($lf_arr));
+
+					$sql = "UPDATE video SET formats = '".$new_formats."', lformats = '".$new_lformats."' WHERE VID = '".(int)$vid."'";
+					executeQuery($sql);
+					echo "\n".$nl."SQL:\n".$nl.$sql."\n\n";
+
 					$config['encode_height'] = $e['height'];
 					echo "\n".$nl."Sending to queue - second pass: VID:".$vid.", Skip:".$e['height']."\n\n";
 					insert_q_sp($vid,$e['height'],$video_info);
@@ -400,7 +405,7 @@ function postConversion($vid,$src) {
 
 	$sql  	     = "SELECT formats, active FROM video WHERE VID = '" .$vid. "' LIMIT 1";
 	$rs 	     = selectQuery($sql);
-    $formats     = explode(',', $rs['formats']);
+    $formats     = array_values(array_unique(array_filter(array_map('trim', explode(',', $rs['formats'])))));
     $status      = $rs['active'];	
 	
 	$hd          = 0;	
@@ -409,7 +414,7 @@ function postConversion($vid,$src) {
 		$active = 0;
 	} elseif ($status == '1') {
 		$active = 1;
-	} elseif ($config['approve'] == '0' && $rs['formats']!='') {
+	} elseif ($config['approve'] == '0' && !empty($formats)) {
 		$active = 1;
 	} else {
 		$active = 0;

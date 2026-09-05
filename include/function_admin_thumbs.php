@@ -3,19 +3,25 @@ defined('_VALID') or die('Restricted Access!');
 require_once ($config['BASE_DIR']. '/include/function_thumbs.php');
 require $config['BASE_DIR']. '/classes/image.class.php';
 
+if (!function_exists('file_url_exists')) {
 function file_url_exists($url){
+    if (empty($url)) return false;
     $ch = curl_init($url);    
-    curl_setopt($ch, CURLOPT_NOBODY, true);
+    if (strpos($url, 'X-Goog-') !== false || strpos($url, 'X-Amz-') !== false) {
+        curl_setopt($ch, CURLOPT_HTTPGET, true);
+        curl_setopt($ch, CURLOPT_RANGE, '0-0');
+    } else {
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+    }
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-    if($code == 200){
-       $status = true;
-    }else{
-      $status = false;
-    }
     curl_close($ch);
-   return $status;
+    return ($code == 200 || $code == 206);
+}
 }
 
 function compareColors($colorA, $colorB, $threshold) {

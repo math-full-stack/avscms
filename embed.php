@@ -69,6 +69,9 @@ if ($video['embed_code'] == '') {
 		$sprite = new images_to_sprite(get_thumb_dir($vid),get_thumb_dir($vid).'/sprite',$config['img_max_width'],$config['img_max_height']);
 		if ($sprite->sprite_is_stale()) {
 			$sprite->create_sprite();
+			// Mantém o sprite do bucket em dia (thumbs de vídeos GCS são servidos do bucket)
+			require_once $config['BASE_DIR']. '/include/function_server.php';
+			sync_video_sprite($vid, true);
 		}
 		$player['sprite'] = get_thumb_url($vid).'/sprite.jpg';
 	}

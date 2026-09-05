@@ -58,8 +58,8 @@ if ($qsp && $conn->Affected_Rows() == 1) {
     die();
 }
 
-// Marcar como Baixando e disparar worker
-$conn->execute("UPDATE video SET active = '2', last_update = " . time() . " WHERE VID = " . intval($vid) . " LIMIT 1");
+// Marcar como Baixando e resetar qualidades antigas para não duplicar
+$conn->execute("UPDATE video SET active = '2', formats = NULL, lformats = NULL, last_update = " . time() . " WHERE VID = " . intval($vid) . " LIMIT 1");
 
 $encodedUrl   = base64_encode($sourceUrl);
 $encodedThumb = base64_encode('');

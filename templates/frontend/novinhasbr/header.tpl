@@ -54,6 +54,7 @@
     <script type="text/javascript">
     var base_url = "{$baseurl}";
 	var max_thumb_folders = "{$max_thumb_folders}";
+	var thumb_cdn_base = "{insert name=gcs_thumbs_base}";
     var tpl_url = "{$relative_tpl}";
 	{if isset($video.VID)}var video_id = "{$video.VID}";{/if}
 	var lang_deleting = "{t c='global.deleting'}";

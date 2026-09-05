@@ -478,17 +478,20 @@ function insert_thumb($options)
 function insert_thumb_path($options)
 {
 	global $config;
-	
-	$vid   = $options['vid'];
-	$index = intval( ($vid - 1) / $config['max_thumb_folders'] );
-	$tmb_folder = 'tmb';
-	if ($index !== 0) {
-		$tmb_folder = 'tmb'.$index;
-	}
 
-	$output = $config['BASE_URL'].'/media/videos/'.$tmb_folder.'/'.$vid;
+	// Fonte única de verdade: GCS (bucket) para vídeos remotos, local caso contrário.
+	require_once $config['BASE_DIR']. '/include/function_thumbs.php';
 
-	return $output;
+	return get_video_thumb_base($options['vid']);
+}
+
+function insert_gcs_thumbs_base($options)
+{
+	global $config;
+
+	require_once $config['BASE_DIR']. '/include/function_thumbs.php';
+
+	return get_gcs_thumbs_base();
 }
 
 function insert_thumb_adm($options)
