@@ -113,13 +113,6 @@
 						<a href="{$relative}/video/{$videos[i].VID}/{$videos[i].title|clean}">
 							<span class="content-title">{$videos[i].title|escape:'html'}</span>
 						</a>
-						{if $videos[i].keywords}
-						<div class="xb-tags">
-							{section name=t loop=$videos[i].keywords max=4}
-								<a href="{$relative}/search/tags/{$videos[i].keywords[t]}">#{$videos[i].keywords[t]}</a>
-							{/section}
-						</div>
-						{/if}
 					</div>
 				</div>			
             {/section}
