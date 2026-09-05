@@ -41,49 +41,49 @@ $title_p        = NULL;
 
 if ( $type != '' ) {
     $title_p        = ' '.ucfirst(($type == 'private') ? $lang['global.private'] : $lang['global.public']);
-    $sql_add        = $sql_delim. " type = '" .$type. "'";
-    $sql_add_count  = $sql_delim. " type = '" .$type. "'";
+    $sql_add        = $sql_delim. " v.type = '" .$type. "'";
+    $sql_add_count  = $sql_delim. " v.type = '" .$type. "'";
     $sql_delim      = ' AND';
 }
 
 if ( $type == 'featured' ) {
 	$title_p        =  ' '.$lang['global.featured'];
 	$sql_delim      = ' WHERE ';	
-    $sql_add        = $sql_delim. " featured = 'yes'";
-    $sql_add_count  = $sql_delim. " featured = 'yes'";
+    $sql_add        = $sql_delim. " v.featured = 'yes'";
+    $sql_add_count  = $sql_delim. " v.featured = 'yes'";
     $sql_delim      = ' AND';	
 }
 
 if ( $quality == 'hd' ) {	
-    $sql_add        .= $sql_delim. " hd = '1'";
-    $sql_add_count  .= $sql_delim. " hd = '1'";
+    $sql_add        .= $sql_delim. " v.hd = '1'";
+    $sql_add_count  .= $sql_delim. " v.hd = '1'";
     $sql_delim      = ' AND';	
 }
 
 switch ( $timeframe ) {
     case 't':
         $title_t         = $lang['global.todays'];
-        $sql_add        .= $sql_delim. " DATE_FORMAT(adddate, '%y-%m-%d') = DATE_FORMAT(NOW(), '%y-%m-%d')";
-        $sql_add_count  .= $sql_delim. " DATE_FORMAT(adddate, '%y-%m-%d') = DATE_FORMAT(NOW(), '%y-%m-%d')";
+        $sql_add        .= $sql_delim. " DATE_FORMAT(v.adddate, '%y-%m-%d') = DATE_FORMAT(NOW(), '%y-%m-%d')";
+        $sql_add_count  .= $sql_delim. " DATE_FORMAT(v.adddate, '%y-%m-%d') = DATE_FORMAT(NOW(), '%y-%m-%d')";
         $sql_delim       = ' AND';
         break;
     case 'w':
         $title_t         = $lang['global.this_weeks'];
-        $sql_add        .= $sql_delim. " DATE_FORMAT(adddate, '%y-%u') = DATE_FORMAT(NOW(), '%y-%u')";
-        $sql_add_count  .= $sql_delim. " DATE_FORMAT(adddate, '%y-%u') = DATE_FORMAT(NOW(), '%y-%u')";
+        $sql_add        .= $sql_delim. " DATE_FORMAT(v.adddate, '%y-%u') = DATE_FORMAT(NOW(), '%y-%u')";
+        $sql_add_count  .= $sql_delim. " DATE_FORMAT(v.adddate, '%y-%u') = DATE_FORMAT(NOW(), '%y-%u')";
         $sql_delim       = ' AND';
         break;
     case 'm':
         $title_t         = $lang['global.this_months'];
-        $sql_add        .= $sql_delim. " DATE_FORMAT(adddate, '%m') = DATE_FORMAT(NOW(), '%m')";
-        $sql_add_count  .= $sql_delim. " DATE_FORMAT(adddate, '%m') = DATE_FORMAT(NOW(), '%m')";
+        $sql_add        .= $sql_delim. " DATE_FORMAT(v.adddate, '%m') = DATE_FORMAT(NOW(), '%m')";
+        $sql_add_count  .= $sql_delim. " DATE_FORMAT(v.adddate, '%m') = DATE_FORMAT(NOW(), '%m')";
         $sql_delim       = ' AND';
         break;
 }
 
 if ( $category ) {
-    $sql_add        .= $sql_delim. " channel = " .$category;
-    $sql_add_count  .= $sql_delim. " channel = " .$category;
+    $sql_add        .= $sql_delim. " v.channel = " .$category;
+    $sql_add_count  .= $sql_delim. " v.channel = " .$category;
     $sql_delim       = ' AND';
     foreach ( $categories as $categ ) {
         if ( $categ['CHID'] == $category ) {
@@ -93,48 +93,53 @@ if ( $category ) {
     }
 }
 
-$sql_add       .= $sql_delim . " active = '1'";
-$sql_add_count .= $sql_delim . " active = '1'";
+$sql_add       .= $sql_delim . " v.active = '1'";
+$sql_add_count .= $sql_delim . " v.active = '1'";
 
 switch ( $order ) {
     case 'bw':
         $title_o  = ' '.$lang['global.being_watched'];
-        $sql_add .= ' ORDER BY viewtime DESC';
+        $sql_add .= ' ORDER BY v.viewtime DESC';
         break;
     case 'mr':
         $title_o  = ' '.$lang['global.most_recent'];
-        $sql_add .= ' ORDER BY addtime DESC';
+        $sql_add .= ' ORDER BY v.addtime DESC';
         break;
     case 'mv':
         $title_o  = ' '.$lang['global.most_viewed'];
-        $sql_add .= ' ORDER BY viewnumber DESC';
+        $sql_add .= ' ORDER BY v.viewnumber DESC';
         break;
     case 'tr':
         $title_o  = ' '.$lang['global.top_rated'];
-        $sql_add .= ' ORDER BY rate DESC';
+        $sql_add .= ' ORDER BY v.rate DESC';
         break;
     case 'md':
         $title_o  = ' '.$lang['global.most_commented'];
-        $sql_add .= ' ORDER BY com_num DESC';
+        $sql_add .= ' ORDER BY v.com_num DESC';
         break;
     case 'tf':
         $title_o  = ' '.$lang['global.top_favorites'];
-        $sql_add .= ' ORDER BY fav_num DESC';
+        $sql_add .= ' ORDER BY v.fav_num DESC';
         break;
     case 'lg':
 		$title_o  = ' '.$lang['global.longest'];
-        $sql_add .= ' ORDER BY duration DESC';
+        $sql_add .= ' ORDER BY v.duration DESC';
         break;		
 }
 
-$sql            = "SELECT count(VID) AS total_videos FROM video" .$sql_add_count;
+$sql            = "SELECT count(v.VID) AS total_videos FROM video AS v" .$sql_add_count;
 $rsc            = $conn->execute($sql);
 $total          = $rsc->fields['total_videos'];
 $pagination     = new Pagination($config['videos_per_page']);
 $limit          = $pagination->getLimit($total);
-$sql            = "SELECT * FROM video" .$sql_add. " LIMIT " .$limit;
+$sql            = "SELECT v.*, u.username FROM video AS v LEFT JOIN signup AS u ON v.UID = u.UID" .$sql_add. " LIMIT " .$limit;
 $rs             = $conn->execute($sql);
 $videos         = $rs->getrows();
+
+// Normaliza keywords para arrays (mesmo formato da página inicial)
+foreach ( $videos as $k => $v ) {
+    $videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
+}
 
 if ($slug) {
 	$page_link      = $pagination->getPagination('videos/'.$slug);	
