@@ -15,6 +15,8 @@ if ( isset($_SESSION['uid']) && $uid != $_SESSION['uid'] ) {
     VRedirect::go($config['BASE_URL']. '/notfound/album_permission');
 }
 
+$old_tags = ( isset($tags) ) ? $tags : '';
+
 if ( isset($_POST['submit_album_edit']) ) {
     require $config['BASE_DIR']. '/classes/filter.class.php';
     require $config['BASE_DIR']. '/classes/image.class.php';
@@ -74,6 +76,8 @@ if ( isset($_POST['submit_album_edit']) ) {
                                      tags = " .$conn->qStr($tags). ", type = '" .$type. "'
                    WHERE AID = " .$aid;
         $conn->execute($sql);
+        remove_tags(tags_to_comma($old_tags));
+        add_tags(tags_to_comma($tags));
 		$album['name'] = $name;
 		$album['category'] = $category;
 		$album['tags'] = $tags;

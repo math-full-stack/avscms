@@ -67,8 +67,7 @@ if ( isset($_POST['album_upload_started']) ) {
                            " .$conn->qStr($tags). ", '" .$type. "', " .time(). ", '" .date('Y-m-d'). "', '" .$status. "')";
         $conn->execute($sql);
         $album_id   = $conn->insert_Id();
-        
-		$exts   = array('jpg', 'jpeg', 'png', 'gif');
+        add_tags(tags_to_comma($tags));
 		$photos = 0;
 		
         $image      = new VImageConv();

@@ -92,6 +92,7 @@ if ( isset($_POST['game_upload_started']) ) {
                            type = '" .$game['privacy']. "', status = '" .$status. "'";
         $conn->execute($sql);
         $game_id    = $conn->insert_Id();
+        add_tags(tags_to_comma($keywords));
         $game_file  = $game_id. '.swf';
         $game_path  = $config['BASE_DIR']. '/media/games/swf/' .$game_file;
         if ( !move_uploaded_file($_FILES['game_file']['tmp_name'], $game_path) ) {
