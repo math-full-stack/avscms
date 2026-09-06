@@ -75,7 +75,7 @@ if ( isset($_POST['video_id']) && isset($_POST['move']) && isset($_POST['page'])
         $code[]     = '<div class="col-sm-6 col-md-3 col-lg-3">';
         $code[]     = '<div class="well well-sm m-b-0 m-t-20">';
         $code[]     = '<a href="' .$config['BASE_URL']. '/video/' .$video['VID']. '/' .prepare_string($video['title']). '">';		
-        $code[]     = '<div class="thumb-overlay">';
+        $code[]     = '<div class="thumb-overlay' .((isset($video['orientation']) && $video['orientation'] == 'portrait') ? ' xb-portrait' : ''). '">';
 		$code[]     = '<img src="' .get_thumb_url($video['VID']). '/'.$video['thumb'].'.jpg" title="' .htmlspecialchars($video['title'], ENT_QUOTES, 'UTF-8'). '" alt="' .htmlspecialchars($video['title'], ENT_QUOTES, 'UTF-8'). '" id="rotate_' .$video['VID']. '_'.$video['thumbs'].'_'.$video['thumb'].'" '.$img_class.' />';
 		if ($video['type'] == 'private') {		
 			$code[]     = '<div class="label-private">' .$lang['global.PRIVATE']. '</div>';

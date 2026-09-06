@@ -692,19 +692,23 @@ function extract_video_vthumbs($video_path, $video_id, $img_thumbs = true) {
 		if(file_exists($dst_webm)) @chmod($dst_webm,0777);
 		if(file_exists($dst_mp4)) @chmod($dst_mp4,0777);
 
-		@copy($copy_webm,$dst_webm); @unlink($copy_webm); 
-		@copy($copy_mp4,$dst_mp4); @unlink($copy_mp4);
+		// Usa rename (atômico no mesmo filesystem) em vez de copy+unlink
+		@rename($copy_webm, $dst_webm);
+		@rename($copy_mp4, $dst_mp4);
+		// Fallback: se rename falhar (cross-device), tenta copy+unlink
+		if (file_exists($copy_webm)) { @copy($copy_webm, $dst_webm); @unlink($copy_webm); }
+		if (file_exists($copy_mp4)) { @copy($copy_mp4, $dst_mp4); @unlink($copy_mp4); }
 		if(file_exists($copy_default) && filesize($copy_default) ) {
 			if(file_exists($dst_default)) @chmod($dst_default,0777);
-			@copy($copy_default,$dst_default); 
+			@rename($copy_default, $dst_default);
+			if (file_exists($copy_default)) { @copy($copy_default, $dst_default); @unlink($copy_default); }
 			sharp_image($dst_default);
-			@chmod($copy_default,0777); @unlink($copy_default);
 		}
 		if(file_exists($copy_thumb) && filesize($copy_thumb) ) {
 			if(file_exists($dst_thumb)) @chmod($dst_thumb,0777);
-			@copy($copy_thumb,$dst_thumb); 
+			@rename($copy_thumb, $dst_thumb);
+			if (file_exists($copy_thumb)) { @copy($copy_thumb, $dst_thumb); @unlink($copy_thumb); }
 			sharp_image($dst_thumb);
-			@chmod($copy_thumb,0777); @unlink($copy_thumb);
 		}
 		$sql = "UPDATE video SET vthumbs = '1' WHERE VID = '".(int)$video_id."'";
 		$conn->execute($sql);		
@@ -864,21 +868,24 @@ function extract_video_vthumbs_hq($video_path, $video_id, $img_thumbs = true) {
 		if (file_exists($dst_webm)) @chmod($dst_webm, 0777);
 		if (file_exists($dst_mp4)) @chmod($dst_mp4, 0777);
 
-		@copy($copy_webm, $dst_webm); @unlink($copy_webm);
-		@copy($copy_mp4, $dst_mp4); @unlink($copy_mp4);
+		// rename atômico + fallback copy+unlink
+		@rename($copy_webm, $dst_webm);
+		@rename($copy_mp4, $dst_mp4);
+		if (file_exists($copy_webm)) { @copy($copy_webm, $dst_webm); @unlink($copy_webm); }
+		if (file_exists($copy_mp4)) { @copy($copy_mp4, $dst_mp4); @unlink($copy_mp4); }
 
 		if ($img_thumbs) {
 			if (file_exists($copy_default) && filesize($copy_default)) {
 				if (file_exists($dst_default)) @chmod($dst_default, 0777);
-				@copy($copy_default, $dst_default);
+				@rename($copy_default, $dst_default);
+				if (file_exists($copy_default)) { @copy($copy_default, $dst_default); @unlink($copy_default); }
 				sharp_image($dst_default);
-				@chmod($copy_default, 0777); @unlink($copy_default);
 			}
 			if (file_exists($copy_thumb) && filesize($copy_thumb)) {
 				if (file_exists($dst_thumb)) @chmod($dst_thumb, 0777);
-				@copy($copy_thumb, $dst_thumb);
+				@rename($copy_thumb, $dst_thumb);
+				if (file_exists($copy_thumb)) { @copy($copy_thumb, $dst_thumb); @unlink($copy_thumb); }
 				sharp_image($dst_thumb);
-				@chmod($copy_thumb, 0777); @unlink($copy_thumb);
 			}
 		} else {
 			@unlink($copy_default);

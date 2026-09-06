@@ -27,9 +27,13 @@ function xbOrientThumb( $ovl ) {
 		return;
 	}
 	$ovl.removeClass('xb-landscape xb-portrait');
+	$ovl.find('> .xb-portrait-bg').remove();
 	if ( $img[0].naturalHeight > $img[0].naturalWidth ) {
 		$ovl.addClass('xb-portrait');
 		$ovl.css('background-image', 'url("' + $img[0].src + '")');
+		// Fundo desfocado full-bleed (padrão Pornolandia): a capa nítida fica
+		// em contain por cima (CSS) e este span desfocado preenche o box 16:9.
+		$ovl.prepend('<span class="xb-portrait-bg" style="background-image:url(\'' + $img[0].src + '\')"></span>');
 	} else {
 		$ovl.addClass('xb-landscape');
 		$ovl.css('background-image', '');
@@ -60,6 +64,7 @@ $(document).ready(function() {
 	xbOrientThumbs();
 	
 	$("body").on('mouseenter', "[id*='playvthumb_']", function(event) {
+		xbOrientThumb( $(this) );
 		var img = $(this).find('img:first');
 		if (!img.hasClass("img-private")) {			
 			var image_id    = $(this).attr("id");

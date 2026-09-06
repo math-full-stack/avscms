@@ -272,10 +272,10 @@ class YoutubeGrabber implements GrabberInterface {
         // Configuração de formato do yt-dlp
         // Baixa melhor video+audio e junta em mp4
         if ($quality === 'best' || empty($quality)) {
-            $formatSelector = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
+            $formatSelector = 'best[ext=mp4][protocol^=http]/best[ext=mp4]/bestvideo[vcodec^=avc]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best';
         } else {
             $h = (int)$quality;
-            $formatSelector = "bestvideo[height<={$h}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={$h}]+bestaudio/best[height<={$h}]/best";
+            $formatSelector = "best[height<={$h}][ext=mp4][protocol^=http]/best[height<={$h}][ext=mp4]/bestvideo[height<={$h}][vcodec^=avc]+bestaudio[ext=m4a]/bestvideo[height<={$h}]+bestaudio/best[height<={$h}]/best";
         }
 
         $cmd = sprintf(
@@ -341,7 +341,7 @@ class YoutubeGrabber implements GrabberInterface {
 
         // Tenta fallback sem restrição de extensão para garantir o download (progressivo, sem necessidade de ffmpeg)
         $cmdFallback = sprintf(
-            '%s %s -f "best[ext=mp4]/best" --no-warnings --socket-timeout 30%s%s -o %s %s 2>&1',
+            '%s %s -f "best[ext=mp4][protocol^=http]/best[ext=mp4]/best" --no-warnings --socket-timeout 30%s%s -o %s %s 2>&1',
             escapeshellarg($this->pythonBinary),
             escapeshellarg($this->ytdlpScript),
             $ffmpegLocationArg,

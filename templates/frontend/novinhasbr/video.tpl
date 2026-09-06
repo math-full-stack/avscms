@@ -736,7 +736,7 @@ $( document ).ready(function() {
 			{section name=i loop=$videos}
 					<div class="related-video">
 						<a href="{$relative}/video/{$videos[i].VID}/{$videos[i].title|clean}">
-							<div class="thumb-overlay" {if $videos[i].vthumbs == '1'} id="playvthumb_{$videos[i].VID}"{/if}>
+							<div class="thumb-overlay{if isset($videos[i].orientation) && $videos[i].orientation == 'portrait'} xb-portrait{/if}" {if $videos[i].vthumbs == '1'} id="playvthumb_{$videos[i].VID}"{/if}>
 								<img src="{insert name=thumb_path vid=$videos[i].VID}/{$videos[i].thumb}.jpg" title="{$videos[i].title|escape:'html'}" alt="{$videos[i].title|escape:'html'}" {if $videos[i].vthumbs == '0'}id="rotate_{$videos[i].VID}_{$videos[i].thumbs}_{$videos[i].thumb}_viewed"{/if} class="img-responsive {if $videos[i].type == 'private'}img-private{/if}"/>
 								{if $videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 								<span class="xb-thumb-meta">

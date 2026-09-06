@@ -91,7 +91,9 @@ import {
     const muteBtn = player.querySelector('[data-action="volume"]');
     const fullBtn = player.querySelector('[data-action="fullscreen"]');
     const seekBar = player.querySelector('.avs-seek');
+    const controlsBar = player.querySelector('.avs-controls');
     const seekFill = player.querySelector('.avs-seek-fill');
+    const seekBuffer = player.querySelector('.avs-seek-buffer');
     const currentEl = player.querySelector('.avs-current');
     const durationEl = player.querySelector('.avs-duration');
     const qualitySel = player.querySelector('.avs-quality');
@@ -112,26 +114,91 @@ import {
     // to accept a play() call — guards manual clicks that arrive mid-init.
     let resolveReady = null;
     const readyPromise = new Promise((r) => { resolveReady = r; });
-    const markReady = () => { if (resolveReady) { resolveReady(); resolveReady = null; } };
+    const markReady = () => { window.__avsReady = true; if (resolveReady) { resolveReady(); resolveReady = null; } };
 
     // Native <video> fallback — used when WebCodecs is missing OR when Media
-    // Bunny cannot decode the file in this browser (e.g. Firefox has no H.264
-    // in WebCodecs). Guarantees playback wherever the plain MP4 plays.
+    // Bunny cannot decode/fetch the file in this browser (e.g. Firefox has no
+    // H.264 in WebCodecs, or a GCS bucket without CORS blocks the signed-URL
+    // fetch). Guarantees playback wherever the plain MP4 plays.
     let fallbackVideo = null;
     const useNativeFallback = (reason) => {
         if (fallbackVideo) return fallbackVideo;
         if (reason) console.warn('[AVS Mediabunny] fallback nativo:', reason);
         fallbackVideo = document.createElement('video');
         fallbackVideo.className = 'avs-fallback-video';
-        fallbackVideo.controls = true;
+        // Native controls OFF — the custom control bar (play/seek/time/volume/
+        // quality + sprite timeline) is wired to the <video> in
+        // setupFallbackControls(), so the player keeps its own UI (and the
+        // timeline/sprite preview) even in fallback mode.
+        fallbackVideo.controls = false;
         fallbackVideo.playsInline = true;
         fallbackVideo.muted = startMuted;
         if (poster) fallbackVideo.poster = poster;
         player.insertBefore(fallbackVideo, player.firstChild);
         posterImg.style.display = 'none';
         player.classList.add('avs-fallback');
+        muteBtn.textContent = startMuted ? '🔇' : '🔊';
+        setupFallbackControls();
         markReady();
         return fallbackVideo;
+    };
+
+    // Keeps the custom control bar + timeline (and the sprite preview) working
+    // on top of the native <video> fallback. Only registers listeners — the
+    // callbacks run after the module has fully initialized.
+    const setupFallbackControls = () => {
+        const fb = fallbackVideo;
+        if (!fb) return;
+
+        const syncFromVideo = () => {
+            renderTime(fb.currentTime || 0);
+        };
+        // Buffered bar: the native <video> exposes the real loaded ranges.
+        const syncBufferFromVideo = () => {
+            if (!fb.buffered || fb.buffered.length === 0) return;
+            bufferedEnd = fb.buffered.end(fb.buffered.length - 1);
+            renderBuffer();
+        };
+
+        fb.addEventListener('loadedmetadata', () => {
+            if (fb.duration && isFinite(fb.duration)) {
+                endTimestamp = fb.duration;
+                firstTimestamp = 0;
+                durationEl.textContent = formatSeconds(fb.duration);
+            }
+            // Match the player box to the real video ratio (vertical included).
+            if (fb.videoWidth > 0 && fb.videoHeight > 0) {
+                applyAspectRatio(fb.videoWidth, fb.videoHeight);
+            }
+            syncFromVideo();
+        });
+        fb.addEventListener('durationchange', () => {
+            if (fb.duration && isFinite(fb.duration)) {
+                endTimestamp = fb.duration;
+                firstTimestamp = 0;
+                durationEl.textContent = formatSeconds(fb.duration);
+            }
+        });
+        fb.addEventListener('timeupdate', syncFromVideo);
+        fb.addEventListener('seeked', syncFromVideo);
+        fb.addEventListener('progress', syncBufferFromVideo);
+        fb.addEventListener('loadedmetadata', syncBufferFromVideo);
+        fb.addEventListener('play', () => {
+            player.classList.add('avs-playing');
+            hidePauseAd();
+        });
+        fb.addEventListener('pause', () => {
+            player.classList.remove('avs-playing');
+            // Pause ad parity: only on a real user pause past 1s, never while
+            // seeking or at the very end of the video.
+            if (!seeking && fb.currentTime > 1 && fb.currentTime < (fb.duration || Infinity) - 0.5) {
+                showPauseAd();
+            }
+        });
+        fb.addEventListener('ended', () => {
+            renderTime(fb.duration || 0);
+            onEnded();
+        });
     };
 
     if (!supportsWebCodecs) {
@@ -167,6 +234,41 @@ import {
     let endedFired = false;
     const queuedAudioNodes = new Set();
 
+    // Buffered indicator: `bufferedEnd` is the furthest loaded position (in
+    // seconds). Fallback mode uses the native `buffered` ranges; Media Bunny
+    // mode approximates it from the source's byte download progress.
+    let bufferedEnd = 0;
+    let bufferedBytesEnd = 0;
+    let sourceSize = 0;
+    // Downloaded byte ranges (Media Bunny mode), used to compute the contiguous
+    // prefix from byte 0 — an MP4's moov atom often lives at the end of the
+    // file and is fetched first, so a naive "max byte read" would over-report.
+    const bufferedRanges = []; // sorted, disjoint [start, end)
+    const addBufferedRange = (start, end) => {
+        if (end <= start) return;
+        let i = 0;
+        while (i < bufferedRanges.length && bufferedRanges[i].end < start) i++;
+        let merged = { start: start, end: end };
+        while (i < bufferedRanges.length && bufferedRanges[i].start <= merged.end) {
+            merged.start = Math.min(merged.start, bufferedRanges[i].start);
+            merged.end = Math.max(merged.end, bufferedRanges[i].end);
+            bufferedRanges.splice(i, 1);
+        }
+        bufferedRanges.splice(i, 0, merged);
+        // Recompute the contiguous prefix from byte 0 (with a small tolerance
+        // so tiny inter-read gaps don't stall the indicator).
+        let contiguous = 0;
+        const gapTolerance = 256 * 1024;
+        for (const r of bufferedRanges) {
+            if (r.start <= contiguous + gapTolerance) {
+                contiguous = Math.max(contiguous, r.end);
+            } else {
+                break;
+            }
+        }
+        bufferedBytesEnd = contiguous;
+    };
+
     // ------------------------------------------------------------------
     // 4. Initialization
     // ------------------------------------------------------------------
@@ -187,8 +289,25 @@ import {
         showError('');
         posterImg.style.display = poster ? '' : 'none';
 
+        const urlSource = new UrlSource(source.src);
+        // Media Bunny reads lazily (no buffered ranges API), so track the
+        // source's download progress: onread fires with each fetched byte
+        // range, and the contiguous downloaded prefix maps to a buffered
+        // playback position.
+        bufferedBytesEnd = 0;
+        sourceSize = 0;
+        bufferedRanges.length = 0;
+        urlSource.onread = (start, end) => {
+            addBufferedRange(start, end);
+            if (sourceSize > 0) {
+                bufferedEnd = firstTimestamp + (bufferedBytesEnd / sourceSize) * (endTimestamp - firstTimestamp);
+                renderBuffer();
+            }
+        };
+        void urlSource.getSizeOrNull().then((s) => { if (s) sourceSize = s; });
+
         const input = new Input({
-            source: new UrlSource(source.src),
+            source: urlSource,
             formats: ALL_FORMATS
         });
 
@@ -199,6 +318,8 @@ import {
         firstTimestamp = Math.max(await input.getFirstTimestamp(tracks), 0);
         endTimestamp = await input.getDurationFromMetadata(tracks, { skipLiveWait: true })
             ?? await input.computeDuration(tracks, { skipLiveWait: true });
+        bufferedEnd = firstTimestamp;
+        renderBuffer();
 
         // Codec sanity checks
         let problem = '';
@@ -232,8 +353,10 @@ import {
             canvas.width = await videoTrack.getDisplayWidth();
             canvas.height = await videoTrack.getDisplayHeight();
             canvas.style.display = '';
+            applyAspectRatio(canvas.width, canvas.height);
         } else {
             canvas.style.display = 'none';
+            applyAspectRatio(0, 0);
         }
 
         fileLoaded = true;
@@ -326,7 +449,7 @@ import {
         }
     };
     render();
-    setInterval(() => render(false), 500);
+    setInterval(() => { render(false); renderBuffer(); }, 500);
 
     const updateNextFrame = async () => {
         const id = asyncId;
@@ -419,10 +542,24 @@ import {
     };
 
     const togglePlay = () => {
+        if (fallbackVideo) {
+            if (fallbackVideo.paused) {
+                void fallbackVideo.play().catch(() => {});
+            } else {
+                fallbackVideo.pause();
+            }
+            return;
+        }
         if (playing) { pause(); } else { beginPlayback(); }
     };
 
     const seekToTime = async (seconds) => {
+        if (fallbackVideo) {
+            const d = fallbackVideo.duration || 0;
+            fallbackVideo.currentTime = Math.max(0, Math.min(seconds, d));
+            renderTime(fallbackVideo.currentTime);
+            return;
+        }
         seeking = true;
         const wasPlaying = playing;
         if (wasPlaying) pause();
@@ -434,6 +571,13 @@ import {
     };
 
     const updateVolume = () => {
+        if (fallbackVideo) {
+            fallbackVideo.muted = volumeMuted;
+            fallbackVideo.volume = Math.max(0, Math.min(1, volume));
+            const actual = volumeMuted ? 0 : volume;
+            muteBtn.textContent = actual === 0 ? '🔇' : (actual < 0.5 ? '🔉' : '🔊');
+            return;
+        }
         const actual = volumeMuted ? 0 : volume;
         if (gainNode) gainNode.gain.value = actual * actual;
         muteBtn.textContent = actual === 0 ? '🔇' : (actual < 0.5 ? '🔉' : '🔊');
@@ -443,6 +587,29 @@ import {
         currentEl.textContent = formatSeconds(seconds);
         const range = (endTimestamp - firstTimestamp) || 1;
         seekFill.style.width = `${Math.max(0, Math.min(100, ((seconds - firstTimestamp) / range) * 100))}%`;
+    };
+
+    const renderBuffer = () => {
+        if (!seekBuffer) return;
+        const range = (endTimestamp - firstTimestamp) || 1;
+        seekBuffer.style.width = `${Math.max(0, Math.min(100, ((bufferedEnd - firstTimestamp) / range) * 100))}%`;
+    };
+
+    // Adapts the player box to the video's real aspect ratio (vertical videos
+    // included). The CSS default is 16:9; this overrides it once the true
+    // dimensions are known, with sane clamps so a 0/faulty size never blows up
+    // the layout.
+    const applyAspectRatio = (w, h) => {
+        if (w > 0 && h > 0) {
+            const ratio = Math.max(0.4, Math.min(3.5, w / h));
+            player.style.aspectRatio = String(ratio);
+            player.style.setProperty('--avs-ratio', String(ratio));
+            player.classList.toggle('avs-vertical', ratio < 1);
+        } else {
+            player.style.aspectRatio = '16 / 9';
+            player.style.removeProperty('--avs-ratio');
+            player.classList.remove('avs-vertical');
+        }
     };
 
     const disposePlayback = () => {
@@ -463,6 +630,11 @@ import {
         videoSink = null;
         audioSink = null;
         nextFrame = null;
+        bufferedEnd = 0;
+        bufferedBytesEnd = 0;
+        sourceSize = 0;
+        // Back to the default box while the next source loads.
+        applyAspectRatio(0, 0);
     };
 
     const showError = (msg) => {
@@ -502,10 +674,12 @@ import {
 
     seekBar.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        player.classList.add('avs-dragging');
         const rect = seekBar.getBoundingClientRect();
         const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         renderTime(firstTimestamp + ratio * (endTimestamp - firstTimestamp));
         const onUp = (ev) => {
+            player.classList.remove('avs-dragging');
             const r = seekBar.getBoundingClientRect();
             const ratio2 = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
             void seekToTime(firstTimestamp + ratio2 * (endTimestamp - firstTimestamp));
@@ -525,20 +699,34 @@ import {
         });
         qualitySel.addEventListener('change', () => {
             const src = sources[parseInt(qualitySel.value, 10)];
-            if (src) void initMediaPlayer(src);
+            if (!src) return;
+            if (fallbackVideo) {
+                fallbackVideo.src = src.src;
+                void fallbackVideo.play().catch(() => {});
+                return;
+            }
+            void initMediaPlayer(src);
         });
     }
 
     // Keyboard shortcuts (space/k, arrows, m, f)
     window.addEventListener('keydown', (e) => {
-        if (!fileLoaded) return;
+        if (!fileLoaded && !fallbackVideo) return;
         if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA')) return;
         if (e.code === 'Space' || e.code === 'KeyK') {
             togglePlay();
         } else if (e.code === 'ArrowLeft') {
-            void seekToTime(getPlaybackTime() - 5);
+            if (fallbackVideo) {
+                fallbackVideo.currentTime = Math.max(0, fallbackVideo.currentTime - 5);
+            } else {
+                void seekToTime(getPlaybackTime() - 5);
+            }
         } else if (e.code === 'ArrowRight') {
-            void seekToTime(getPlaybackTime() + 5);
+            if (fallbackVideo) {
+                fallbackVideo.currentTime = Math.min(fallbackVideo.duration || 0, fallbackVideo.currentTime + 5);
+            } else {
+                void seekToTime(getPlaybackTime() + 5);
+            }
         } else if (e.code === 'KeyM') {
             volumeMuted = !volumeMuted;
             updateVolume();
@@ -707,7 +895,11 @@ import {
         resume.addEventListener('click', (e) => {
             e.preventDefault();
             hidePauseAd();
-            void play();
+            if (fallbackVideo) {
+                void fallbackVideo.play().catch(() => {});
+            } else {
+                void play();
+            }
         });
         close.addEventListener('click', (e) => {
             e.preventDefault();
@@ -740,57 +932,128 @@ import {
         adIframe = null;
     };
 
-    // --- 9.3 Timeline preview (sprite) ----------------------------------
-    // Same math as video-js-events.js: 20 frames, thumb 256x144 scaled 0.6.
+    // --- 9.3 Timeline: hover time tooltip + sprite preview ---------------
+    // The sprite (sprite.class.php) is a single row of 320x180 tiles, one per
+    // available frame — missing frames are skipped, so the real frame count is
+    // measured from the image at runtime instead of assuming the old video-js
+    // constants (20 frames, thumb 256x144 at 0.6).
     let previewEl = null;
     let previewImg = null;
+    let seekTipEl = null;
 
     const setupTimelinePreview = () => {
-        if (!cfg.timelinePreview || !cfg.sprite) return;
-        const step = (cfg.duration || endTimestamp || 1) / 20;
-        const resize = 0.6;
-        const thumbW = Math.floor(256 * resize);
-        const thumbH = Math.floor(144 * resize);
+        console.info('[AVS Mediabunny] timeline preview:', cfg.timelinePreview ? 'ON' : 'OFF', '| sprite:', cfg.sprite || '(ausente)');
 
-        previewEl = document.createElement('div');
-        previewEl.className = 'avs-preview';
-        previewEl.style.position = 'absolute';
-        previewEl.style.pointerEvents = 'none';
-        previewEl.style.display = 'none';
-        previewEl.style.zIndex = '5';
-        previewEl.style.overflow = 'hidden';
-        previewEl.style.width = thumbW + 'px';
-        previewEl.style.height = thumbH + 'px';
-        previewEl.style.border = '1px solid rgba(255,255,255,0.6)';
-        previewEl.style.background = '#000';
+        // Hover time label — always available on the seek bar.
+        seekTipEl = document.createElement('div');
+        seekTipEl.className = 'avs-seek-tip';
+        seekTipEl.style.display = 'none';
+        player.appendChild(seekTipEl);
 
-        previewImg = document.createElement('img');
-        previewImg.src = cfg.sprite;
-        previewImg.style.position = 'absolute';
-        previewImg.style.top = '0';
-        previewImg.style.maxWidth = 'none';
-        previewImg.style.height = thumbH + 'px';
-        previewEl.appendChild(previewImg);
-        player.appendChild(previewEl);
+        const hasSprite = cfg.timelinePreview && !!cfg.sprite;
+        let thumbW = 0;
+        let thumbH = 0;
+        let frameCount = 0;
 
-        seekBar.addEventListener('pointermove', (e) => {
-            const rect = seekBar.getBoundingClientRect();
-            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            const t = ratio * (cfg.duration || endTimestamp || 1);
-            const frame = Math.min(19, Math.max(0, Math.round(t / step)));
-            previewImg.style.left = (-(frame * thumbW)) + 'px';
+        const buildPreview = () => {
+            previewEl = document.createElement('div');
+            previewEl.className = 'avs-preview';
+            previewEl.style.position = 'absolute';
+            previewEl.style.pointerEvents = 'none';
+            previewEl.style.display = 'none';
+            previewEl.style.zIndex = '5';
+            previewEl.style.overflow = 'hidden';
+            previewEl.style.width = thumbW + 'px';
+            previewEl.style.height = thumbH + 'px';
+            previewEl.style.border = '1px solid rgba(255,255,255,0.6)';
+            previewEl.style.background = '#000';
 
-            const pRect = player.getBoundingClientRect();
-            const previewW = previewEl.offsetWidth;
-            let left = rect.left - pRect.left + (rect.width * ratio) - (previewW / 2);
-            left = Math.max(0, Math.min(pRect.width - previewW, left));
-            previewEl.style.left = left + 'px';
-            previewEl.style.bottom = (player.offsetHeight - (rect.top - pRect.top)) + 12 + 'px';
-            previewEl.style.display = '';
-        });
-        seekBar.addEventListener('pointerleave', () => {
+            previewImg = document.createElement('img');
+            previewImg.src = cfg.sprite;
+            previewImg.style.position = 'absolute';
+            previewImg.style.top = '0';
+            previewImg.style.maxWidth = 'none';
+            previewImg.style.height = thumbH + 'px';
+            previewEl.appendChild(previewImg);
+            player.appendChild(previewEl);
+        };
+
+        if (hasSprite) {
+            // Measure the sprite's real geometry: tiles are 320px wide and the
+            // strip is one tile tall, so frameCount = width / 320. Displayed at
+            // the same ~86px height as before, the thumb width scales with the
+            // sprite's actual aspect ratio.
+            const probe = new Image();
+            probe.onload = () => {
+                const tileW = 320; // sprite.class.php SPRITE_TILE_W
+                const nw = probe.naturalWidth;
+                const nh = probe.naturalHeight;
+                if (nw > 0 && nh > 0) {
+                    frameCount = Math.max(1, Math.round(nw / tileW));
+                    thumbH = 86;
+                    thumbW = Math.round(thumbH * (tileW / nh));
+                    buildPreview();
+                }
+            };
+            probe.src = cfg.sprite;
+        }
+
+        const durationAt = () => (cfg.duration > 0 ? cfg.duration : (endTimestamp > 0 ? endTimestamp : 0));
+
+        const hideTimeline = () => {
             if (previewEl) previewEl.style.display = 'none';
-        });
+            if (seekTipEl) seekTipEl.style.display = 'none';
+        };
+
+        // Hit zone ampliada: além dos 14px do seek, a prévia também aparece com
+        // o cursor na barra de controles (até ~12px acima/abaixo da tira) — não
+        // precisa acertar exatamente a linha vermelha.
+        const hoverPadY = 12;
+        const hoverPadX = 10;
+        const onTimelineMove = (clientX, clientY) => {
+            const rect = seekBar.getBoundingClientRect();
+            if (clientX < rect.left - hoverPadX || clientX > rect.right + hoverPadX ||
+                clientY < rect.top - hoverPadY || clientY > rect.bottom + hoverPadY) {
+                hideTimeline();
+                return;
+            }
+            const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            const dur = durationAt() || 1;
+            const t = ratio * dur;
+            const pRect = player.getBoundingClientRect();
+            const seekTop = rect.top - pRect.top;
+
+            // Time tooltip, centered on the pointer (clamped to the player).
+            seekTipEl.textContent = formatSeconds(t);
+            seekTipEl.style.display = 'block';
+            let tipLeft = rect.left - pRect.left + (rect.width * ratio) - (seekTipEl.offsetWidth / 2);
+            tipLeft = Math.max(0, Math.min(pRect.width - seekTipEl.offsetWidth, tipLeft));
+            seekTipEl.style.left = tipLeft + 'px';
+            let tipBottom = (player.offsetHeight - seekTop) + 14;
+            if (hasSprite && previewEl) tipBottom += thumbH + 6;
+            seekTipEl.style.bottom = tipBottom + 'px';
+
+            // Sprite frame preview (frame count measured from the sprite).
+            if (hasSprite && previewEl && previewImg && frameCount > 0) {
+                const step = dur / frameCount;
+                const frame = Math.min(frameCount - 1, Math.max(0, Math.round(t / step)));
+                previewImg.style.left = (-(frame * thumbW)) + 'px';
+                // Show FIRST so offsetWidth is measured while visible.
+                previewEl.style.display = 'block';
+                const previewW = previewEl.offsetWidth;
+                let left = rect.left - pRect.left + (rect.width * ratio) - (previewW / 2);
+                left = Math.max(0, Math.min(pRect.width - previewW, left));
+                previewEl.style.left = left + 'px';
+                previewEl.style.bottom = (player.offsetHeight - seekTop) + 12 + 'px';
+            }
+        };
+
+        seekBar.addEventListener('pointermove', (e) => onTimelineMove(e.clientX, e.clientY));
+        seekBar.addEventListener('pointerleave', hideTimeline);
+        if (controlsBar) {
+            controlsBar.addEventListener('pointermove', (e) => onTimelineMove(e.clientX, e.clientY));
+            controlsBar.addEventListener('pointerleave', hideTimeline);
+        }
     };
     setupTimelinePreview();
 
@@ -1121,10 +1384,10 @@ import {
             if (autoplay) beginPlayback();
         });
     } else {
-        // Native fallback: plain <video> with the same (signed) URL
+        // Native fallback: plain <video> with the same (signed) URL. Controls
+        // and ended handling are wired by setupFallbackControls().
         fallbackVideo.src = pickSource().src;
         fallbackVideo.load();
         if (autoplay) beginPlayback();
-        fallbackVideo.addEventListener('ended', onEnded);
     }
 })();

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md",
+    ".opencode/projeto/*.md",
+    ".opencode/ia/*.md",
+    ".opencode/skills/README.md",
+    ".opencode/plugins/system-prompt.md",
+    ".opencode/plugins/coordinator-prompt.md"
+  ],
+  "permission": {
+    "skill": {
+      "*": "allow",
+      "coding-agent-standards": "allow",
+      "verification-agent": "allow",
+      "prompt-architect": "allow"
+    }
+  },
+  "agent": {
+    "build": {
+      "permission": {
+        "skill": {
+          "*": "allow"
+        }
+      }
+    },
+    "plan": {
+      "permission": {
+        "skill": {
+          "*": "allow"
+        }
+      }
+    }
+  }
+}

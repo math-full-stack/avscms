@@ -96,7 +96,7 @@
 	<link rel="stylesheet" href="{$relative_tpl}/css/easy-autocomplete.themes.min.css">	
 	
 	<link href="{$relative_tpl}/css/style.css" rel="stylesheet">
-	<link href="{$relative_tpl}/css/novinhasbr.css" rel="stylesheet">
+	<link href="{$relative_tpl}/css/novinhasbr.css?ver=1.0.1" rel="stylesheet">
 	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 	
 	<!-- Video Player -->

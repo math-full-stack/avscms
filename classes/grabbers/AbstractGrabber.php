@@ -2,6 +2,7 @@
 defined('_VALID') or die('Restricted Access!');
 
 require_once dirname(__FILE__) . '/GrabberInterface.php';
+require_once dirname(__FILE__) . '/DownloadStrategy.php';
 
 /**
  * AbstractGrabber - Base comum para os grabbers de vídeo.

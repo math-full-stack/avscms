@@ -88,18 +88,29 @@ public function sprite_is_stale() {
 		if ($this->build_sprite()) {
 			return true;
 		}
-		// Legacy body below runs only when no frames were available.
-		
+		// Legacy body runs only when no 1..20 frames were available to
+		// build_sprite(). Each frame is checked before use so a missing file
+		// (e.g. thumbs only in the GCS bucket) can never crash the page.
+
 		$resize = 1;
-		$basedir = $this->folder;
-		$files = array();
 		// Read through the directory for suitable images
 		for ($i = 1; $i<=20; $i++) {
 			$this->files[$i.'.jpg'] = $i.'.jpg';
 		}
 
-		// xx is the height of the sprite to be created, basically X * number of images
-		$this->xx = $this->x * count($this->files);
+		// Keep only frames that actually exist locally
+		$available = array();
+		foreach ($this->files as $file) {
+			if (is_file($this->folder.'/'.$file) && is_readable($this->folder.'/'.$file)) {
+				$available[] = $file;
+			}
+		}
+		if (empty($available)) {
+			return false;
+		}
+
+		// xx is the width of the sprite to be created, basically X * number of images
+		$this->xx = $this->x * count($available);
 		$im = imagecreatetruecolor(round($this->xx*$resize),round($this->y*$resize));
  
 		// Add alpha channel to image (transparency)
@@ -107,15 +118,20 @@ public function sprite_is_stale() {
 		$alpha = imagecolorallocatealpha($im, 0, 0, 0, 127);
 		imagefill($im,0,0,$alpha);
  
-		// Append images to sprite and generate CSS lines
-		$i = $ii = 0;
-			foreach($this->files as $key => $file) {
-				$im2 = imagecreatefromjpeg($this->folder.'/'.$file);
-				imagecopyresized($im,$im2,round(($this->x*$i)*$resize),0,0,0,round(($this->x)*$resize),round(($this->y)*$resize),$this->x,$this->y);
-				$i++;
+		// Append images to sprite
+		$i = 0;
+		foreach($available as $file) {
+			$im2 = @imagecreatefromjpeg($this->folder.'/'.$file);
+			if (!$im2) {
+				continue;
 			}
+			imagecopyresized($im,$im2,round(($this->x*$i)*$resize),0,0,0,round(($this->x)*$resize),round(($this->y)*$resize),$this->x,$this->y);
+			imagedestroy($im2);
+			$i++;
+		}
 		imagejpeg($im,$this->output.'.jpg'); // Save image to file
 		imagedestroy($im);
+		return true;
 	}
 }
 ?>

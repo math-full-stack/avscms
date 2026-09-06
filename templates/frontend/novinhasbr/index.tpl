@@ -10,7 +10,7 @@
 	<div class="row content-row">
 		{section name=i loop=$recent_videos}
 		<div class="col-6 col-sm-6 col-md-4 col-lg-3">
-			<a href="{$relative}/video/{$recent_videos[i].VID}/{$recent_videos[i].title|clean}">					<div class="thumb-overlay" {if $recent_videos[i].vthumbs == '1'} id="playvthumb_{$recent_videos[i].VID}"{/if}>
+			<a href="{$relative}/video/{$recent_videos[i].VID}/{$recent_videos[i].title|clean}">					<div class="thumb-overlay{if isset($recent_videos[i].orientation) && $recent_videos[i].orientation == 'portrait'} xb-portrait{/if}" {if $recent_videos[i].vthumbs == '1'} id="playvthumb_{$recent_videos[i].VID}"{/if}>
 						<img src="{insert name=thumb_path vid=$recent_videos[i].VID}/{$recent_videos[i].thumb}.jpg" title="{$recent_videos[i].title|escape:'html'}" alt="{$recent_videos[i].title|escape:'html'}" {if $recent_videos[i].vthumbs == '0'}id="rotate_{$recent_videos[i].VID}_{$recent_videos[i].thumbs}_{$recent_videos[i].thumb}_viewed"{/if} class="img-responsive {if $recent_videos[i].type == 'private'}img-private{/if}"/>
 						{if $recent_videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 						<span class="xb-thumb-meta">
@@ -118,7 +118,7 @@
 	<div class="row content-row">
 		{section name=i loop=$viewed_videos}
 		<div class="col-6 col-sm-6 col-md-4 col-lg-3">
-			<a href="{$relative}/video/{$viewed_videos[i].VID}/{$viewed_videos[i].title|clean}">					<div class="thumb-overlay" {if $viewed_videos[i].vthumbs == '1'} id="playvthumb_{$viewed_videos[i].VID}"{/if}>
+			<a href="{$relative}/video/{$viewed_videos[i].VID}/{$viewed_videos[i].title|clean}">					<div class="thumb-overlay{if isset($viewed_videos[i].orientation) && $viewed_videos[i].orientation == 'portrait'} xb-portrait{/if}" {if $viewed_videos[i].vthumbs == '1'} id="playvthumb_{$viewed_videos[i].VID}"{/if}>
 						<img src="{insert name=thumb_path vid=$viewed_videos[i].VID}/{$viewed_videos[i].thumb}.jpg" title="{$viewed_videos[i].title|escape:'html'}" alt="{$viewed_videos[i].title|escape:'html'}" {if $viewed_videos[i].vthumbs == '0'}id="rotate_{$viewed_videos[i].VID}_{$viewed_videos[i].thumbs}_{$viewed_videos[i].thumb}_viewed"{/if} class="img-responsive {if $viewed_videos[i].type == 'private'}img-private{/if}"/>
 						{if $viewed_videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 						<span class="xb-thumb-meta">

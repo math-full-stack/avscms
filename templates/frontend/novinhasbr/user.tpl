@@ -19,7 +19,7 @@
 					<div class="{if $max_col == '5'}{if $min_col == '2'} col-6 {/if} col-sm-6 col-md-4 col-lg-4 col-xl-3 {if $smarty.section.i.index > 2} d-md-none d-xl-inline {/if}
 								{else}{if $min_col == '2'} col-6 {/if} col-sm-6 col-md-4 col-lg-4 {if $smarty.section.i.index > 2}d-md-none d-xl-none{/if}{/if}">
 						<a href="{$relative}/video/{$playlist[i].VID}/{$playlist[i].title|clean}">
-							<div class="thumb-overlay" {if $playlist[i].vthumbs == '1'} id="playvthumb_{$playlist[i].VID}"{/if}>
+							<div class="thumb-overlay{if isset($playlist[i].orientation) && $playlist[i].orientation == 'portrait'} xb-portrait{/if}" {if $playlist[i].vthumbs == '1'} id="playvthumb_{$playlist[i].VID}"{/if}>
 								<img src="{insert name=thumb_path vid=$playlist[i].VID}/{$playlist[i].thumb}.jpg" title="{$playlist[i].title|escape:'html'}" alt="{$playlist[i].title|escape:'html'}" {if $playlist[i].vthumbs == '0'}id="rotate_{$playlist[i].VID}_{$playlist[i].thumbs}_{$playlist[i].thumb}_viewed"{/if} class="img-responsive {if $playlist[i].type == 'private'}img-private{/if}"/>
 								{if $playlist[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 								<div class="duration">
@@ -65,7 +65,7 @@
 					<div class="{if $max_col == '5'}{if $min_col == '2'} col-6 {/if} col-sm-6 col-md-4 col-lg-4 col-xl-3 {if $smarty.section.i.index > 2} d-md-none d-xl-inline {/if}
 								{else}{if $min_col == '2'} col-6 {/if} col-sm-6 col-md-4 col-lg-4 {if $smarty.section.i.index > 2}d-md-none d-xl-none{/if}{/if}">
 						<a href="{$relative}/video/{$videos[i].VID}/{$videos[i].title|clean}">
-							<div class="thumb-overlay" {if $videos[i].vthumbs == '1'} id="playvthumb_{$videos[i].VID}"{/if}>
+							<div class="thumb-overlay{if isset($videos[i].orientation) && $videos[i].orientation == 'portrait'} xb-portrait{/if}" {if $videos[i].vthumbs == '1'} id="playvthumb_{$videos[i].VID}"{/if}>
 								<img src="{insert name=thumb_path vid=$videos[i].VID}/{$videos[i].thumb}.jpg" title="{$videos[i].title|escape:'html'}" alt="{$videos[i].title|escape:'html'}" {if $videos[i].vthumbs == '0'}id="rotate_{$videos[i].VID}_{$videos[i].thumbs}_{$videos[i].thumb}_viewed"{/if} class="img-responsive {if $videos[i].type == 'private'}img-private{/if}"/>
 								{if $videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 								<div class="duration">
@@ -150,7 +150,7 @@
 					<div class="{if $max_col == '5'}{if $min_col == '2'} col-6 {/if} col-sm-6 col-md-4 col-lg-4 col-xl-3 {if $smarty.section.i.index > 2} d-md-none d-xl-inline {/if}
 								{else}{if $min_col == '2'} col-6 {/if} col-sm-6 col-md-4 col-lg-4 {if $smarty.section.i.index > 2}d-md-none d-xl-none{/if}{/if}">
 						<a href="{$relative}/video/{$favorites[i].VID}/{$favorites[i].title|clean}">
-							<div class="thumb-overlay" {if $favorites[i].vthumbs == '1'} id="playvthumb_{$favorites[i].VID}"{/if}>
+							<div class="thumb-overlay{if isset($favorites[i].orientation) && $favorites[i].orientation == 'portrait'} xb-portrait{/if}" {if $favorites[i].vthumbs == '1'} id="playvthumb_{$favorites[i].VID}"{/if}>
 								<img src="{insert name=thumb_path vid=$favorites[i].VID}/{$favorites[i].thumb}.jpg" title="{$favorites[i].title|escape:'html'}" alt="{$favorites[i].title|escape:'html'}" {if $favorites[i].vthumbs == '0'}id="rotate_{$favorites[i].VID}_{$favorites[i].thumbs}_{$favorites[i].thumb}_viewed"{/if} class="img-responsive {if $favorites[i].type == 'private'}img-private{/if}"/>
 								{if $favorites[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 								<div class="duration">

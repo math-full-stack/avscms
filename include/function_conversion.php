@@ -17,7 +17,9 @@ function scale ($iw, $ih, $rw, $rh) {
 	}
 	$ow = floor($ow/2)*2;
 	$oh = floor($oh/2)*2;
-	$scale = "-vf scale=".$ow.":".$oh;
+	// Normaliza SAR antes do redimensionamento: fontes anamórficas (ex.:
+	// HLS 720x720 com SAR 15:26) viram pixels quadrados antes do scale.
+	$scale = "-vf scale=iw*sar:ih,setsar=1,scale=".$ow.":".$oh.",setsar=1";
 	return $scale;
 }
 
@@ -27,6 +29,26 @@ function ratio($a, $b) {
     };
     $g = $gcd($a, $b);
     return $a/$g . ':' . $b/$g;
+}
+
+/**
+ * Orientação de exibição a partir das dimensões em pixels quadrados + DAR.
+ * Storage quadrado com DAR retrato (anamórfico, ex. 720x720 SAR 15:26) conta
+ * como portrait — mesma regra do MP4 direto com dimensões retrato reais.
+ */
+function video_orientation($w, $h, $ar = '') {
+	$w = intval($w);
+	$h = intval($h);
+	if ($w > 0 && $h > 0) {
+		if ($w < $h) return 'portrait';
+		if ($w > $h) return 'landscape';
+		if (preg_match('/^\s*(\d+)\s*:\s*(\d+)\s*$/', (string)$ar, $m) && intval($m[2]) > 0) {
+			if (intval($m[1]) < intval($m[2])) return 'portrait';
+			if (intval($m[1]) > intval($m[2])) return 'landscape';
+		}
+		return 'square';
+	}
+	return 'landscape';
 }
 
 function get_mediainfo_data($videofile) {
@@ -82,7 +104,7 @@ function get_ffprobe_data($videofile) {
 	$output1 = array();
 	$output2 = array();
 
-	$command1 = $config['ffprobe']." -v error -select_streams v:0 -show_entries stream=codec_long_name,codec_name,width,height,display_aspect_ratio -of default=noprint_wrappers=1 ".$videofile."";	
+	$command1 = $config['ffprobe']." -v error -select_streams v:0 -show_entries stream=codec_long_name,codec_name,width,height,display_aspect_ratio,sample_aspect_ratio -of default=noprint_wrappers=1 ".$videofile."";	
 	exec($command1,$output1);
 
 	$command2 = $config['ffprobe']." -v error -show_entries format=filename,format_name,duration,size -of default=noprint_wrappers=1 ".$videofile."";	
@@ -216,7 +238,7 @@ function convert ($e, $vid, $video_name, $video_info) {
 		} else {
 			$faststart = "";			
 		}
-		if ($e['copyonly'] && !wm_force_reencode($wmCfg) && $add_trim === '' && ($e['height'] == $video_info['height'] || $e['width'] == $video_info['width']) && $video_info['file_extension'] == "mp4" && strpos($video_info['format_name'], 'mp4') !== false && $video_info['codec_name'] == "h264" && strpos($video_info['codec_long_name'], 'MPEG-4') !== false && strpos($video_info['codec_long_name'], 'AVC') !== false) {
+		if ($e['copyonly'] && !wm_force_reencode($wmCfg) && $add_trim === '' && ($e['height'] == $video_info['height'] || $e['width'] == $video_info['width']) && $video_info['file_extension'] == "mp4" && strpos($video_info['format_name'], 'mp4') !== false && $video_info['codec_name'] == "h264" && strpos($video_info['codec_long_name'], 'MPEG-4') !== false && strpos($video_info['codec_long_name'], 'AVC') !== false && (!isset($video_info['sample_aspect_ratio']) || $video_info['sample_aspect_ratio'] === '1:1')) {
 			if ($cut) {
 				$cmd = $config['ffmpeg'].$add_cut." -i ".$src.$add_trim." -acodec copy ".$output."";	
 				modproc($cmd);					
@@ -235,7 +257,11 @@ function convert ($e, $vid, $video_name, $video_info) {
 					$e['label'] = 'SD';
 				}
 			} else {
-				$scale = "-vf scale=\"'if(gt(a,4/3),".$e['width'].",-1)':'if(gt(a,4/3),-1,".$e['height'].")'\"";
+				// Normaliza SAR antes de enquadrar: o primeiro scale converte fontes
+			// anamórficas (ex.: HLS 720x720 SAR 15:26) para pixels quadrados
+			// (415x720); o segundo enquadra pelo DAR real com setsar=1, como o
+			// MP4 direto do Pornolandia (SAR 1:1, onde o 1o scale é no-op).
+			$scale = "-vf scale=iw*sar:ih,setsar=1,scale=\"'if(gt(dar,4/3),".$e['width'].",-2)':'if(gt(dar,4/3),-2,".$e['height'].")'\",setsar=1";
 			}
 			$scaleInner = preg_replace('/^-vf /', '', $scale);
 			$wmArgs = wm_build_args($wmCfg, $scaleInner, $video_info, $e);
@@ -429,6 +455,7 @@ function postConversion($vid,$src) {
 			width_sd = '".$sd_w."',
 			height_sd = '".$sd_h."',
 			aspect_sd = '".$sd_ar."',
+			orientation = '".video_orientation($sd_w, $sd_h, $sd_ar)."',
 			last_update = '".time()."'
 			WHERE VID = '".(int)$vid."' LIMIT 1";
 
@@ -454,6 +481,7 @@ function postConversion($vid,$src) {
 					height_sd = '".$sd_h."',
 					aspect_sd = '".$sd_ar."',
 					hd = '".$hd."',
+					orientation = '".video_orientation($hd_w, $hd_h, $hd_ar)."',
 					last_update = '".time()."'
 					WHERE VID = '".(int)$vid."' LIMIT 1";
 		}
@@ -469,6 +497,7 @@ function postConversion($vid,$src) {
 					height_sd = '".$sd_h."',
 					aspect_sd = '".$sd_ar."',
 					hd = '".$hd."',
+					orientation = '".video_orientation($sd_w, $sd_h, $sd_ar)."',
 					last_update = '".time()."'
 					WHERE VID = '".(int)$vid."' LIMIT 1";
 		}

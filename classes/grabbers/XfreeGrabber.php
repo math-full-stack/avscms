@@ -10,6 +10,7 @@ require_once dirname(__FILE__) . '/AbstractGrabber.php';
  * para extrair metadados e baixar vídeos de xfree.com.
  */
 class XfreeGrabber extends AbstractGrabber {
+    use DownloadStrategy;
 
     public function __construct() {
         $this->referer = 'https://www.xfree.com/';
@@ -137,40 +138,7 @@ class XfreeGrabber extends AbstractGrabber {
 
     public function downloadVideo($url, $targetPath, $quality = 'best') {
         $url = trim($url);
-
-        // Configuração de formato do yt-dlp
-        if ($quality === 'best' || empty($quality)) {
-            $formatSelector = 'best[ext=mp4]/best';
-        } else {
-            $h = (int)$quality;
-            $formatSelector = "best[height<={$h}][ext=mp4]/best[height<={$h}]/best[ext=mp4]/best";
-        }
-
-        $output = $this->downloadWithYtdlp($url, $targetPath, $formatSelector);
-
-        if (file_exists($targetPath) && filesize($targetPath) > 1024) {
-            return array(
-                'status'    => true,
-                'file_path' => $targetPath,
-                'size'      => filesize($targetPath)
-            );
-        }
-
-        // Fallback: tentar download direto via URL extraída
         $info = $this->fetchInfo($url);
-        if ($info['status'] && !empty($info['stream_url'])
-            && $this->downloadDirect($info['stream_url'], $targetPath)
-            && file_exists($targetPath) && filesize($targetPath) > 1024) {
-            return array(
-                'status'    => true,
-                'file_path' => $targetPath,
-                'size'      => filesize($targetPath)
-            );
-        }
-
-        return array(
-            'status' => false,
-            'error'  => 'Falha ao baixar vídeo do XFree: ' . $this->truncateLog($output)
-        );
+        return $this->downloadVideoStandard($url, $targetPath, $quality, $info);
     }
 }

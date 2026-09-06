@@ -10,6 +10,7 @@ require_once dirname(__FILE__) . '/AbstractGrabber.php';
  * Extracts metadata from page HTML/JSON-LD and downloads via yt-dlp or direct URL.
  */
 class SonovinhasbrGrabber extends AbstractGrabber {
+    use DownloadStrategy;
 
     public function __construct() {
         $this->referer = 'https://www.sonovinhasbr.com/';
@@ -43,6 +44,7 @@ class SonovinhasbrGrabber extends AbstractGrabber {
         $thumbnail   = '';
         $duration    = 0;
         $embedUrl    = '';
+        $streamUrl   = '';
         $tags        = array();
 
         // 1. Try VideoObject JSON-LD
@@ -54,6 +56,7 @@ class SonovinhasbrGrabber extends AbstractGrabber {
                 $description = isset($vo['description']) ? $vo['description'] : '';
                 $thumbnail   = isset($vo['thumbnailUrl']) ? $vo['thumbnailUrl'] : '';
                 $embedUrl    = isset($vo['embedUrl']) ? $vo['embedUrl'] : '';
+                $streamUrl   = isset($vo['contentUrl']) ? $vo['contentUrl'] : '';
                 $duration    = $this->parseIsoDuration(isset($vo['duration']) ? $vo['duration'] : '');
             }
         }
@@ -86,16 +89,12 @@ class SonovinhasbrGrabber extends AbstractGrabber {
             $videoId = $m[1];
         }
 
-        // Try to get stream URL from the player page
-        $streamUrl = '';
-        if (!empty($embedUrl)) {
+        // 5. Fallback: stream URL from player page (if JSON-LD didn't provide contentUrl)
+        if (empty($streamUrl) && !empty($embedUrl)) {
             $streamUrl = $this->extractStreamUrl($embedUrl);
         }
 
-        // Fallback: página sem player exposto no HTML (bloqueada ou player
-        // renderizado via JS). Extrai via yt-dlp — o mesmo mecanismo usado no
-        // download, que conhece o player real do site e funciona atrás de
-        // proteções. Também preenche metadados que a página não revelou.
+        // 6. Fallback: yt-dlp probe (página bloqueada ou player renderizado via JS)
         if (empty($embedUrl) && empty($streamUrl)) {
             $data = $this->probeYtdlp($url, 120);
             if (is_array($data)) {
@@ -152,49 +151,8 @@ class SonovinhasbrGrabber extends AbstractGrabber {
 
     public function downloadVideo($url, $targetPath, $quality = 'best') {
         $url = trim($url);
-
-        // First, get info to find stream URL
         $info = $this->fetchInfo($url);
-
-        // Strategy 1: Try yt-dlp on the page URL
-        $output = $this->downloadWithYtdlp($url, $targetPath, 'best[ext=mp4]/best');
-
-        if (file_exists($targetPath) && filesize($targetPath) > 1024) {
-            return array(
-                'status'    => true,
-                'file_path' => $targetPath,
-                'size'      => filesize($targetPath)
-            );
-        }
-
-        // Strategy 2: Try yt-dlp on the embed URL
-        if ($info['status'] && !empty($info['embed_url'])) {
-            $output = $this->downloadWithYtdlp($info['embed_url'], $targetPath, 'best[ext=mp4]/best');
-
-            if (file_exists($targetPath) && filesize($targetPath) > 1024) {
-                return array(
-                    'status'    => true,
-                    'file_path' => $targetPath,
-                    'size'      => filesize($targetPath)
-                );
-            }
-        }
-
-        // Strategy 3: Direct curl download from stream URL
-        if ($info['status'] && !empty($info['stream_url'])
-            && $this->downloadDirect($info['stream_url'], $targetPath)
-            && file_exists($targetPath) && filesize($targetPath) > 1024) {
-            return array(
-                'status'    => true,
-                'file_path' => $targetPath,
-                'size'      => filesize($targetPath)
-            );
-        }
-
-        return array(
-            'status' => false,
-            'error'  => 'Falha ao baixar vídeo do SonovinhasBR: ' . $this->truncateLog($output)
-        );
+        return $this->downloadVideoStandard($url, $targetPath, $quality, $info);
     }
 
     /**

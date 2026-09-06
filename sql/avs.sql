@@ -996,6 +996,7 @@ CREATE TABLE `video` (
   `aspect_sd` varchar(10) NOT NULL DEFAULT '0',
   `width_sd` int(4) NOT NULL DEFAULT '0',
   `height_sd` int(4) NOT NULL DEFAULT '0',
+  `orientation` enum('landscape','portrait','square') NOT NULL DEFAULT 'landscape',
   `iphone` int(1) NOT NULL DEFAULT '0',
   `hd` int(1) NOT NULL DEFAULT '0',
   `likes` bigint(20) NOT NULL DEFAULT '0',

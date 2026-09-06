@@ -16,6 +16,7 @@ require_once dirname(__FILE__) . '/AbstractGrabber.php';
  *   2. Fallback: yt-dlp no extractor generic/html5.
  */
 class PornolandiaGrabber extends AbstractGrabber {
+    use DownloadStrategy;
 
     public function __construct() {
         $this->referer = 'https://www.pornolandia.xxx/';
@@ -132,33 +133,7 @@ class PornolandiaGrabber extends AbstractGrabber {
 
     public function downloadVideo($url, $targetPath, $quality = 'best') {
         $url = trim($url);
-
-        // Estratégia 1: download direto do MP4 (contentUrl do JSON-LD)
         $info = $this->fetchInfo($url);
-        if ($info['status'] && !empty($info['stream_url'])
-            && $this->downloadDirect($info['stream_url'], $targetPath)
-            && file_exists($targetPath) && filesize($targetPath) > 1024) {
-            return array(
-                'status'    => true,
-                'file_path' => $targetPath,
-                'size'      => filesize($targetPath)
-            );
-        }
-
-        // Estratégia 2: yt-dlp como fallback
-        $output = $this->downloadWithYtdlp($url, $targetPath, 'best[ext=mp4]/best');
-
-        if (file_exists($targetPath) && filesize($targetPath) > 1024) {
-            return array(
-                'status'    => true,
-                'file_path' => $targetPath,
-                'size'      => filesize($targetPath)
-            );
-        }
-
-        return array(
-            'status' => false,
-            'error'  => 'Falha ao baixar vídeo do Pornolandia: ' . $this->truncateLog($output)
-        );
+        return $this->downloadVideoStandard($url, $targetPath, $quality, $info);
     }
 }

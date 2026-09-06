@@ -61,10 +61,6 @@
     opacity: 1;
 }
 
-.avs-player.avs-fallback .avs-controls {
-    display: none;
-}
-
 .avs-player .avs-btn {
     background: none;
     border: 0;
@@ -101,20 +97,70 @@
     position: absolute;
     left: 0;
     right: 0;
+    top: 50%;
     height: 4px;
-    border-radius: 2px;
+    transform: translateY(-50%);
+    border-radius: 999px;
     background: rgba(255, 255, 255, 0.25);
+    transition: height 0.15s ease, background 0.15s ease;
+}
+
+.avs-player .avs-seek-buffer {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    height: 4px;
+    transform: translateY(-50%);
+    width: 0%;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.45);
+    pointer-events: none;
+    transition: height 0.15s ease;
 }
 
 .avs-player .avs-seek-fill {
     position: absolute;
     left: 0;
-    top: 0;
-    bottom: 0;
+    top: 50%;
+    height: 4px;
+    transform: translateY(-50%);
     width: 0%;
-    border-radius: 2px;
-    background: #e50914;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #b0070f, #e50914);
+    box-shadow: 0 0 6px rgba(229, 9, 20, 0.55);
     pointer-events: none;
+    transition: height 0.15s ease;
+}
+
+/* Thumb handle: appears on hover / while dragging */
+.avs-player .avs-seek-handle {
+    position: absolute;
+    right: -7px;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    transform: translateY(-50%) scale(0.4);
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.avs-player:hover .avs-seek-handle,
+.avs-player.avs-dragging .avs-seek-handle {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+}
+
+.avs-player:hover .avs-seek-track,
+.avs-player:hover .avs-seek-buffer,
+.avs-player:hover .avs-seek-fill,
+.avs-player.avs-dragging .avs-seek-track,
+.avs-player.avs-dragging .avs-seek-buffer,
+.avs-player.avs-dragging .avs-seek-fill {
+    height: 6px;
 }
 
 .avs-player .avs-quality {
@@ -156,6 +202,64 @@
     }
     .avs-player .avs-quality {
         max-width: 70px;
+    }
+    /* Bigger touch target for the seek bar on small screens */
+    .avs-player .avs-seek {
+        height: 20px;
+    }
+    .avs-player .avs-seek-handle {
+        width: 16px;
+        height: 16px;
+        right: -8px;
+    }
+    /* Touch-sized control buttons */
+    .avs-player .avs-btn {
+        min-width: 36px;
+        min-height: 36px;
+        font-size: 18px;
+    }
+    /* Keep quick controls inside the frame on small screens */
+    .avs-player .avs-quick-controls {
+        right: 8px;
+        bottom: 64px;
+        padding: 4px 6px;
+        gap: 4px;
+    }
+}
+
+/* Touch devices have no hover: keep controls visible when paused,
+   otherwise the play button disappears and playback can't resume. */
+@media (hover: none) {
+    .avs-player .avs-controls {
+        opacity: 1;
+    }
+}
+
+/* Vertical videos: constrain by HEIGHT instead of width, so a 9:16 source
+   never grows to ~1.8x the column width in height. width:min() derives the
+   largest width whose height (width / ratio) still fits the viewport; the
+   --avs-ratio var is set from JS alongside the inline aspect-ratio. */
+.avs-player.avs-vertical {
+    width: min(100%, calc(72vh * var(--avs-ratio, 0.5625)));
+    margin: 0 auto;
+}
+
+/* Vertical videos: cap height on small screens so a 9:16 source
+   doesn't push the page to ~2.5x the viewport width in height. */
+@media (max-width: 767px) {
+    .avs-player.avs-vertical {
+        width: min(100%, calc(68vh * var(--avs-ratio, 0.5625)));
+    }
+}
+
+/* Short landscape screens (phones rotated): slim the control bar. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .avs-player .avs-controls {
+        padding: 4px 8px;
+        gap: 6px;
+    }
+    .avs-player .avs-quick-controls {
+        bottom: 56px;
     }
 }
 
@@ -215,7 +319,22 @@
     outline: 0;
 }
 
-/* --- 9.3 Timeline preview (sprite) --------------------------- */
+/* --- 9.3 Timeline: hover time tooltip + sprite preview ------- */
+.avs-player .avs-seek-tip {
+    position: absolute;
+    z-index: 6;
+    pointer-events: none;
+    display: none;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    white-space: nowrap;
+}
 .avs-player .avs-preview {
     position: absolute;
     z-index: 5;

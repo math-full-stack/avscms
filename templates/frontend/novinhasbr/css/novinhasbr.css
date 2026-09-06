@@ -915,12 +915,43 @@ a:hover .thumb-overlay {
 	transition: transform .35s ease;
 }
 
+/* Vertical (retrato): box segue 16:9, cena nítida centralizada (contain)
+   sobre fundo desfocado full-bleed — padrão Pornolandia. O fundo vem do
+   JS (.xb-portrait-bg, mesma capa) ou do HQ vthumb (canvas 16:9 já com blur). */
+.thumb-overlay.xb-portrait {
+	background: #000;
+	background-size: cover;
+	background-position: center;
+}
+
 .thumb-overlay.xb-portrait img {
 	object-fit: contain;
+	position: relative;
+	z-index: 1;
+	background: transparent;
 }
 
 .thumb-overlay.xb-portrait video {
-	object-fit: contain;
+	object-fit: cover;
+}
+
+.xb-portrait-bg {
+	position: absolute;
+	inset: -12px;
+	background-size: cover;
+	background-position: center;
+	filter: blur(18px) brightness(.62) saturate(1.2);
+	transform: scale(1.12);
+	z-index: 0;
+	pointer-events: none;
+}
+
+.thumb-overlay.xb-portrait img {
+	transform: none;
+}
+
+a:hover .thumb-overlay.xb-portrait img {
+	transform: none;
 }
 
 a:hover .thumb-overlay img {
@@ -1555,10 +1586,12 @@ a:hover .xb-thumb-meta {
 /* --------------------------------------------------------------------------
    Página do vídeo (watch)
    -------------------------------------------------------------------------- */
-.video-embedded, .avs-player-wrap, .vplayer-container {
+.video-embedded, .avs-player-wrap, .vplayer-container, .video-container {
 	border-radius: 12px;
 	overflow: hidden;
 	background: #000;
+	border: 1px solid var(--xb-border);
+	box-shadow: 0 8px 32px rgba(0, 0, 0, .45);
 }
 
 /* Título da página do vídeo — moderno e em destaque */

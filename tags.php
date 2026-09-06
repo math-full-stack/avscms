@@ -5,6 +5,8 @@ require 'include/function_global.php';
 require 'include/function_smarty.php';
 require 'classes/pagination.class.php';
 
+cleanup_tags();
+
 $sql = "SELECT * FROM tags WHERE LENGTH(tag) > 2 AND counter >= 1 ORDER BY SUBSTR( tag, 1, 1 ) ASC, counter DESC";
 
 $rs  = $conn->execute($sql);

@@ -59,7 +59,7 @@
 							{if $feeds[i].type == 'video'}
 								<div class="col-12 col-sm-6 col-md-4 feed-right">
 									<a href="{$relative}/video/{$feeds[i].data.VID}/{$feeds[i].data.title|clean}">
-										<div class="thumb-overlay" {if $feeds[i].data.vthumbs == '1'} id="playvthumb_{$feeds[i].data.VID}"{/if}>
+										<div class="thumb-overlay{if isset($feeds[i].data.orientation) && $feeds[i].data.orientation == 'portrait'} xb-portrait{/if}" {if $feeds[i].data.vthumbs == '1'} id="playvthumb_{$feeds[i].data.VID}"{/if}>
 											<img src="{insert name=thumb_path vid=$feeds[i].data.VID}/{$feeds[i].data.thumb}.jpg" title="{$feeds[i].data.title|escape:'html'}" alt="{$feeds[i].data.title|escape:'html'}" {if $feeds[i].data.vthumbs == '0'}id="rotate_{$feeds[i].data.VID}_{$feeds[i].data.thumbs}_{$feeds[i].data.thumb}_viewed"{/if} class="img-responsive"/>
 											<div class="label-date">{$feeds[i].time|date_format}</div>
 											<div class="duration">

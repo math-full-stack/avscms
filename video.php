@@ -30,8 +30,26 @@ $video_height = $rs->fields['height_sd'];
 $video_root   = '';
 
 $vertical = false;
-if ($video_width < $video_height || intval($video_width) < 100 || intval($video_height) < 100) {
+// Proporção salva no ato da conversão (video.orientation). Fallback legado
+// para linhas ainda não (re)convertidas desde a migration.
+$orientation = isset($rs->fields['orientation']) ? (string)$rs->fields['orientation'] : '';
+if ($orientation === 'portrait') {
 	$vertical = true;
+}
+if (!$vertical && ($video_width < $video_height || intval($video_width) < 100 || intval($video_height) < 100)) {
+	$vertical = true;
+}
+// Fontes anamórficas (ex.: HLS 720x720 com DAR 15:26) têm storage quadrado
+// mas display vertical: o DAR manda, como no MP4 direto do Pornolandia.
+if (!$vertical) {
+	foreach (array($rs->fields['aspect_hd'], $rs->fields['aspect_sd']) as $ar) {
+		if (preg_match('/^\s*(\d+)\s*:\s*(\d+)\s*$/', (string)$ar, $m) && intval($m[2]) > 0) {
+			if (intval($m[1]) < intval($m[2])) {
+				$vertical = true;
+			}
+			break;
+		}
+	}
 }
 
 $video_width = 640;
@@ -40,6 +58,11 @@ $video_height = 360;
 $player_width = 640;
 $embed_width = 640;
 $embed_auto_height = round($embed_width * ($video_height/$video_width));
+if ($vertical) {
+	// Embed retrato para vídeo vertical (não força 16:9).
+	$embed_width = 360;
+	$embed_auto_height = 640;
+}
 
 $video              = $rs->getrows();
 $video              = $video['0'];
