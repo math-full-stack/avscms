@@ -6,7 +6,8 @@
 		<span class="avs-time avs-current">00:00</span>
 		<div class="avs-seek" title="Seek">
 			<div class="avs-seek-track"></div>
-			<div class="avs-seek-fill"></div>
+			<div class="avs-seek-buffer"></div>
+			<div class="avs-seek-fill"><span class="avs-seek-handle"></span></div>
 		</div>
 		<span class="avs-time avs-duration">00:00</span>
 		<select class="avs-quality" style="display:none;" title="Quality"></select>
@@ -15,5 +16,5 @@
 	</div>
 	<div class="avs-error" style="display:none;"></div>
 </div>
-<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=2.1.1">
-<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=2.1.1"></script>
+<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=2.3.0">
+<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=2.3.0"></script>
