@@ -427,9 +427,17 @@ class DiscoveryManager {
 
                 // Check completed job only if status wasn't just reset from IMPORTED
                 if (!$justReset && ($row['status'] === 'NEW' || $row['status'] === 'QUEUED')) {
-                    $jobRs = $this->safeExec("SELECT id, video_id FROM grabber_jobs
-                                              WHERE discovered_video_id = " . intval($row['id']) . "
-                                              AND status = 'COMPLETED' LIMIT 1");
+                    // Only re-mark as imported when the completed job's video
+                    // still exists in AVS - a leftover COMPLETED job whose video
+                    // was deleted would otherwise resurrect the IMPORTED state
+                    // and block re-importing the entry.
+                    $jobRs = $this->safeExec("SELECT j.id, j.video_id
+                                              FROM grabber_jobs j
+                                              LEFT JOIN video v ON v.VID = j.video_id
+                                              WHERE j.discovered_video_id = " . intval($row['id']) . "
+                                              AND j.status = 'COMPLETED'
+                                              AND v.VID IS NOT NULL
+                                              LIMIT 1");
                     if ($jobRs && !$jobRs->EOF) {
                         $completedVid = intval($jobRs->fields['video_id']);
                         $this->updateStatus($row['id'], 'IMPORTED', $completedVid);

@@ -134,6 +134,12 @@ function deleteVideo( $vid )
     $conn->execute("DELETE FROM conversion_queue_fp WHERE VID = " .intval($vid). " LIMIT 1");
     $conn->execute("DELETE FROM conversion_queue_sp WHERE VID = " .intval($vid). " LIMIT 1");
 
+    // Remove stale grab jobs tied to this video so the grabber can re-import it
+    // later: a leftover COMPLETED job (or a pending one) would otherwise make
+    // the discovered entry look already imported and block re-grabbing.
+    $conn->execute("DELETE FROM grabber_jobs WHERE video_id = " . intval($vid));
+    $conn->execute("DELETE FROM grabber_jobs WHERE discovered_video_id IN (SELECT id FROM grabber_discovered_videos WHERE video_id = " . intval($vid) . ")");
+
     // Reset discovered videos that pointed to this video
     $conn->execute("UPDATE grabber_discovered_videos SET status = 'NEW', video_id = 0, updated_at = " . time() . " WHERE video_id = " . intval($vid));
 
