@@ -86,6 +86,7 @@ if ( isset($_POST['add_album']) ) {
                                    " .$conn->qStr($tags). ", '" .$type. "', " .time(). ", '" .date('Y-m-d'). "', '1')";
         $conn->execute($sql);
         $album_id   = $conn->insert_Id();
+        add_tags(tags_to_comma($tags));
 		
 		$exts   = array('jpg', 'jpeg', 'png', 'gif');
 		$photos = 0;

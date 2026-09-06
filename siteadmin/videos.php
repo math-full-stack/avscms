@@ -20,7 +20,7 @@ $module             = ( isset($_GET['m']) && $_GET['m'] != '' ) ? trim($_GET['m'
 $module_keep        = NULL;
 $module_template    = 'videos.tpl';
 $modules_allowed    = array('all', 'public', 'private', 'flagged', 'view', 'edit', 'comments',
-                            'commentedit', 'add', 'spam', 'grabber', 'mass_grabber', 'embed', 'membed', 'csv', 'csvformats', 'aembedder', 'yt', 'queue');
+                            'commentedit', 'add', 'spam', 'grabber', 'mass_grabber', 'embed', 'membed', 'csv', 'csvformats', 'queue');
 if ( !in_array($module, $modules_allowed) ) {
     $module = 'all';
     $err    = 'Invalid Videos Module!';
@@ -42,8 +42,6 @@ switch ( $module ) {
 	case 'csvformats':
 	case 'csvformatadd':	
 	case 'csvformatedit':
-	case 'aembedder':
-	case 'yt':		
         $module_template = 'videos_' .$module. '.tpl';
         break;
     case 'all':
@@ -60,7 +58,7 @@ if ( in_array($module, array('all', 'public', 'private', 'view', 'edit')) ) {
 	$sub_menu = 'manage-videos';
 } elseif ( in_array($module, array('flagged', 'comments', 'commentedit', 'spam')) ) {
 	$sub_menu = 'requests';
-} elseif ( in_array($module, array('add', 'grabber', 'membed', 'embed', 'csv', 'csvformats', 'aembedder', 'yt')) ) {
+} elseif ( in_array($module, array('add', 'grabber', 'membed', 'embed', 'csv', 'csvformats')) ) {
 	$sub_menu = 'add-videos';
 }
 

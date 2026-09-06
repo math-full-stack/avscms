@@ -11,6 +11,12 @@ if ( !$AID ) {
     $errors[]   = 'Invalid album identifier. Are you sure this album exists!?';
 }
 
+$old_tags = '';
+$rs_old = $conn->execute("SELECT tags FROM albums WHERE AID = " .intval($AID). " LIMIT 1");
+if ( $conn->Affected_Rows() == 1 ) {
+    $old_tags = $rs_old->fields['tags'];
+}
+
 if ( isset($_POST['submit_album_edit']) && !$errors ) {
     require $config['BASE_DIR']. '/classes/filter.class.php';
     $filter             = new VFilter();
@@ -52,12 +58,14 @@ if ( isset($_POST['submit_album_edit']) && !$errors ) {
     
     if ( !$errors ) {
         require $config['BASE_DIR']. '/classes/image.class.php';
-        $sql            = "UPDATE albums SET name = " .$conn->qStr($name). "' tags = " .$conn->qStr($tags). ",
+        $sql            = "UPDATE albums SET name = " .$conn->qStr($name). ", tags = " .$conn->qStr($tags). ",
                                              category = " .$category. ", type = " .$conn->qStr($type). ",
                                              status = '" .$status. "', total_views = " .$total_views. ", total_comments = " .$total_comments. ",
                                              total_favorites = " .$total_favorites. ", rate = " .$rate. ", ratedby = " .$ratedby. "
                            WHERE AID = " .$AID. " LIMIT 1";
         $conn->execute($sql);
+        remove_tags(tags_to_comma($old_tags));
+        add_tags(tags_to_comma($tags));
         $src    = $config['BASE_DIR']. '/tmp/albums/' .$pid. '_' .$random. '.jpg';
         $dst    = $config['BASE_DIR']. '/media/albums/' .$AID. '.jpg';
         if ( file_exists($src) && is_file($src) ) {

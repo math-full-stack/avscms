@@ -41,10 +41,12 @@ if ( !$errors ) {
 		}
         
         if ( !$errors ) {
+            $keyword = prepare_tags($keyword);
+            update_tags($VID, $keyword);
             settype($thumb, 'integer');
             settype($viewnumber, 'integer');
-            settype($likes, 'likes');
-            settype($dislikes, 'dislikes');
+            settype($likes, 'integer');
+            settype($dislikes, 'integer');
             settype($channel, 'integer');
 			if ( $likes != 0 || $dislikes !=0)
 				$rate = round(($likes * 100)/($likes + $dislikes));
