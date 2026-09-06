@@ -437,6 +437,12 @@ function deleteAlbum( $aid )
         ++$index;
     }
     
+    $sql    = "SELECT tags FROM albums WHERE AID = " .$aid;
+    $rs     = $conn->execute($sql);
+    if ( $conn->Affected_Rows() == 1 && $rs->fields['tags'] != '' ) {
+        remove_tags(tags_to_comma($rs->fields['tags']));
+    }
+
     $sql    = "DELETE FROM albums WHERE AID = " .$aid;
     $conn->execute($sql);
 	

@@ -448,11 +448,20 @@ function remove_tags($string) {
 				$sql = "UPDATE tags SET counter = counter - 1 WHERE tag = '".$tag."'";
 				$conn->execute($sql);
 			} else {
-				$sql = "UPDATE tags SET counter = 0 WHERE tag = '".$tag."'";
+				$sql = "DELETE FROM tags WHERE tag = '".$tag."'";
 				$conn->execute($sql);				
 			}
 		}			
 	}
+}
+
+function tags_to_comma($string) {
+	return implode(', ', array_unique(array_filter(array_map('trim', explode(' ', $string)))));
+}
+
+function cleanup_tags() {
+	global $conn;
+	$conn->execute("DELETE FROM tags WHERE counter <= 0");
 }
 
 function update_tags($vid, $string) {

@@ -262,7 +262,7 @@ if (defined('_ADMIN')) {
 	$categories_sm  = $rs->getrows();	
 	$smarty->assign('categories_sm', $categories_sm);
 	
-	$sql = "SELECT * FROM tags WHERE LENGTH(tag) > 2 ORDER BY counter DESC LIMIT 48";
+	$sql = "SELECT * FROM tags WHERE LENGTH(tag) > 2 AND counter >= 1 ORDER BY counter DESC LIMIT 48";
 	$rs             = $conn->execute($sql);
 	$tags_sm  = $rs->getrows();
 	$smarty->assign('tags_sm', $tags_sm);	
