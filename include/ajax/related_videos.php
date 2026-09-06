@@ -51,7 +51,7 @@ if ( isset($_POST['video_id']) && isset($_POST['move']) && isset($_POST['page'])
     $total          = ( $total > 80 ) ? 80 : $total;
     $pagination     = new Pagination(8, $page);
     $limit          = $pagination->getLimit($total);
-    $sql            = "SELECT VID, title, duration, addtime, rate, likes, dislikes, viewnumber, type, thumb, thumbs, thumbnails_opt, hd
+    $sql            = "SELECT VID, title, duration, addtime, rate, likes, dislikes, viewnumber, type, thumb, thumbs, thumbnails_opt, orientation, hd
 	                   FROM video 
                        WHERE channel = '" .intval($video['channel']). "' AND VID != " .$vid. "
 					   AND active = '1'" .$type. "
@@ -76,7 +76,11 @@ if ( isset($_POST['video_id']) && isset($_POST['move']) && isset($_POST['page'])
         $code[]     = '<div class="well well-sm m-b-0 m-t-20">';
         $code[]     = '<a href="' .$config['BASE_URL']. '/video/' .$video['VID']. '/' .prepare_string($video['title']). '">';		
         $code[]     = '<div class="thumb-overlay' .((isset($video['orientation']) && $video['orientation'] == 'portrait') ? ' xb-portrait' : ''). '">';
-		$code[]     = '<img src="' .get_thumb_url($video['VID']). '/'.$video['thumb'].'.jpg" title="' .htmlspecialchars($video['title'], ENT_QUOTES, 'UTF-8'). '" alt="' .htmlspecialchars($video['title'], ENT_QUOTES, 'UTF-8'). '" id="rotate_' .$video['VID']. '_'.$video['thumbs'].'_'.$video['thumb'].'" '.$img_class.' />';
+		if (isset($video['orientation']) && $video['orientation'] == 'portrait') {
+			$code[] = video_trio_html($video['VID'], $video['thumb'], $video['thumbs'], isset($video['thumbnails_opt']) ? $video['thumbnails_opt'] : '', $video['title'], $video['type']);
+		} else {
+			$code[]     = '<img src="' .get_thumb_url($video['VID']). '/'.$video['thumb'].'.jpg" title="' .htmlspecialchars($video['title'], ENT_QUOTES, 'UTF-8'). '" alt="' .htmlspecialchars($video['title'], ENT_QUOTES, 'UTF-8'). '" id="rotate_' .$video['VID']. '_'.$video['thumbs'].'_'.$video['thumb'].'" '.$img_class.' />';
+		}
 		if ($video['type'] == 'private') {		
 			$code[]     = '<div class="label-private">' .$lang['global.PRIVATE']. '</div>';
 		}

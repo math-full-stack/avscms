@@ -3,7 +3,7 @@
 		{$video.embed_code}
 	</div>
 {else}
-<div class="video-container">
+<div class="video-container{if $player.engine == 'mediabunny'} video-container-mb{/if}">
 	{if $player.engine == 'mediabunny'}
 		{include file='video_mbplayer.tpl'}
 	{else}

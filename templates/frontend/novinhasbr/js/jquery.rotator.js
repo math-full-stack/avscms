@@ -19,6 +19,19 @@ function thumb_path( vid ) {
     return path;
 }
 function xbOrientThumb( $ovl ) {
+	// Fonte da verdade é o banco (video.orientation -> classe xb-portrait
+	// renderizada no template). Thumbs são crops 16:9, então re-detectar
+	// por naturalWidth/Height apagaria o portrait correto. Preserva.
+	if ( $ovl.hasClass('xb-portrait') ) {
+		if ( $ovl.find('.xb-trio').length ) {
+			return;
+		}
+		var $cur = $ovl.find('img:first');
+		if ( $cur.length && !$ovl.find('> .xb-portrait-bg').length && $cur[0].src ) {
+			$ovl.prepend('<span class="xb-portrait-bg" style="background-image:url(\'' + $cur[0].src + '\')"></span>');
+		}
+		return;
+	}
 	var $img  = $ovl.find('img:first');
 	if ( !$img.length || typeof $img[0].naturalWidth === 'undefined' ) {
 		return;
@@ -59,12 +72,46 @@ function xbOrientThumbs() {
 		}
 	});
 }
+function xbAdvanceTrio($t) {
+	if (!$t || !$t.length) return;
+	var now = Date.now ? Date.now() : (new Date()).getTime();
+	var last = $t.data('xb-last-advance') || 0;
+	if (now - last < 400) return;
+	$t.data('xb-last-advance', now);
+
+	var video_id = parseInt($t.attr('data-vid'), 10);
+	if (!video_id) return;
+	var covers = String($t.attr('data-covers') || '').split(',').map(function(x) {
+		return parseInt(x, 10);
+	}).filter(function(x) {
+		return x > 0;
+	});
+	if (covers.length < 2) return;
+	var n = covers.length;
+	var idx = (parseInt($t.attr('data-idx'), 10) || 0) % n;
+	var ni = (idx + 1) % n;
+	var base = thumb_path(video_id) + '/' + video_id + '/';
+	var $imgs = $t.find('img');
+	for (var s = 0; s < 3 && s < $imgs.length; s++) {
+		var f = covers[(ni + s) % n];
+		var url = base + f + '.jpg';
+		var pre = new Image();
+		pre.src = url;
+		$($imgs[s]).attr('src', url);
+	}
+	$t.attr('data-idx', ni);
+}
+
 $(document).ready(function() {
 	
 	xbOrientThumbs();
 	
 	$("body").on('mouseenter', "[id*='playvthumb_']", function(event) {
 		xbOrientThumb( $(this) );
+		var $trio = $(this).find('.xb-trio');
+		if ($trio.length) {
+			xbAdvanceTrio($trio);
+		}
 		var img = $(this).find('img:first');
 		if (!img.hasClass("img-private")) {			
 			var image_id    = $(this).attr("id");
@@ -76,7 +123,7 @@ $(document).ready(function() {
 				$(video).append(content);
 				$(video).hide();
 				var vloader = $('<span class="vloader">');
-				var target = $(this).find('img:first');
+				var target = $trio.length ? $trio : $(this).find('img:first');
 				$(target).after($(video));$(video).after($(vloader));
 				$( ".vloader" ).animate({ width: '100%',}, 2000, function() {$( ".vloader" ).fadeOut();});
 				$("#thumbPlayer").css('visibility','visible');
@@ -134,6 +181,37 @@ $(document).ready(function() {
 		else
 			$(this).attr('src', thumb_path(video_id) + '/' + video_id + '/1.jpg');
     });
+
+	// Trio vertical: passar o mouse avança as 3 capas (janela deslizante
+	// sobre data-covers). Sem volta no mouseleave — avança e fica.
+	$("body").on('mouseenter', '.xb-trio', function(event) {
+		var $t = $(this);
+		var video_id = parseInt($t.attr('data-vid'), 10);
+		if (!video_id) {
+			return;
+		}
+		var covers = String($t.attr('data-covers') || '').split(',').map(function(x) {
+			return parseInt(x, 10);
+		}).filter(function(x) {
+			return x > 0;
+		});
+		if (covers.length < 2) {
+			return;
+		}
+		var n = covers.length;
+		var idx = (parseInt($t.attr('data-idx'), 10) || 0) % n;
+		var ni = (idx + 1) % n;
+		var base = thumb_path(video_id) + '/' + video_id + '/';
+		var $imgs = $t.find('img');
+		for (var s = 0; s < 3 && s < $imgs.length; s++) {
+			var f = covers[(ni + s) % n];
+			var url = base + f + '.jpg';
+			var pre = new Image();
+			pre.src = url;
+			$($imgs[s]).attr('src', url);
+		}
+		$t.attr('data-idx', ni);
+	});
 });
 
 $(window).on('load', function() {

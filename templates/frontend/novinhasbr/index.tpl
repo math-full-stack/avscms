@@ -11,7 +11,7 @@
 		{section name=i loop=$recent_videos}
 		<div class="col-6 col-sm-6 col-md-4 col-lg-3">
 			<a href="{$relative}/video/{$recent_videos[i].VID}/{$recent_videos[i].title|clean}">					<div class="thumb-overlay{if isset($recent_videos[i].orientation) && $recent_videos[i].orientation == 'portrait'} xb-portrait{/if}" {if $recent_videos[i].vthumbs == '1'} id="playvthumb_{$recent_videos[i].VID}"{/if}>
-						<img src="{insert name=thumb_path vid=$recent_videos[i].VID}/{$recent_videos[i].thumb}.jpg" title="{$recent_videos[i].title|escape:'html'}" alt="{$recent_videos[i].title|escape:'html'}" {if $recent_videos[i].vthumbs == '0'}id="rotate_{$recent_videos[i].VID}_{$recent_videos[i].thumbs}_{$recent_videos[i].thumb}_viewed"{/if} class="img-responsive {if $recent_videos[i].type == 'private'}img-private{/if}"/>
+						{if isset($recent_videos[i].orientation) && $recent_videos[i].orientation == 'portrait'}{insert name=video_trio vid=$recent_videos[i].VID thumb=$recent_videos[i].thumb thumbs=$recent_videos[i].thumbs opt=$recent_videos[i].thumbnails_opt title=$recent_videos[i].title type=$recent_videos[i].type}{else}<img src="{insert name=thumb_path vid=$recent_videos[i].VID}/{$recent_videos[i].thumb}.jpg" title="{$recent_videos[i].title|escape:'html'}" alt="{$recent_videos[i].title|escape:'html'}" {if $recent_videos[i].vthumbs == '0'}id="rotate_{$recent_videos[i].VID}_{$recent_videos[i].thumbs}_{$recent_videos[i].thumb}_viewed"{/if} class="img-responsive {if $recent_videos[i].type == 'private'}img-private{/if}"/>{/if}
 						{if $recent_videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 						<span class="xb-thumb-meta">
 							{insert name=views assign=s_views views=$recent_videos[i].viewnumber text='0'}
@@ -63,11 +63,12 @@
 		{section name=h loop=$hero_videos}
 			{if $smarty.section.h.index == 0}
 			<a class="xb-hero-main" href="{$relative}/video/{$hero_videos[h].VID}/{$hero_videos[h].title|clean}">
-				<div class="thumb-overlay" {if $hero_videos[h].vthumbs == '1'} id="playvthumb_{$hero_videos[h].VID}"{/if}>
+				<div class="thumb-overlay{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'} xb-portrait{/if}" {if $hero_videos[h].vthumbs == '1'} id="playvthumb_{$hero_videos[h].VID}"{/if}>
+					{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'}<span class="xb-portrait-bg" style="background-image:url('{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg')"></span>{/if}
 					{if $hero_videos[h].hero_src}
 					<video id="xb-hero-video" class="xb-hero-video" src="{$hero_videos[h].hero_src}" poster="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>
 					{else}
-					<img src="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" title="{$hero_videos[h].title|escape:'html'}" alt="{$hero_videos[h].title|escape:'html'}" />
+					{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'}{insert name=video_trio vid=$hero_videos[h].VID thumb=$hero_videos[h].thumb thumbs=$hero_videos[h].thumbs opt=$hero_videos[h].thumbnails_opt title=$hero_videos[h].title type=$hero_videos[h].type}{else}<img src="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" title="{$hero_videos[h].title|escape:'html'}" alt="{$hero_videos[h].title|escape:'html'}" />{/if}
 					{/if}
 				</div>
 				<span class="xb-hero-overlay">
@@ -80,8 +81,9 @@
 			</a>
 			{else}
 			<a class="xb-hero-item" href="{$relative}/video/{$hero_videos[h].VID}/{$hero_videos[h].title|clean}">
-				<div class="thumb-overlay" {if $hero_videos[h].vthumbs == '1'} id="playvthumb_{$hero_videos[h].VID}"{/if}>
-					<img src="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" title="{$hero_videos[h].title|escape:'html'}" alt="{$hero_videos[h].title|escape:'html'}" />
+				<div class="thumb-overlay{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'} xb-portrait{/if}" {if $hero_videos[h].vthumbs == '1'} id="playvthumb_{$hero_videos[h].VID}"{/if}>
+					{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'}<span class="xb-portrait-bg" style="background-image:url('{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg')"></span>{/if}
+					{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'}{insert name=video_trio vid=$hero_videos[h].VID thumb=$hero_videos[h].thumb thumbs=$hero_videos[h].thumbs opt=$hero_videos[h].thumbnails_opt title=$hero_videos[h].title type=$hero_videos[h].type}{else}<img src="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" title="{$hero_videos[h].title|escape:'html'}" alt="{$hero_videos[h].title|escape:'html'}" />{/if}
 				</div>
 				<span class="xb-hero-overlay">
 					<span class="xb-hero-title">{$hero_videos[h].title|escape:'html'}</span>
@@ -119,7 +121,7 @@
 		{section name=i loop=$viewed_videos}
 		<div class="col-6 col-sm-6 col-md-4 col-lg-3">
 			<a href="{$relative}/video/{$viewed_videos[i].VID}/{$viewed_videos[i].title|clean}">					<div class="thumb-overlay{if isset($viewed_videos[i].orientation) && $viewed_videos[i].orientation == 'portrait'} xb-portrait{/if}" {if $viewed_videos[i].vthumbs == '1'} id="playvthumb_{$viewed_videos[i].VID}"{/if}>
-						<img src="{insert name=thumb_path vid=$viewed_videos[i].VID}/{$viewed_videos[i].thumb}.jpg" title="{$viewed_videos[i].title|escape:'html'}" alt="{$viewed_videos[i].title|escape:'html'}" {if $viewed_videos[i].vthumbs == '0'}id="rotate_{$viewed_videos[i].VID}_{$viewed_videos[i].thumbs}_{$viewed_videos[i].thumb}_viewed"{/if} class="img-responsive {if $viewed_videos[i].type == 'private'}img-private{/if}"/>
+						{if isset($viewed_videos[i].orientation) && $viewed_videos[i].orientation == 'portrait'}{insert name=video_trio vid=$viewed_videos[i].VID thumb=$viewed_videos[i].thumb thumbs=$viewed_videos[i].thumbs opt=$viewed_videos[i].thumbnails_opt title=$viewed_videos[i].title type=$viewed_videos[i].type}{else}<img src="{insert name=thumb_path vid=$viewed_videos[i].VID}/{$viewed_videos[i].thumb}.jpg" title="{$viewed_videos[i].title|escape:'html'}" alt="{$viewed_videos[i].title|escape:'html'}" {if $viewed_videos[i].vthumbs == '0'}id="rotate_{$viewed_videos[i].VID}_{$viewed_videos[i].thumbs}_{$viewed_videos[i].thumb}_viewed"{/if} class="img-responsive {if $viewed_videos[i].type == 'private'}img-private{/if}"/>{/if}
 						{if $viewed_videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 						<span class="xb-thumb-meta">
 							{insert name=views assign=s_views views=$viewed_videos[i].viewnumber text='0'}

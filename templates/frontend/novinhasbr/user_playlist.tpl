@@ -22,7 +22,7 @@ var lang_playlist_remove_confirm = "{t c='playlist.remove_confirm'}";
 					<div id="playlist_block_{$playlist[i].VID}" class="{if $min_col == '2'}col-6{/if} col-sm-6 col-md-4 col-lg-4 {if $max_col == '5'}col-xl-3{/if}">
 						<a href="{$relative}/video/{$playlist[i].VID}/{$playlist[i].title|clean}">
 							<div class="thumb-overlay{if isset($playlist[i].orientation) && $playlist[i].orientation == 'portrait'} xb-portrait{/if}" {if $playlist[i].vthumbs == '1'} id="playvthumb_{$playlist[i].VID}"{/if}>
-								<img src="{insert name=thumb_path vid=$playlist[i].VID}/{$playlist[i].thumb}.jpg" title="{$playlist[i].title|escape:'html'}" alt="{$playlist[i].title|escape:'html'}" {if $playlist[i].vthumbs == '0'}id="rotate_{$playlist[i].VID}_{$playlist[i].thumbs}_{$playlist[i].thumb}_viewed"{/if} class="img-responsive {if $playlist[i].type == 'private'}img-private{/if}"/>
+								{if isset($playlist[i].orientation) && $playlist[i].orientation == 'portrait'}{insert name=video_trio vid=$playlist[i].VID thumb=$playlist[i].thumb thumbs=$playlist[i].thumbs opt=$playlist[i].thumbnails_opt title=$playlist[i].title type=$playlist[i].type}{else}<img src="{insert name=thumb_path vid=$playlist[i].VID}/{$playlist[i].thumb}.jpg" title="{$playlist[i].title|escape:'html'}" alt="{$playlist[i].title|escape:'html'}" {if $playlist[i].vthumbs == '0'}id="rotate_{$playlist[i].VID}_{$playlist[i].thumbs}_{$playlist[i].thumb}_viewed"{/if} class="img-responsive {if $playlist[i].type == 'private'}img-private{/if}"/>{/if}
 								{if $playlist[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 								<div class="duration">
 									{if $playlist[i].hd==1}<span class="hd-text-icon">HD</span>{/if}

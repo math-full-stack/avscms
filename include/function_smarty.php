@@ -485,6 +485,15 @@ function insert_thumb_path($options)
 	return get_video_thumb_base($options['vid']);
 }
 
+function insert_video_trio($options)
+{
+	$type  = isset($options['type']) ? $options['type'] : 'public';
+	$title = isset($options['title']) ? $options['title'] : '';
+	$opt   = isset($options['opt']) ? $options['opt'] : '';
+
+	return video_trio_html($options['vid'], $options['thumb'], $options['thumbs'], $opt, $title, $type);
+}
+
 function insert_gcs_thumbs_base($options)
 {
 	global $config;

@@ -954,6 +954,42 @@ a:hover .thumb-overlay.xb-portrait img {
 	transform: none;
 }
 
+/* Trio vertical: 3 capas lado a lado com divisória preta de 2px (gap sobre
+   fundo preto). Cada slot tem quase a proporção do frame retrato. */
+.thumb-overlay .xb-trio {
+	display: flex;
+	gap: 2px;
+	background: #000;
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+	position: relative;
+	z-index: 1;
+}
+
+.thumb-overlay.xb-portrait .xb-trio img {
+	flex: 1 1 0;
+	min-width: 0;
+	width: auto;
+	height: 100%;
+	aspect-ratio: auto;
+	object-fit: cover;
+	object-position: center;
+	transform: none;
+	position: relative;
+	z-index: 1;
+	background: #000;
+}
+
+a:hover .thumb-overlay.xb-portrait .xb-trio img {
+	transform: none;
+}
+
+.xb-hero .thumb-overlay .xb-trio {
+	height: 100%;
+	aspect-ratio: auto;
+}
+
 a:hover .thumb-overlay img {
 	transform: scale(1.06);
 }
@@ -1373,8 +1409,29 @@ a:hover .xb-thumb-meta {
 	transform: scale(1.05);
 }
 
+.xb-hero .thumb-overlay.xb-portrait {
+	background: #000;
+}
+
 .xb-hero .thumb-overlay.xb-portrait img {
 	object-fit: contain;
+	position: relative;
+	z-index: 1;
+	background: transparent;
+}
+
+/* Miniclip vertical no hero: cena inteira contida sobre fundo desfocado,
+   sem cortar topo/base (mesmo padrão dos cards). */
+.xb-hero .thumb-overlay.xb-portrait video.xb-hero-video {
+	object-fit: contain;
+	background: transparent;
+	position: relative;
+	z-index: 1;
+}
+
+.xb-hero .xb-hero-main:hover .thumb-overlay.xb-portrait video.xb-hero-video,
+.xb-hero .xb-hero-item:hover .thumb-overlay.xb-portrait img {
+	transform: none;
 }
 
 .xb-hero .xb-hero-main .thumb-overlay::after {
@@ -1592,6 +1649,11 @@ a:hover .xb-thumb-meta {
 	background: #000;
 	border: 1px solid var(--xb-border);
 	box-shadow: 0 8px 32px rgba(0, 0, 0, .45);
+}
+
+.video-container-mb {
+	padding-top: 0 !important;
+	height: auto !important;
 }
 
 /* Título da página do vídeo — moderno e em destaque */

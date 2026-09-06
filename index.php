@@ -14,7 +14,7 @@ if ( $config['show_private_videos'] == '0' ) {
 
 $sql_add       .= $sql_delim. " v.active = '1'";  
 
-$video_select   = "v.VID, v.title, v.duration, v.addtime, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.viewnumber, v.rate, v.likes, v.dislikes, v.type, v.hd, v.keyword, v.UID, u.username";
+$video_select   = "v.VID, v.title, v.duration, v.addtime, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.viewnumber, v.rate, v.likes, v.dislikes, v.type, v.hd, v.keyword, v.UID, v.orientation, u.username";
 $video_from     = " FROM video AS v, signup AS u WHERE v.UID = u.UID" .$sql_add;
 
 $sql            = "SELECT " .$video_select. $video_from. " ORDER BY v.viewtime DESC LIMIT " .$config['watched_per_page'];

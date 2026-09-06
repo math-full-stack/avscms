@@ -16,7 +16,7 @@ $rsc            = $conn->execute($sql);
 $total          = $rsc->fields['total_videos'];
 $pagination     = new Pagination(24);
 $limit          = $pagination->getLimit($total);
-$sql            = "SELECT v.VID, v.title, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.duration, v.type, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.hd
+$sql            = "SELECT v.VID, v.title, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.duration, v.type, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.hd, v.orientation
                    FROM video AS v, playlist AS p
                    WHERE p.UID = " .$uid. " AND p.VID = v.VID AND v.active = '1'
 				   ORDER BY v.VID DESC LIMIT " .$limit;

@@ -82,6 +82,94 @@ function video_apply_cover_rotation(&$videos)
     }
 }
 
+/**
+ * Lista de capas para ciclagem (trio vertical + hover).
+ *
+ * Usa as capas escolhidas pelo admin (`thumbnails_opt`) quando há 3+ válidas;
+ * senão completa com a sequência de frames a partir da capa atual. Mesma
+ * sanitização de video_rotate_cover().
+ *
+ * @param array $video Linha da tabela video (VID, thumb, thumbs, thumbnails_opt)
+ * @return int[] Frames 1..thumbs em ordem de ciclagem
+ */
+function video_cover_list($video)
+{
+    $max = ( isset($video['thumbs']) && (int)$video['thumbs'] > 0 ) ? (int)$video['thumbs'] : 20;
+    $opt = ( isset($video['thumbnails_opt']) ) ? trim((string)$video['thumbnails_opt']) : '';
+
+    $covers = array();
+    if ( $opt !== '' ) {
+        foreach ( explode(',', $opt) as $c ) {
+            $c = (int)$c;
+            if ( $c >= 1 && $c <= $max && !in_array($c, $covers, true) ) {
+                $covers[] = $c;
+            }
+        }
+    }
+
+    if ( count($covers) >= 3 ) {
+        return $covers;
+    }
+
+    $start = ( isset($video['thumb']) ) ? (int)$video['thumb'] : 1;
+    if ( $start < 1 || $start > $max ) {
+        $start = 1;
+    }
+    $covers = array();
+    for ( $i = 0; $i < $max; $i++ ) {
+        $covers[] = (($start - 1 + $i) % $max) + 1;
+    }
+    return $covers;
+}
+
+/**
+ * Trio inicial do card vertical: 3 capas distintas da lista, com offset
+ * estável por request (mesmo esquema de video_rotate_cover).
+ *
+ * @param array $video Linha da tabela video
+ * @return array array($trio, $idx, $covers) — 3 frames, índice inicial e lista
+ */
+function video_cover_trio($video)
+{
+    $covers = video_cover_list($video);
+    $n      = count($covers);
+
+    static $rot_seed = null;
+    if ( $rot_seed === null ) {
+        $rot_seed = mt_rand(0, 100000);
+    }
+
+    $vid   = ( isset($video['VID']) ) ? (int)$video['VID'] : 0;
+    $start = ($rot_seed + $vid) % $n;
+
+    $trio = array($covers[$start], $covers[($start + 1) % $n], $covers[($start + 2) % $n]);
+    return array($trio, $start, $covers);
+}
+
+/**
+ * HTML do trio vertical: 3 capas lado a lado (CSS faz a divisória preta de
+ * 2px via gap). data-* alimenta o avanço no hover (jquery.rotator.js).
+ */
+function video_trio_html($vid, $thumb, $thumbs, $opt, $title, $type = 'public')
+{
+    global $config;
+
+    require_once $config['BASE_DIR']. '/include/function_thumbs.php';
+
+    $video = array('VID' => $vid, 'thumb' => $thumb, 'thumbs' => $thumbs, 'thumbnails_opt' => $opt);
+    list($trio, $idx, $covers) = video_cover_trio($video);
+
+    $base = get_video_thumb_base((int)$vid);
+    $esc  = htmlspecialchars((string)$title, ENT_QUOTES, 'UTF-8');
+    $cls  = ( $type === 'private' ) ? 'img-responsive img-private' : 'img-responsive';
+
+    $html = '<div class="xb-trio" data-vid="'.(int)$vid.'" data-idx="'.(int)$idx.'" data-covers="'.implode(',', $covers).'" data-thumbs="'.(int)$thumbs.'">';
+    foreach ( $trio as $f ) {
+        $html .= '<img src="'.$base.'/'.(int)$f.'.jpg" title="'.$esc.'" alt="'.$esc.'" class="'.$cls.'" loading="lazy"/>';
+    }
+    return $html.'</div>';
+}
+
 function get_categories()
 {
     global $conn;

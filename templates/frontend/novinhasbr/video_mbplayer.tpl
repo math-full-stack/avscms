@@ -17,7 +17,7 @@
 	<div class="avs-error" style="display:none;"></div>
 </div>
 <link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=2.3.2">
-<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=2.3.3"></script>
+<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=2.3.4"></script>
 <script>
 {literal}
 window.__avsReady = false;

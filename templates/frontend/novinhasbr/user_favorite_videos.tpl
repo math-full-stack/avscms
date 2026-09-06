@@ -22,7 +22,7 @@ var lang_favorites_remove_confirm = "{t c='favorites.remove_confirm'}";
 					<div id="favorite_block_{$favorites[i].VID}" class="{if $min_col == '2'}col-6{/if} col-sm-6 col-md-4 col-lg-4 {if $max_col == '5'}col-xl-3{/if}">
 						<a href="{$relative}/video/{$favorites[i].VID}/{$favorites[i].title|clean}">
 							<div class="thumb-overlay{if isset($favorites[i].orientation) && $favorites[i].orientation == 'portrait'} xb-portrait{/if}" {if $favorites[i].vthumbs == '1'} id="playvthumb_{$favorites[i].VID}"{/if}>
-								<img src="{insert name=thumb_path vid=$favorites[i].VID}/{$favorites[i].thumb}.jpg" title="{$favorites[i].title|escape:'html'}" alt="{$favorites[i].title|escape:'html'}" {if $favorites[i].vthumbs == '0'}id="rotate_{$favorites[i].VID}_{$favorites[i].thumbs}_{$favorites[i].thumb}_viewed"{/if} class="img-responsive {if $favorites[i].type == 'private'}img-private{/if}"/>
+								{if isset($favorites[i].orientation) && $favorites[i].orientation == 'portrait'}{insert name=video_trio vid=$favorites[i].VID thumb=$favorites[i].thumb thumbs=$favorites[i].thumbs opt=$favorites[i].thumbnails_opt title=$favorites[i].title type=$favorites[i].type}{else}<img src="{insert name=thumb_path vid=$favorites[i].VID}/{$favorites[i].thumb}.jpg" title="{$favorites[i].title|escape:'html'}" alt="{$favorites[i].title|escape:'html'}" {if $favorites[i].vthumbs == '0'}id="rotate_{$favorites[i].VID}_{$favorites[i].thumbs}_{$favorites[i].thumb}_viewed"{/if} class="img-responsive {if $favorites[i].type == 'private'}img-private{/if}"/>{/if}
 								{if $favorites[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
 								<div class="duration">
 									{if $favorites[i].hd==1}<span class="hd-text-icon">HD</span>{/if}

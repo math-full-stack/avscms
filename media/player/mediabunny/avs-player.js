@@ -273,13 +273,28 @@ import {
     // 4. Initialization
     // ------------------------------------------------------------------
     const pickSource = () => {
-        if (sources.length === 1) {
-            return sources[0];
+        return orderedSources()[0];
+    };
+
+    // Sources ordered by preference (resolution setting), highest first
+    // unless the user prefers low. Used to retry with the next rendition
+    // when the preferred file is corrupt/unreadable.
+    const orderedSources = () => {
+        if (sources.length <= 1) {
+            return [...sources];
         }
         // Honor the player_settings.tpl resolution preference when present
         const pref = typeof window.player_resolution !== 'undefined' ? window.player_resolution : 'high';
         const sorted = [...sources].sort((a, b) => a.res - b.res);
-        return pref === 'low' ? sorted[0] : sorted[sorted.length - 1];
+        return pref === 'low' ? sorted : sorted.reverse();
+    };
+
+    // Keeps the quality selector in sync when playback auto-downgrades to a
+    // lower rendition (e.g. the preferred file is corrupt).
+    const syncQualitySel = (src) => {
+        if (!qualitySel) return;
+        const idx = sources.indexOf(src);
+        if (idx >= 0) qualitySel.value = String(idx);
     };
 
     const initMediaPlayer = async (source) => {
@@ -392,22 +407,58 @@ import {
         }
     };
 
+    // Loads one source into the native <video> fallback, resolving true when
+    // the file proves playable (loadedmetadata) or false on error/timeout.
+    const loadNativeSource = (fv, src) => new Promise((resolve) => {
+        const done = (ok) => {
+            fv.removeEventListener('loadedmetadata', onOk);
+            fv.removeEventListener('error', onFail);
+            clearTimeout(timer);
+            resolve(ok);
+        };
+        const onOk = () => done(true);
+        const onFail = () => done(false);
+        const timer = setTimeout(() => done(false), 12000);
+        fv.addEventListener('loadedmetadata', onOk);
+        fv.addEventListener('error', onFail);
+        fv.src = src.src;
+        fv.load();
+    });
+
     const startPlayer = async () => {
-        try {
-            await initMediaPlayer(pickSource());
-        } catch (err) {
-            console.error('[AVS Mediabunny]', err);
-            // Se o Media Bunny não conseguir inicializar/decodificar neste
-            // navegador, cai para o <video> nativo — o MP4 toca igual.
-            showError('');
-            disposePlayback();
-            const fv = useNativeFallback(err && err.message ? err.message : String(err));
-            const src = pickSource().src;
-            if (src) {
-                fv.src = src;
-                fv.load();
+        const order = orderedSources();
+        let lastErr = null;
+        // Try each rendition in preference order: a corrupt preferred file
+        // (e.g. broken 720p) must not leave the player black when a lower
+        // rendition of the same video is fine.
+        for (const src of order) {
+            try {
+                await initMediaPlayer(src);
+                // Guard: if initMediaPlayer succeeded but produced no video
+                // sink (corrupt file → audio-only), skip to the next source.
+                if (!videoSink) {
+                    disposePlayback();
+                    throw new Error('Fonte sem trilha de vídeo utilizável.');
+                }
+                syncQualitySel(src);
+                return;
+            } catch (err) {
+                lastErr = err;
+                console.error('[AVS Mediabunny]', err);
             }
         }
+        // Media Bunny failed on every source (unsupported browser or broken
+        // files): fall back to the native <video>, also trying each source.
+        showError('');
+        disposePlayback();
+        const fv = useNativeFallback(lastErr && lastErr.message ? lastErr.message : String(lastErr));
+        for (const src of order) {
+            if (await loadNativeSource(fv, src)) {
+                syncQualitySel(src);
+                return;
+            }
+        }
+        showError('Não foi possível carregar o vídeo. Tente outra qualidade ou recarregue a página.');
     };
 
     // ------------------------------------------------------------------
@@ -705,7 +756,16 @@ import {
                 void fallbackVideo.play().catch(() => {});
                 return;
             }
-            void initMediaPlayer(src);
+            void initMediaPlayer(src).then(() => {
+                if (!videoSink) {
+                    disposePlayback();
+                    showError('Esta qualidade falhou. Escolha outra qualidade.');
+                }
+            }).catch((err) => {
+                console.error('[AVS Mediabunny]', err);
+                disposePlayback();
+                showError('Esta qualidade falhou. Escolha outra qualidade.');
+            });
         });
     }
 
