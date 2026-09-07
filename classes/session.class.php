@@ -8,7 +8,13 @@ class Session
     public static function open() {
         global $config;    
     
-        if (self::$_sess_db = mysqli_connect($config['db_host'], $config['db_user'], $config['db_pass'])) {
+        $host = $config['db_host'];
+        $port = 3306;
+        if (preg_match('/^(.+):(\d+)$/', $host, $m)) {
+            $host = $m[1];
+            $port = intval($m[2]);
+        }
+        if (self::$_sess_db = @mysqli_connect($host, $config['db_user'], $config['db_pass'], null, $port)) {
             return mysqli_select_db(self::$_sess_db, $config['db_name']);
         }
         

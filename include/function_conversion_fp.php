@@ -453,7 +453,7 @@ function postThumbs($vid, $src) {
 		echo "\n"."Extracting thumbnails: ".$src."\n\n";
 		extract_video_thumbs($src, $vid, 'all', $config['thumbnail_remove_bb'], $config['thumbnail_keep_ar']);
 		if ($config['vthumbs'] == '1') {
-			extract_video_vthumbs($file, $vid, false);
+			extract_video_vthumbs($src, $vid, false);
 		}			
 		return;		
 	}
@@ -597,7 +597,13 @@ function postConversion($vid,$src) {
 |*/ 
 function executeQuery($query) {
 	global $config;
-	$link = mysqli_connect($config['db_host'], $config['db_user'], $config['db_pass']);
+	$host = $config['db_host'];
+	$port = 3306;
+	if (preg_match('/^(.+):(\d+)$/', $host, $m)) {
+		$host = $m[1];
+		$port = intval($m[2]);
+	}
+	$link = @mysqli_connect($host, $config['db_user'], $config['db_pass'], null, $port);
 	if($link){	
 		$dbs = mysqli_select_db($link, $config['db_name']);
 		$result = mysqli_query($link, $query);
@@ -607,7 +613,7 @@ function executeQuery($query) {
 		$err = mysqli_error($link);
 		mysqli_close($link);
 	}else{
-		$err = 'Could not connect to '.$dbs.': ' . mysqli_error($link);
+		$err = 'Could not connect to '.$host.':'.mysqli_connect_error();
 	}
 	$result = (intval($id) > 0) ? $id : $result;
 	$result = ($err != "") ? "Sql Error :: ".$err."<br/>" : $result;
@@ -616,7 +622,13 @@ function executeQuery($query) {
 	
 function selectQuery($query) {
 	global $config;
-	$link = mysqli_connect($config['db_host'], $config['db_user'], $config['db_pass']);
+	$host = $config['db_host'];
+	$port = 3306;
+	if (preg_match('/^(.+):(\d+)$/', $host, $m)) {
+		$host = $m[1];
+		$port = intval($m[2]);
+	}
+	$link = @mysqli_connect($host, $config['db_user'], $config['db_pass'], null, $port);
 	if($link){	
 		$dbs = mysqli_select_db($link, $config['db_name']);
 		$result = mysqli_fetch_array(mysqli_query($link, $query), MYSQLI_BOTH);
