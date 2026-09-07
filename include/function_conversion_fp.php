@@ -351,10 +351,22 @@ function convert ($e, $vid, $video_name, $video_info) {
 
 function insert_q_sp($vid, $height, $info) {
 
-	global $config;
-	$link = mysqli_connect($config['db_host'], $config['db_user'], $config['db_pass']);
+	global $config, $conn;
+	// Prefer existing ADODB connection.
+	if ($conn && is_object($conn) && $conn->_connectionID) {
+		$existing = $conn->execute("SELECT VID FROM conversion_queue_sp WHERE VID = '".intval($vid)."' LIMIT 1");
+		if ($existing && $existing->RecordCount() > 0) { return; } // already queued
+		$qid = intval($info['UID']);
+		$vname = $conn->qStr($info['video_name']);
+		$vpath = $conn->qStr($info['video_path']);
+		$vtitle = $conn->qStr($info['title']);
+		$conn->execute("INSERT INTO conversion_queue_sp SET VID='".intval($vid)."', UID='".$qid."', video_name=".$vname.", video_path=".$vpath.", skip='".intval($height)."', title=".$vtitle.", addtime='".time()."'");
+		$conn->execute("DELETE FROM conversion_queue_fp WHERE VID='".intval($vid)."' LIMIT 1");
+		return;
+	}
+	// Fallback: raw connection (with correct port parsing).
+	$link = _db_connect_raw();
 	if($link){	
-		$dbs = mysqli_select_db($link, $config['db_name']);
 		$sql = "SELECT * FROM conversion_queue_sp WHERE VID = '".$vid."' LIMIT 1";
 		echo "\nSQL:".$sql."\n";
 		$res = mysqli_query($link, $sql);

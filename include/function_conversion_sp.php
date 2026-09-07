@@ -348,6 +348,82 @@ function convert($e, $vid, $video_name, $video_info, $skip) {
 	}
 }
 
+function postThumbs($vid, $src) {
+	global $config;
+
+	// Thumbs only AFTER processing: when the video carries a watermark profile
+	// or a trim (cut/cut_out), the frames MUST come from a converted
+	// (watermarked/trimmed) file. The raw source / a pristine .bak would expose
+	// pre-processing frames (sem logo, com a intro do anúncio, etc).
+	$requiresProcessed = (wm_video_config($vid) !== null);
+	$prsSql = "SELECT cut, cut_out FROM video WHERE VID = '".(int)$vid."' LIMIT 1";
+	$prsRs  = selectQuery($prsSql);
+	if (is_array($prsRs)) {
+		$requiresProcessed = $requiresProcessed
+			|| intval(isset($prsRs['cut'])     ? $prsRs['cut']     : 0) > 0
+			|| intval(isset($prsRs['cut_out']) ? $prsRs['cut_out'] : 0) > 0;
+	}
+
+	$bak_src = $src.'.bak';
+	if (!$requiresProcessed && file_exists($bak_src) && filesize($bak_src) > 100) {	
+		echo "\n"."Extracting thumbnails: ".$src."\n\n";
+		extract_video_thumbs($bak_src, $vid, 'all', $config['thumbnail_remove_bb'], $config['thumbnail_keep_ar']);
+		return;		
+	}
+	
+	$sql     = "SELECT formats, server FROM video WHERE VID = '" .$vid. "' LIMIT 1";
+	$rs      = selectQuery($sql);
+    $formats = $rs['formats'];
+    $server  = $rs['server'];
+
+	$formats = explode(',', $formats);
+	foreach ($formats as $format) {
+		 unset($f);
+		 $f    = explode('.', $format);
+		 $vf[] = $config['H264_DIR'].'/'.$vid."_".$f[1].".".$f[2];
+	}
+	if ($server != '') {
+		foreach ($formats as $format) {
+			 unset($f);
+			 $f    = explode('.', $format);
+			 // GCS buckets são organizados por pasta por vídeo: h264/{VID}/{label}.{ext};
+			 // FTP/local mantêm o layout plano antigo: h264/{VID}_{label}.{ext}
+			 $h264Path = (strpos($server, 'storage.googleapis.com') !== false)
+			 	       ? '/h264/'.$vid.'/'.$f[1].'.'.$f[2]
+			 	       : '/h264/'.$vid."_".$f[1].".".$f[2];
+			 $vfs[] = $server.$h264Path;
+		}		
+	}
+	foreach ($vf as $file) {
+		if (file_exists($file) && filesize($file) > 100) {
+			echo "\n"."Extracting thumbnails: ".$file."\n\n";
+			extract_video_thumbs($file, $vid, 'all', $config['thumbnail_remove_bb'], $config['thumbnail_keep_ar']);
+			if ($config['vthumbs'] == '1') {
+				extract_video_vthumbs($file, $vid, false);
+			}				
+			return;
+		}
+	}
+	foreach ($vfs as $file) {
+		if (file_url_exists($file)) {
+			echo "\n"."Extracting thumbnails: ".$file."\n\n";
+			extract_video_thumbs($file, $vid, 'all', $config['thumbnail_remove_bb'], $config['thumbnail_keep_ar']);
+			if ($config['vthumbs'] == '1') {
+				extract_video_vthumbs($file, $vid, false);
+			}				
+			return;
+		}
+	}
+	if (!$requiresProcessed && file_exists($src) && filesize($src) > 100) {	
+		echo "\n"."Extracting thumbnails: ".$src."\n\n";
+		extract_video_thumbs($src, $vid, 'all', $config['thumbnail_remove_bb'], $config['thumbnail_keep_ar']);
+		if ($config['vthumbs'] == '1') {
+			extract_video_vthumbs($src, $vid, false);
+		}			
+		return;		
+	}
+}
+
 function postConversion($vid,$src) {
 	global $config;
 
@@ -519,7 +595,7 @@ function postConversion($vid,$src) {
 |*| Function :: DB SELECTOR
 |*|*****************************************
 |*/ 
-function executeQuery($query) {
+function _db_connect_raw() {
 	global $config;
 	$host = $config['db_host'];
 	$port = 3306;
@@ -528,40 +604,73 @@ function executeQuery($query) {
 		$port = intval($m[2]);
 	}
 	$link = @mysqli_connect($host, $config['db_user'], $config['db_pass'], null, $port);
-	if($link){	
-		$dbs = mysqli_select_db($link, $config['db_name']);
-		$result = mysqli_query($link, $query);
-		if($result){
+	if ($link) {
+		@mysqli_select_db($link, $config['db_name']);
+	}
+	return $link;
+}
+
+function executeQuery($query) {
+	global $conn;
+	// Prefer the existing ADODB connection (no extra socket).
+	if ($conn && is_object($conn) && $conn->_connectionID) {
+		$rs = $conn->execute($query);
+		if ($rs !== false) {
+			$id = $conn->Insert_ID();
+			return (intval($id) > 0) ? $id : true;
+		}
+	}
+	for ($attempt = 1; $attempt <= 3; $attempt++) {
+		$link = _db_connect_raw();
+		if (!$link) {
+			if ($attempt < 3) { sleep(1); continue; }
+			return "Sql Error :: Could not connect: " . mysqli_connect_error();
+		}
+		$result = @mysqli_query($link, $query);
+		if ($result) {
 			$id = mysqli_insert_id($link);
+			mysqli_close($link);
+			return (intval($id) > 0) ? $id : true;
 		}
 		$err = mysqli_error($link);
 		mysqli_close($link);
-	}else{
-		$err = 'Could not connect to '.$host.':'.mysqli_connect_error();
+		if (preg_match('/(gone away|lost connection|can.t connect)/i', $err) && $attempt < 3) {
+			sleep($attempt);
+			continue;
+		}
+		return "Sql Error :: " . $err;
 	}
-	$result = (intval($id) > 0) ? $id : $result;
-	$result = ($err != "") ? "Sql Error :: ".$err."<br/>" : $result;
-	return $result;
+	return "Sql Error :: max retries exceeded";
 }
 	
 function selectQuery($query) {
-	global $config;
-	$host = $config['db_host'];
-	$port = 3306;
-	if (preg_match('/^(.+):(\d+)$/', $host, $m)) {
-		$host = $m[1];
-		$port = intval($m[2]);
+	global $conn;
+	if ($conn && is_object($conn) && $conn->_connectionID) {
+		$rs = $conn->execute($query);
+		if ($rs !== false && !$rs->EOF) {
+			return $rs->fields;
+		}
 	}
-	$link = @mysqli_connect($host, $config['db_user'], $config['db_pass'], null, $port);
-	if($link){	
-		$dbs = mysqli_select_db($link, $config['db_name']);
-		$result = mysqli_fetch_array(mysqli_query($link, $query), MYSQLI_BOTH);
+	for ($attempt = 1; $attempt <= 3; $attempt++) {
+		$link = _db_connect_raw();
+		if (!$link) {
+			if ($attempt < 3) { sleep(1); continue; }
+			return "Sql Error :: Could not connect: " . mysqli_connect_error();
+		}
+		$result = @mysqli_query($link, $query);
+		if ($result) {
+			$row = mysqli_fetch_array($result, MYSQLI_BOTH);
+			mysqli_close($link);
+			return $row;
+		}
 		$err = mysqli_error($link);
 		mysqli_close($link);
-	} else {
-		$err = 'Could not connect to '.$host.':'.mysqli_connect_error();
+		if (preg_match('/(gone away|lost connection|can.t connect)/i', $err) && $attempt < 3) {
+			sleep($attempt);
+			continue;
+		}
+		return "Sql Error :: " . $err;
 	}
-	$result = ($err != "") ? "Sql Error :: ".$err."<br/>" : $result;
-	return $result;
+	return "Sql Error :: max retries exceeded";
 }	
 ?>

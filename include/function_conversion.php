@@ -397,7 +397,9 @@ function postThumbs($vid, $src) {
 		echo "\n"."Extracting thumbnails: ".$src."\n\n";
 		extract_video_thumbs($src, $vid, 'all', $config['thumbnail_remove_bb'], $config['thumbnail_keep_ar']);
 		if ($config['vthumbs'] == '1') {
-			extract_video_vthumbs($file, $vid, false);
+			// $src, not the loop variable $file: this branch runs when no
+			// converted format exists locally/remotely, so the raw is the source.
+			extract_video_vthumbs($src, $vid, false);
 		}	
 		return;		
 	}
@@ -579,7 +581,7 @@ function postConversion($vid,$src) {
 |*| Function :: DB SELECTOR
 |*|*****************************************
 |*/ 
-function executeQuery($query) {
+function _db_connect_raw() {
 	global $config;
 	$host = $config['db_host'];
 	$port = 3306;
@@ -588,40 +590,79 @@ function executeQuery($query) {
 		$port = intval($m[2]);
 	}
 	$link = @mysqli_connect($host, $config['db_user'], $config['db_pass'], null, $port);
-	if($link){	
-		$dbs = mysqli_select_db($link, $config['db_name']);
-		$result = mysqli_query($link, $query);
-		if($result){
+	if ($link) {
+		@mysqli_select_db($link, $config['db_name']);
+	}
+	return $link;
+}
+
+function executeQuery($query) {
+	global $conn;
+	// Prefer the existing ADODB connection (no extra socket).
+	if ($conn && is_object($conn) && $conn->_connectionID) {
+		$rs = $conn->execute($query);
+		if ($rs !== false) {
+			$id = $conn->Insert_ID();
+			return (intval($id) > 0) ? $id : true;
+		}
+		// ADODB failed — fall through to raw connection below.
+	}
+	// Fallback: raw mysqli with retry on transient errors.
+	for ($attempt = 1; $attempt <= 3; $attempt++) {
+		$link = _db_connect_raw();
+		if (!$link) {
+			if ($attempt < 3) { sleep(1); continue; }
+			return "Sql Error :: Could not connect: " . mysqli_connect_error();
+		}
+		$result = @mysqli_query($link, $query);
+		if ($result) {
 			$id = mysqli_insert_id($link);
+			mysqli_close($link);
+			return (intval($id) > 0) ? $id : true;
 		}
 		$err = mysqli_error($link);
 		mysqli_close($link);
-	}else{
-		$err = 'Could not connect to '.$host.':'.mysqli_connect_error();
+		// Retry on transient errors.
+		if (preg_match('/(gone away|lost connection|can.t connect)/i', $err) && $attempt < 3) {
+			sleep($attempt);
+			continue;
+		}
+		return "Sql Error :: " . $err;
 	}
-	$result = (intval($id) > 0) ? $id : $result;
-	$result = ($err != "") ? "Sql Error :: ".$err."<br/>" : $result;
-	return $result;
+	return "Sql Error :: max retries exceeded";
 }
 	
 function selectQuery($query) {
-	global $config;
-	$host = $config['db_host'];
-	$port = 3306;
-	if (preg_match('/^(.+):(\d+)$/', $host, $m)) {
-		$host = $m[1];
-		$port = intval($m[2]);
+	global $conn;
+	// Prefer the existing ADODB connection (no extra socket).
+	if ($conn && is_object($conn) && $conn->_connectionID) {
+		$rs = $conn->execute($query);
+		if ($rs !== false && !$rs->EOF) {
+			return $rs->fields;
+		}
+		// ADODB failed or no rows — fall through to raw.
 	}
-	$link = @mysqli_connect($host, $config['db_user'], $config['db_pass'], null, $port);
-	if($link){	
-		$dbs = mysqli_select_db($link, $config['db_name']);
-		$result = mysqli_fetch_array(mysqli_query($link, $query), MYSQLI_BOTH);
+	// Fallback: raw mysqli with retry.
+	for ($attempt = 1; $attempt <= 3; $attempt++) {
+		$link = _db_connect_raw();
+		if (!$link) {
+			if ($attempt < 3) { sleep(1); continue; }
+			return "Sql Error :: Could not connect: " . mysqli_connect_error();
+		}
+		$result = @mysqli_query($link, $query);
+		if ($result) {
+			$row = mysqli_fetch_array($result, MYSQLI_BOTH);
+			mysqli_close($link);
+			return $row;
+		}
 		$err = mysqli_error($link);
 		mysqli_close($link);
-	} else {
-		$err = 'Could not connect to '.$host.':'.mysqli_connect_error();
+		if (preg_match('/(gone away|lost connection|can.t connect)/i', $err) && $attempt < 3) {
+			sleep($attempt);
+			continue;
+		}
+		return "Sql Error :: " . $err;
 	}
-	$result = ($err != "") ? "Sql Error :: ".$err."<br/>" : $result;
-	return $result;
+	return "Sql Error :: max retries exceeded";
 }	
 ?>
