@@ -2,6 +2,7 @@
 define('_VALID', 1);
 define('_CLI', true);
 define('_ENTER', true);
+define('_CONSOLE', true); // CLI: skip web sessions (and their extra DB connection)
 
 // Usage: php reprocess_videos.php <VID1> <VID2> ...
 if ($argc < 2) {

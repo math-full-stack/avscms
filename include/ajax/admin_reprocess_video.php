@@ -66,17 +66,21 @@ $encodedThumb = base64_encode('');
 $worker       = $config['BASE_DIR'] . '/scripts/grabber_worker.php';
 
 if (file_exists($worker)) {
-    $cmd = sprintf('%s %s %d %s %s %s > /dev/null 2>&1 & echo $!',
+    $logFile = $config['LOG_DIR'] . '/' . intval($vid) . '.grabber.log';
+    @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Reprocessamento via admin. URL: $sourceUrl\n", FILE_APPEND);
+
+    // Worker stderr/stdout goes to the same grabber log: boot failures (e.g.
+    // "Too many connections") used to vanish into /dev/null, leaving the video
+    // stuck at active=2 (downloading) with no trace in the log.
+    $cmd = sprintf('%s %s %d %s %s %s >> %s 2>&1 & echo $!',
         escapeshellarg($config['phppath']),
         escapeshellarg($worker),
         intval($vid),
         escapeshellarg($encodedUrl),
         escapeshellarg('best'),
-        escapeshellarg($encodedThumb)
+        escapeshellarg($encodedThumb),
+        escapeshellarg($logFile)
     );
-
-    $logFile = $config['LOG_DIR'] . '/' . intval($vid) . '.grabber.log';
-    @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Reprocessamento via admin. URL: $sourceUrl\n", FILE_APPEND);
 
     @shell_exec($cmd);
 

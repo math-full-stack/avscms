@@ -14,6 +14,7 @@
 define('_VALID', 1);
 define('_CLI', true);
 define('_ENTER', true);
+define('_CONSOLE', true); // CLI: skip web sessions (and their extra DB connection)
 
 $basedir = dirname(dirname(__FILE__));
 require_once $basedir . '/include/config.php';
@@ -28,6 +29,15 @@ require_once $basedir . '/classes/grabbers/mass/MassGrabberManager.php';
 @set_time_limit(0);
 @ini_set('max_execution_time', 0);
 @ini_set('memory_limit', '512M');
+
+// Host role gate (fail-closed): grabber_cron runs ONLY on the converter host
+// (the PC). Covers VM crontab entries and "Process Now" fired from the VM
+// panel - without this, real traffic on the VM would claim grab jobs here.
+$workerRole = isset($config['worker_role']) ? $config['worker_role'] : 'web';
+if ($workerRole !== 'converter') {
+    echo "[" . date('Y-m-d H:i:s') . "] worker_role='$workerRole' - not the converter host. No grab/conversion work runs on this host.\n";
+    exit(0);
+}
 
 $startTime = time();
 $pid = getmypid();

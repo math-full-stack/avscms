@@ -25,6 +25,15 @@ function active_conversions($table) {
 function check_q() {
 
 	global $config, $conn;
+
+	// Host role gate (fail-closed): never spawn conversions on a host that is
+	// not the declared 'converter' (the PC). This also covers explicit callers
+	// such as insert_into_q_fp()/insert_into_q_sp() on the web host: the row is
+	// enqueued, but only the converter host picks it up.
+	if ((isset($config['worker_role']) ? $config['worker_role'] : 'web') !== 'converter') {
+		return false;
+	}
+
 	remove_overdue('conversion_queue_fp');
 
 	if (active_conversions('conversion_queue_fp') < intval($config['q_limit'])) {
@@ -48,14 +57,18 @@ function check_q() {
 					$cmd = $config['phppath']." ".$script." ".$video_name." ".$video_id." ".$video_path."";
 					$sql = "UPDATE conversion_queue_fp SET status='1', start = '".time()."' WHERE VID = '".$video_id."' LIMIT 1";
 					$conn->execute($sql);
-					// Atualizar last_update para防止 timeout
 					$conn->execute("UPDATE video SET last_update = '".time()."' WHERE VID = '".intval($video_id)."' LIMIT 1");
 					log_in_back($config['LOG_DIR']. '/' .$video_id. '.log', $cmd);
 					$lg = $config['LOG_DIR']. '/' .$video_id. '.log2';
-					@unlink($lg);  // remove stale log: ">" over a file owned by another user fails silently and the conversion never starts
-					run_in_bg($cmd.' > '.$lg);	
+					@unlink($lg);
+					$pid = run_in_bg($cmd.' > '.$lg);
+					if (!$pid) {
+						log_in_back($config['LOG_DIR']. '/' .$video_id. '.log', "ERRO: Falha ao iniciar processo em background para VID=$video_id");
+						$conn->execute("UPDATE conversion_queue_fp SET status='0', start = '0' WHERE VID = '".$video_id."' LIMIT 1");
+					}
 					return true;
 				} else {
+					log_in_back($config['LOG_DIR']. '/' .$video_id. '.log', "ERRO: Arquivo fonte não existe: $video_path (VID=$video_id)");
 					$sql = "DELETE FROM conversion_queue_fp WHERE VID = '".$video_id."' LIMIT 1";
 					$conn->execute($sql);
 				}
@@ -87,14 +100,18 @@ function check_q() {
 				$cmd = $config['phppath']." ".$script." ".$video_name." ".$video_id." ".$video_path." ".$skip."";
 				$sql = "UPDATE conversion_queue_sp SET status='1', start = '".time()."' WHERE VID = '".$video_id."' LIMIT 1";
 				$conn->execute($sql);
-				// Atualizar last_update para防止 timeout
 				$conn->execute("UPDATE video SET last_update = '".time()."' WHERE VID = '".intval($video_id)."' LIMIT 1");
 				log_in_back($config['LOG_DIR']. '/' .$video_id. '.log', $cmd);
 				$lg = $config['LOG_DIR']. '/' .$video_id. '.log3';
-				@unlink($lg);  // remove stale log: ">" over a file owned by another user fails silently and the conversion never starts
-				run_in_bg($cmd.' > '.$lg);	
+				@unlink($lg);
+				$pid = run_in_bg($cmd.' > '.$lg);
+				if (!$pid) {
+					log_in_back($config['LOG_DIR']. '/' .$video_id. '.log', "ERRO: Falha ao iniciar processo em background para VID=$video_id (2nd pass)");
+					$conn->execute("UPDATE conversion_queue_sp SET status='0', start = '0' WHERE VID = '".$video_id."' LIMIT 1");
+				}
 				return true;
 			} else {
+				log_in_back($config['LOG_DIR']. '/' .$video_id. '.log', "ERRO: Arquivo fonte não existe: $video_path (VID=$video_id, 2nd pass)");
 				$sql = "DELETE FROM conversion_queue_sp WHERE VID = '".$video_id."' LIMIT 1";
 				$conn->execute($sql);			
 			}
@@ -113,6 +130,10 @@ function pump_conversion_queue() {
     // the mass-grabber cron actually saturate the queue like the panel
     // setting promises, without changing the web request behaviour.
     if (!isset($config['conversion_q']) || $config['conversion_q'] != '1') {
+        return 0;
+    }
+    // Host role gate (fail-closed): only the converter host pumps the queue.
+    if ((isset($config['worker_role']) ? $config['worker_role'] : 'web') !== 'converter') {
         return 0;
     }
     remove_overdue('conversion_queue_fp');
@@ -142,6 +163,7 @@ function pump_conversion_queue() {
             continue;
         }
         if (!file_exists($video_path)) {
+            log_in_back($config['LOG_DIR'] . '/' . $video_id . '.log', "ERRO: Arquivo fonte não existe: $video_path (VID=$video_id, pump fp)");
             $conn->execute("DELETE FROM conversion_queue_fp WHERE VID = '" . $video_id . "' LIMIT 1");
             continue;
         }
@@ -152,8 +174,13 @@ function pump_conversion_queue() {
         $conn->execute("UPDATE video SET last_update = '" . time() . "' WHERE VID = '" . $video_id . "' LIMIT 1");
         log_in_back($config['LOG_DIR'] . '/' . $video_id . '.log', $cmd);
         $lg = $config['LOG_DIR'] . '/' . $video_id . '.log2';
-        @unlink($lg);  // remove stale log: ">" over a file owned by another user fails silently and the conversion never starts
-        run_in_bg($cmd . ' > ' . $lg);
+        @unlink($lg);
+        $pid = run_in_bg($cmd . ' > ' . $lg);
+        if (!$pid) {
+            log_in_back($config['LOG_DIR'] . '/' . $video_id . '.log', "ERRO: Falha ao iniciar processo em background para VID=$video_id (pump fp)");
+            $conn->execute("UPDATE conversion_queue_fp SET status='0', start = '0' WHERE VID = '" . $video_id . "' LIMIT 1");
+            continue;
+        }
         $started++;
     }
 
@@ -175,6 +202,7 @@ function pump_conversion_queue() {
             continue;
         }
         if (!file_exists($video_path)) {
+            log_in_back($config['LOG_DIR'] . '/' . $video_id . '.log', "ERRO: Arquivo fonte não existe: $video_path (VID=$video_id, pump sp)");
             $conn->execute("DELETE FROM conversion_queue_sp WHERE VID = '" . $video_id . "' LIMIT 1");
             continue;
         }
@@ -185,8 +213,13 @@ function pump_conversion_queue() {
         $conn->execute("UPDATE video SET last_update = '" . time() . "' WHERE VID = '" . $video_id . "' LIMIT 1");
         log_in_back($config['LOG_DIR'] . '/' . $video_id . '.log', $cmd);
         $lg = $config['LOG_DIR'] . '/' . $video_id . '.log3';
-        @unlink($lg);  // remove stale log: ">" over a file owned by another user fails silently and the conversion never starts
-        run_in_bg($cmd . ' > ' . $lg);
+        @unlink($lg);
+        $pid = run_in_bg($cmd . ' > ' . $lg);
+        if (!$pid) {
+            log_in_back($config['LOG_DIR'] . '/' . $video_id . '.log', "ERRO: Falha ao iniciar processo em background para VID=$video_id (pump sp)");
+            $conn->execute("UPDATE conversion_queue_sp SET status='0', start = '0' WHERE VID = '" . $video_id . "' LIMIT 1");
+            continue;
+        }
         $started++;
     }
 
@@ -270,22 +303,22 @@ function log_in_back ($file_path, $text) {
 } 
 
 function run_in_bg($Command, $Priority = 0) {
-	// Se o comando ja tem redirecionamento (contém '>'), não sobrescrever para /dev/null
-	// Caso contrário mantém comportamento antigo
+	$pid = false;
 	if (strpos($Command, '>') !== false) {
 		if($Priority) {
-			$PID = shell_exec("nice -n $Priority $Command 2>&1 & echo $!");
+			$pid = shell_exec("nice -n $Priority $Command 2>&1 & echo \$!");
 		} else {
-			$PID = shell_exec("$Command 2>&1 & echo $!");
+			$pid = shell_exec("$Command 2>&1 & echo \$!");
 		}
 	} else {
 		if($Priority) {
-			$PID = shell_exec("nice -n $Priority $Command > /dev/null 2>&1 & echo $!");
+			$pid = shell_exec("nice -n $Priority $Command > /dev/null 2>&1 & echo \$!");
 		} else {
-			$PID = shell_exec("$Command > /dev/null 2>&1 & echo $!");
+			$pid = shell_exec("$Command > /dev/null 2>&1 & echo \$!");
 		}
 	}
-	return($PID);
+	$pid = trim($pid);
+	return ($pid !== '' && is_numeric($pid) && $pid > 0) ? (int)$pid : false;
 }
 
 ?>

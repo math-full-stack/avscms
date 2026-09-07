@@ -2,6 +2,7 @@
 define('_VALID', 1);
 define('_CLI', true);
 define('_ENTER', true);
+define('_CONSOLE', true); // CLI: skip web sessions (and their extra DB connection)
 
 // Args: VID, base64_url, quality, base64_thumb, jobId (optional)
 if ($argc < 4) {
@@ -31,6 +32,15 @@ require_once $basedir . '/include/function_global.php';
 @set_time_limit(0);
 @ini_set('max_execution_time', 0);
 @ini_set('memory_limit', '512M');
+
+// Host role gate (fail-closed): the worker (download + ffmpeg remux +
+// conversion handoff) runs ONLY on the converter host (the PC). Covers
+// reprocess/grab/admin actions triggered from the VM panel.
+$workerRole = isset($config['worker_role']) ? $config['worker_role'] : 'web';
+if ($workerRole !== 'converter') {
+    echo "worker_role='$workerRole' - not the converter host. Worker skipped.\n";
+    exit(0);
+}
 
 // Helper: marcar job como COMPLETED ou FAILED
 $jobMgr = ($jobId > 0) ? new JobManager() : null;

@@ -26,6 +26,7 @@
 define('_VALID', 1);
 define('_ENTER', true);
 define('_CLI', true);
+define('_CONSOLE', true); // CLI: skip web sessions (and their extra DB connection)
 
 $basedir = dirname(__FILE__);
 require $basedir. '/../include/config.php';

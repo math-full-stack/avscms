@@ -2,6 +2,7 @@
 define('_VALID', 1);
 define('_ENTER', true);
 define('_CLI', true);
+define('_CONSOLE', true); // CLI: skip web sessions (and their extra DB connection)
 
 // Argvs
 $video_name = $_SERVER['argv'][1];
@@ -15,6 +16,19 @@ require $basedir. '/include/config.php';
 require $basedir. '/include/function_video.php';
 require $basedir. '/include/function_conversion_sp.php';
 require $basedir. '/include/function_server.php';
+
+
+// Host role gate (fail-closed): conversion/FFmpeg runs ONLY on the converter
+// host (the PC). A 'web' host exits immediately even if a legacy path spawns
+// this script directly.
+$workerRole = isset($config['worker_role']) ? $config['worker_role'] : 'web';
+if ($workerRole !== 'converter') {
+    $logDir = $config['LOG_DIR'];
+    if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+    @file_put_contents($logDir.'/'.intval($vid).'.log', "[".date('Y-m-d H:i:s')."] worker_role='$workerRole' - conversion skipped (not the converter host).\n", FILE_APPEND);
+    echo "worker_role='$workerRole' - not the converter host, exiting.\n";
+    exit(0);
+}
 
 // Processor dispatch
 $processor = isset($config['processor']) ? $config['processor'] : 'ffmpeg';
@@ -63,6 +77,13 @@ foreach($encodings as $encoding) {
 executeQuery("DELETE FROM conversion_queue_fp WHERE VID = '".$vid."' LIMIT 1");
 executeQuery("DELETE FROM conversion_queue_sp WHERE VID = '".$vid."' LIMIT 1");
 
+// Thumbs + vthumbs MUST be generated HERE (second pass), not in the first
+// pass: this pass owns postConversion, which uploads to GCS and then removes
+// the local h264/{VID}_*.mp4 ladder (del_original_video=1). Running postThumbs
+// in the FP pass raced that cleanup — the SP pass started concurrently
+// (q_limit >= 2) and deleted the file the FP pass was still extracting from,
+// leaving videos active with no thumbs/video.mp4/video.webm and duration=0.
+postThumbs($vid, $video_path);
 postConversion($vid, $video_path);
 
 // Display :: Encoder Core End

@@ -32,6 +32,12 @@ function compareColors($colorA, $colorB, $threshold) {
 
 function detect_black_bars($src, $coef) {
 
+	// Frame pode não ter sido gerado (extração falhou) — retorna zero para não
+	// derrubar o run com fatal de GD em arquivo inexistente.
+	if (!is_file($src)) {
+		return array('left' => 0, 'right' => 0, 'top' => 0, 'bottom' => 0);
+	}
+
 	$image_path = $src;
 
 	$jpg = imagecreatefromjpeg($image_path);
@@ -93,6 +99,10 @@ function detect_black_bars($src, $coef) {
 }
 
 function remove_black_bars($src, $removeLeft, $removeRight, $removeTop, $removeBottom) {
+	// Frame pode não ter sido gerado (extração falhou) — nada a remover.
+	if (!is_file($src)) {
+		return;
+	}
 	$image_path = $src;
 	$jpg = imagecreatefromjpeg($image_path);
 	$cropped = imagecreatetruecolor(imagesx($jpg) - ($removeLeft + $removeRight), imagesy($jpg) - ($removeTop + $removeBottom));
@@ -106,6 +116,12 @@ function remove_black_bars($src, $removeLeft, $removeRight, $removeTop, $removeB
 
 
 function process_thumb($src, $dst_w, $dst_h, $keep_ar = true) {
+
+    // Frame pode não ter sido gerado (extração falhou) — nunca processar
+    // arquivo inexistente, senão o GD fatal derruba o run.
+    if (!is_file($src)) {
+        return;
+    }
 
     $image      = new VImageConv();
 	list ($width, $height) = getimagesize($src);
@@ -179,9 +195,17 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 		if (!file_exists($temp_thumbs_folder)) {
 			@mkdir($temp_thumbs_folder, 0777);
 		}
+		// 0777 efetivo (mkdir é mascarado pelo umask -> 755): o pipeline roda
+		// como usuários diferentes (CLI manual vs workers do Apache).
+		if (!is_writable($temp_thumbs_folder)) {
+			@chmod($temp_thumbs_folder, 0777);
+		}
 		
 		if (!file_exists($final_thumbs_folder)) {		
 			@mkdir($final_thumbs_folder, 0777);
+		}
+		if (!is_writable($final_thumbs_folder)) {
+			@chmod($final_thumbs_folder, 0777);
 		}
 		// Duration - set se = start/end
 		if ($duration > 5) {

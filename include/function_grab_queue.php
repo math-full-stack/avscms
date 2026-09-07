@@ -60,6 +60,12 @@ function grabber_setting_set($key, $value) {
 function check_grab_queue() {
     global $config, $conn;
 
+    // Host role gate (fail-closed): only the converter host (the PC) triggers
+    // the real-time grab cron. A 'web' host must never claim/process grab jobs.
+    if ((isset($config['worker_role']) ? $config['worker_role'] : 'web') !== 'converter') {
+        return;
+    }
+
     // Safety: skip if table doesn't exist
     if (!grabber_settings_exist()) return;
 

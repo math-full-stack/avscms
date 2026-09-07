@@ -97,14 +97,29 @@ if ( $config['user_remember'] == '1' ) {
 
 require 'smarty.php';
 
-if($config['conversion_q'] == '1') {
-	require_once $config['BASE_DIR'].'/include/function_queue.php'; 
-	check_q(); 
+// Host processing role (fail-closed). Only the host that explicitly declares
+// worker_role = 'converter' (the local PC) consumes the shared conversion and
+// grab queues and runs FFmpeg. Any other host - or one without the key -
+// defaults to 'web' and NEVER spawns conversion/grab work: it only waits for
+// the converter host. Set worker_role = 'converter' in config.local.php on
+// the PC and 'web' on the VM (deploy.sh preserves each host's file).
+if (!isset($config['worker_role']) || !in_array($config['worker_role'], array('converter', 'web'), true)) {
+	$config['worker_role'] = 'web';
 }
 
-// Real-time grab queue processing (when enabled)
+if($config['conversion_q'] == '1') {
+	require_once $config['BASE_DIR'].'/include/function_queue.php'; 
+	if ($config['worker_role'] === 'converter') {
+		check_q(); 
+		pump_conversion_queue();
+	}
+}
+
+// Real-time grab queue processing (when enabled) - converter host only
 require_once $config['BASE_DIR'].'/include/function_grab_queue.php';
-check_grab_queue();
+if ($config['worker_role'] === 'converter') {
+	check_grab_queue();
+}
 
 if ( $config['submenu_tag_scroller'] == '1' ) {
     $tags       = array();

@@ -150,7 +150,12 @@ function get_thumb_dir($vid)
 	
 	if (!file_exists($path)) {
 		mkdir($path, 0777, true);
-	}	
+	}
+	// 0777 efetivo (o mkdir acima é mascarado pelo umask -> 755): o pipeline
+	// roda como usuários diferentes (CLI manual vs workers do Apache).
+	if (!is_writable($path)) {
+		@chmod($path, 0777);
+	}
 	
 	$output = $path.'/'.$vid;
 

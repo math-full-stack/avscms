@@ -176,6 +176,31 @@ foreach ($found as $vid => $assets) {
     }
     $row = $rs->fields;
 
+    // Nunca remover mídia de vídeo em processamento. Um reprocess re-baixa o
+    // original (vid/{VID}.mp4) e re-encoda h264/* mesmo quando o bucket já tem
+    // formatos de uma conversão anterior — sem este guard, o media_cleanup do
+    // cron apagava a fonte fresca ~1 min após o download e a conversão morria
+    // com "Error opening input", deixando o vídeo preso em active=2/3.
+    $isBusy = (isset($row['active']) && ($row['active'] == '2' || $row['active'] == '3'));
+    if (!$isBusy) {
+        $rsBusy = $conn->execute("SELECT VID FROM conversion_queue_fp WHERE VID = " . intval($vid) . " LIMIT 1");
+        if ($rsBusy && $conn->Affected_Rows() == 1) {
+            $isBusy = true;
+        } else {
+            $rsBusy = $conn->execute("SELECT VID FROM conversion_queue_sp WHERE VID = " . intval($vid) . " LIMIT 1");
+            if ($rsBusy && $conn->Affected_Rows() == 1) {
+                $isBusy = true;
+            }
+        }
+    }
+    if ($isBusy) {
+        echo "\n[" . $vid . "] mantido: vídeo em processamento (active=" . $row['active'] . " / na fila de conversão) — mídia local preservada.\n";
+        foreach ($assets as $type => $paths) {
+            $kept[$type] += (is_array($paths) ? count($paths) : 1);
+        }
+        continue;
+    }
+
     // Vídeo em servidor GCS? (normaliza a URL gravada em video.server)
     $server = isset($gcsServers[rtrim($row['server'], '/')]) ? $gcsServers[rtrim($row['server'], '/')] : null;
     if (!$server) {
