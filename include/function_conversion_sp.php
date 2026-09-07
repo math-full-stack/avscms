@@ -472,11 +472,44 @@ function postConversion($vid,$src) {
 		if ($transferServer && isset($transferServer['server_type']) && $transferServer['server_type'] === 'gcs') {
 			$canDelete = gcs_video_has_formats($vid, $transferServer);
 		}
-		if ($canDelete) {
-			@chmod($src, 0777);
-			@unlink($src);
+		// Se nao for servidor GCS, ou se for GCS e os formatos confirmados no bucket,
+		// entao pode deletar o original local. Se for GCS sem confirmacao, mantem local.
+		if (!$transferServer || ($transferServer['server_type'] === 'gcs' && $canDelete)) {
+			if ($canDelete) {
+				@chmod($src, 0777);
+				@unlink($src);
+			} else {
+				echo "\n[Multi-Server-GCS] Upload nao confirmado no bucket; original mantido localmente: " . $src . "\n";
+			}
 		} else {
-			echo "\n[Multi-Server-GCS] Upload não confirmado no bucket; original mantido localmente: " . $src . "\n";
+			echo "\n[Multi-Server-GCS] Servidor GCS ativo mas upload nao confirmado; original mantido localmente: " . $src . "\n";
+		}
+	}
+
+	// Limpeza mop-up de formatos H.264 locais: apenas remove quando
+	// upload confirmado no bucket OU quando multi-server nao esta ativo (local-only mode).
+	// Evita remover arquivos locais antes do upload GCS ser confirmado.
+	if ($config['del_original_video'] == 1 && !empty($formats)) {
+		$transferOk = false;
+		if ($transferServer && isset($transferServer['server_type']) && $transferServer['server_type'] === 'gcs') {
+			$transferOk = gcs_video_has_formats($vid, $transferServer);
+		} else {
+			// Sem multi-server GCS: remove locais se a flag estiver ativa
+			$transferOk = true;
+		}
+		if ($transferOk) {
+			$h264Dir = isset($config['H264_DIR']) ? $config['H264_DIR'] : $config['BASE_DIR'] . '/media/videos/h264';
+			foreach ($formats as $fmt) {
+				$parts = explode('.', trim($fmt));
+				if (count($parts) >= 3) {
+					$h264File = $h264Dir . '/' . $vid . '_' . $parts[1] . '.' . $parts[2];
+					if (file_exists($h264File)) {
+						@unlink($h264File);
+					}
+				}
+			}
+		} else {
+			echo "\n[Multi-Server-GCS] Upload nao confirmado no bucket; formatos H.264 mantidos localmente.\n";
 		}
 	}
 

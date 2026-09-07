@@ -47,7 +47,12 @@ foreach($encodings as $encoding) {
 	convert($encoding, $vid, $video_name, $video_info);
 }
 postThumbs($vid,$video_path);
-postConversion($vid,$video_path);
+
+// postConversion intentionally omitted from pass 1: it prematurely activates the
+// video (active=1) with only the highest resolution before pass 2 adds the full
+// resolution ladder. Pass 2 (convert_videos_sp.php) calls its own postConversion
+// which handles final metadata, source cleanup, and queue cleanup after all
+// formats are produced.
 
 // Cleanup on failure: a first pass that produced NO formats never reached
 // insert_q_sp() (which deletes the fp row). Leaving the row at status='1'

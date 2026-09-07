@@ -259,6 +259,38 @@ if ($deletedJobs > 0 || $deletedRuns > 0 || $deletedLogs > 0) {
     echo "[" . date('Y-m-d H:i:s') . "] Cleanup: $deletedJobs jobs, $deletedRuns runs, $deletedLogs logs deleted\n";
 }
 
+// 3b: Limpeza automática de mídia local restante (fail-safe: só remove após confirmar no GCS)
+$mediaCleanupScript = $config['BASE_DIR'] . '/scripts/media_cleanup.php';
+if (file_exists($mediaCleanupScript)) {
+    $cleanupOutput = array();
+    $cleanupCode = 0;
+    exec($config['phppath'] . ' ' . escapeshellarg($mediaCleanupScript) . ' --delete 2>&1', $cleanupOutput, $cleanupCode);
+    $lastLine = '';
+    foreach (array_reverse($cleanupOutput) as $line) {
+        if (trim($line) !== '') { $lastLine = $line; break; }
+    }
+    if ($lastLine !== '') {
+        echo "[" . date('Y-m-d H:i:s') . "] Media cleanup: " . $lastLine . "\n";
+    }
+}
+
+// 3c: Limpeza de temp files do grabber (yt-dlp .part/.ytdl órfãos)
+$tmpDir = $config['BASE_DIR'] . '/tmp';
+$tmpPatterns = array('grab_*.part', 'grab_*.ytdl', 'thumb_*.jpg');
+$tmpCutoff = time() - 3600; // 1 hora
+$tmpCleaned = 0;
+foreach ($tmpPatterns as $pattern) {
+    foreach (glob($tmpDir . '/' . $pattern) as $f) {
+        if (is_file($f) && filemtime($f) < $tmpCutoff) {
+            @unlink($f);
+            ++$tmpCleaned;
+        }
+    }
+}
+if ($tmpCleaned > 0) {
+    echo "[" . date('Y-m-d H:i:s') . "] Temp cleanup: $tmpCleaned stale grabber files removed\n";
+}
+
 // ============================================================
 // 4. STUCK VIDEOS CLEANUP (vídeos presos em active=2 ou 3)
 // ============================================================
@@ -269,6 +301,17 @@ if ($deletedJobs > 0 || $deletedRuns > 0 || $deletedLogs > 0) {
 // Resetar no meio da conversão órfã o ffmpeg e trava o vídeo em loop.
 $stuckTimeout = 1800; // 30 minutos (worker agora tem timeout de 5 min no yt-dlp)
 $stuckCutoff = time() - $stuckTimeout;
+
+// Coletar VIDs stuck antes de resetar (para limpar arquivos parciais)
+$stuckVids = array();
+$rsStuck = $conn->execute("SELECT VID FROM video WHERE (active = '2' OR active = '3') AND last_update > 0 AND last_update < " . $stuckCutoff
+    . " AND VID NOT IN (SELECT VID FROM conversion_queue_fp)"
+    . " AND VID NOT IN (SELECT VID FROM conversion_queue_sp)");
+if ($rsStuck && $conn->Affected_Rows() > 0) {
+    foreach ($rsStuck->getrows() as $row) {
+        $stuckVids[] = intval($row['VID']);
+    }
+}
 
 // Reset vídeos presos em active=2 (baixando) por mais de 30 min,
 // SOMENTE se não estiverem em nenhuma fila de conversão
@@ -289,6 +332,27 @@ $stuckReset += $conn->Affected_Rows();
 
 // Reset jobs PROCESSING há mais de 30 min (crash recovery)
 $stuckReset += $jobMgr->resetStaleJobs($stuckTimeout);
+
+// Limpar arquivos parciais de vídeos stuck (mídia local sem conversão/upload)
+if (!empty($stuckVids)) {
+    require_once $config['BASE_DIR'] . '/include/function_thumbs.php';
+    $h264Dir = isset($config['H264_DIR']) ? $config['H264_DIR'] : $config['BASE_DIR'] . '/media/videos/h264';
+    $stuckCleaned = 0;
+    foreach ($stuckVids as $sv) {
+        // vid/{VID}.mp4
+        $vidFile = $config['VDO_DIR'] . '/' . $sv . '.mp4';
+        if (file_exists($vidFile)) { @unlink($vidFile); ++$stuckCleaned; }
+        // h264/{VID}_*
+        foreach (glob($h264Dir . '/' . $sv . '_*') as $f) {
+            if (is_file($f)) { @unlink($f); ++$stuckCleaned; }
+        }
+        // tmb/{VID}/
+        delete_local_video_thumbs($sv);
+    }
+    if ($stuckCleaned > 0) {
+        echo "[" . date('Y-m-d H:i:s') . "] Stuck files: $stuckCleaned partial files removed from " . count($stuckVids) . " stuck videos\n";
+    }
+}
 
 if ($stuckReset > 0) {
     echo "[" . date('Y-m-d H:i:s') . "] Stuck cleanup: $stuckReset items reset (videos stuck active=2/3 + stale jobs)\n";

@@ -359,19 +359,24 @@ function insert_q_sp($vid, $height, $info) {
 		echo "\nSQL:".$sql."\n";
 		$res = mysqli_query($link, $sql);
 		$count = $res ? mysqli_num_rows($res) : 0;
-		if ($count !=1) {
+		$insert_ok = false;
+		if ($count == 0) {
 			$uid = $info['UID'];
 			$video_name = mysqli_real_escape_string($link,$info['video_name']);
 			$video_path = mysqli_real_escape_string($link,$info['video_path']);
 			$title = mysqli_real_escape_string($link,$info['title']);	
 			$sql = "INSERT INTO conversion_queue_sp SET VID = '".$vid."', UID = '".intval($uid)."', video_name = '".$video_name."', video_path = '".$video_path."', skip = '".intval($height)."', title = '".$title."', addtime = '".time()."'";
-			echo "\nINSERT INTO QUEUE SECOND PASS SQL:".$sql."\n";
-			@mysqli_query($link, $sql);
+			$qr = mysqli_query($link, $sql);
+			if ($qr) {
+				$insert_ok = true;
+			}
+		} elseif ($count == 1) {
+			$insert_ok = true;
 		}
-		// The 1st pass produced a format, so its fp queue row is done no matter
-		// whether an sp row already existed - otherwise the fp row stays at
-		// status='1' forever and the video looks stuck "Converting".
-		@mysqli_query($link, "DELETE FROM conversion_queue_fp WHERE VID = '".$vid."' LIMIT 1");
+		// Only delete FP row if SP insert succeeded or already existed
+		if ($insert_ok) {
+			@mysqli_query($link, "DELETE FROM conversion_queue_fp WHERE VID = '".$vid."' LIMIT 1");
+		}
 
 		mysqli_close($link);
 	}
@@ -568,6 +573,20 @@ function postConversion($vid,$src) {
 			upload_video_formats($vid, $formats, $server);
 		} else {
 			echo "\n[Multi-Server] Nenhum servidor secundario ativo disponivel na fila. O video sera mantido no servidor principal.\n";
+		}
+	}
+
+	// Limpeza mop-up de formatos H.264 locais após upload confirmado
+	if ($config['del_original_video'] == 1 && !empty($formats)) {
+		$h264Dir = isset($config['H264_DIR']) ? $config['H264_DIR'] : $config['BASE_DIR'] . '/media/videos/h264';
+		foreach ($formats as $fmt) {
+			$parts = explode('.', trim($fmt));
+			if (count($parts) >= 3) {
+				$h264File = $h264Dir . '/' . $vid . '_' . $parts[1] . '.' . $parts[2];
+				if (file_exists($h264File)) {
+					@unlink($h264File);
+				}
+			}
 		}
 	}
 }

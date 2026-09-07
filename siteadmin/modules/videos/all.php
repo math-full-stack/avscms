@@ -254,7 +254,7 @@ function constructQuery($module)
         $option['title']        = trim($_POST['title']);
         $option['description']  = null;
         $option['keyword']      = trim($_POST['keyword']);
-        $option['channel']      = intval(trim($_POST['channel']));
+		$option['channel']      = trim($_POST['channel']);
         $option['active']       = trim($_POST['active']);
         $option['type']         = trim($_POST['type']);		
 		$option['sort']         = trim($_POST['sort']);		
@@ -280,7 +280,7 @@ function constructQuery($module)
 			$query_option[] = " AND v.keyword LIKE '%" .trim($conn->qStr($option['keyword']), "'"). "%'";
 		}
 
-		if ( $option['channel'] != '' ) {
+		if ( $option['channel'] !== '' && $option['channel'] !== 0 ) {
 			$query_option[] = " AND v.channel = " .intval($option['channel']);
 		}
 		
@@ -320,7 +320,7 @@ function constructQuery($module)
 			$query_option[] = " AND v.keyword LIKE '%" .trim($conn->qStr($option['keyword']), "'"). "%'";
 		}
 
-		if ( $option['channel'] != '' ) {
+		if ( $option['channel'] !== '' && $option['channel'] !== 0 ) {
 			$query_option[] = " AND v.channel = " .intval($option['channel']);
 		}
 

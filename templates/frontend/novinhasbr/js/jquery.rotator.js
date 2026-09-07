@@ -72,59 +72,25 @@ function xbOrientThumbs() {
 		}
 	});
 }
-function xbAdvanceTrio($t) {
-	if (!$t || !$t.length) return;
-	var now = Date.now ? Date.now() : (new Date()).getTime();
-	var last = $t.data('xb-last-advance') || 0;
-	if (now - last < 400) return;
-	$t.data('xb-last-advance', now);
-
-	var video_id = parseInt($t.attr('data-vid'), 10);
-	if (!video_id) return;
-	var covers = String($t.attr('data-covers') || '').split(',').map(function(x) {
-		return parseInt(x, 10);
-	}).filter(function(x) {
-		return x > 0;
-	});
-	if (covers.length < 2) return;
-	var n = covers.length;
-	var idx = (parseInt($t.attr('data-idx'), 10) || 0) % n;
-	var ni = (idx + 1) % n;
-	var base = thumb_path(video_id) + '/' + video_id + '/';
-	var $imgs = $t.find('img');
-	for (var s = 0; s < 3 && s < $imgs.length; s++) {
-		var f = covers[(ni + s) % n];
-		var url = base + f + '.jpg';
-		var pre = new Image();
-		pre.src = url;
-		$($imgs[s]).attr('src', url);
-	}
-	$t.attr('data-idx', ni);
-}
-
 $(document).ready(function() {
 	
 	xbOrientThumbs();
 	
 	$("body").on('mouseenter', "[id*='playvthumb_']", function(event) {
 		xbOrientThumb( $(this) );
-		var $trio = $(this).find('.xb-trio');
-		if ($trio.length) {
-			xbAdvanceTrio($trio);
-		}
 		var img = $(this).find('img:first');
 		if (!img.hasClass("img-private")) {			
 			var image_id    = $(this).attr("id");
 			var id_split    = image_id.split('_');
-			var video_id    = id_split[1];
-			var video 		= $('<video style="width:100%; height:100%; position:absolute; top:0; left:0;" class="img-fluid" muted autoplay loop>');
+			var video_id    = id_split[1];var video 		= $('<video style="width:100%; height:100%; position:absolute; top:0; left:0;" class="img-fluid" muted autoplay loop>');
 			var content 	= '<source type="video/webm" src="'+thumb_path(video_id) + '/' + video_id + '/video.webm"></source>';
 				content		= content + '<source type="video/mp4" src="'+thumb_path(video_id) + '/' + video_id + '/video.mp4"></source>';
 				$(video).append(content);
 				$(video).hide();
 				var vloader = $('<span class="vloader">');
-				var target = $trio.length ? $trio : $(this).find('img:first');
-				$(target).after($(video));$(video).after($(vloader));
+
+				$(this).prepend($(video));
+				$(this).prepend($(vloader));
 				$( ".vloader" ).animate({ width: '100%',}, 2000, function() {$( ".vloader" ).fadeOut();});
 				$("#thumbPlayer").css('visibility','visible');
 
@@ -139,9 +105,12 @@ $(document).ready(function() {
 		}
 	});
 	$("body").on('mouseleave', "[id*='playvthumb_']", function(event) {
-		var target = $(this).find('video');
+		$(this).find('video').remove();
+		$(this).find('.vloader').remove();
 		var img = $(this).find('img:first');
-		$(target).remove();$(this).find('.vloader').remove(); $(img).show(); 
+		if (img.length) {
+			$(img).show();
+		}
 	});
 	
     $("body").on('mouseover', "img[id*='rotate_']", function(event) {
@@ -182,36 +151,7 @@ $(document).ready(function() {
 			$(this).attr('src', thumb_path(video_id) + '/' + video_id + '/1.jpg');
     });
 
-	// Trio vertical: passar o mouse avança as 3 capas (janela deslizante
-	// sobre data-covers). Sem volta no mouseleave — avança e fica.
-	$("body").on('mouseenter', '.xb-trio', function(event) {
-		var $t = $(this);
-		var video_id = parseInt($t.attr('data-vid'), 10);
-		if (!video_id) {
-			return;
-		}
-		var covers = String($t.attr('data-covers') || '').split(',').map(function(x) {
-			return parseInt(x, 10);
-		}).filter(function(x) {
-			return x > 0;
-		});
-		if (covers.length < 2) {
-			return;
-		}
-		var n = covers.length;
-		var idx = (parseInt($t.attr('data-idx'), 10) || 0) % n;
-		var ni = (idx + 1) % n;
-		var base = thumb_path(video_id) + '/' + video_id + '/';
-		var $imgs = $t.find('img');
-		for (var s = 0; s < 3 && s < $imgs.length; s++) {
-			var f = covers[(ni + s) % n];
-			var url = base + f + '.jpg';
-			var pre = new Image();
-			pre.src = url;
-			$($imgs[s]).attr('src', url);
-		}
-		$t.attr('data-idx', ni);
-	});
+
 });
 
 $(window).on('load', function() {

@@ -6,6 +6,8 @@ require_once dirname(__FILE__) . '/YoutubeGrabber.php';
 require_once dirname(__FILE__) . '/XfreeGrabber.php';
 require_once dirname(__FILE__) . '/SonovinhasbrGrabber.php';
 require_once dirname(__FILE__) . '/PornolandiaGrabber.php';
+require_once dirname(__FILE__) . '/MixvazadasGrabber.php';
+require_once dirname(__FILE__) . '/BuceteiroGrabber.php';
 
 class GrabberManager {
 
@@ -18,6 +20,8 @@ class GrabberManager {
                 new XfreeGrabber(),
                 new SonovinhasbrGrabber(),
                 new PornolandiaGrabber(),
+                new MixvazadasGrabber(),
+                new BuceteiroGrabber(),
             );
         }
     }

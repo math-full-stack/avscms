@@ -47,6 +47,23 @@ function worker_fail_job($jobId, $jobMgr, $code, $msg) {
     }
 }
 
+function worker_cleanup_tmp($uniqId) {
+    global $config;
+    $tmpDir = $config['BASE_DIR'] . '/tmp';
+    $patterns = array(
+        $tmpDir . '/grab_' . $uniqId . '.mp4',
+        $tmpDir . '/grab_' . $uniqId . '.mp4.part',
+        $tmpDir . '/grab_' . $uniqId . '.mp4.ytdl',
+        $tmpDir . '/thumb_' . $uniqId . '.jpg',
+    );
+    foreach ($patterns as $f) {
+        if (file_exists($f)) @unlink($f);
+    }
+    foreach (glob($tmpDir . '/grab_' . $uniqId . '.mp4.part-Frag*.part') as $f) {
+        if (is_file($f)) @unlink($f);
+    }
+}
+
 // Verifica se vídeo existe
 $sql = "SELECT * FROM video WHERE VID = " . intval($vid) . " LIMIT 1";
 $rs = $conn->execute($sql);
@@ -91,6 +108,7 @@ $grabber = GrabberManager::getGrabberForUrl($url);
 if (!$grabber) {
     grabber_log("Grabber não encontrado para URL $url");
     $conn->execute("UPDATE video SET active = '0', last_update = " . time() . " WHERE VID = " . intval($vid) . " LIMIT 1");
+    worker_cleanup_tmp($uniqId);
     worker_fail_job($jobId, $jobMgr, 'GRABBER_NOT_FOUND', 'Grabber não encontrado para URL: ' . $url);
     exit(1);
 }
@@ -113,6 +131,7 @@ if (!$dlResult['status'] || !file_exists($tmpVideoDst) || filesize($tmpVideoDst)
     grabber_log("Falha download: $err");
     $conn->execute("UPDATE video SET active = '0', last_update = " . time() . " WHERE VID = " . intval($vid) . " LIMIT 1");
     @unlink($tmpVideoDst);
+    worker_cleanup_tmp($uniqId);
     worker_fail_job($jobId, $jobMgr, 'DOWNLOAD_FAILED', substr($err, 0, 500));
     exit(1);
 }
@@ -134,6 +153,7 @@ if (file_exists($vdoPath)) @unlink($vdoPath);
 if (!file_exists($vdoPath)) {
     grabber_log("Falha ao mover para $vdoPath");
     $conn->execute("UPDATE video SET active = '0', last_update = " . time() . " WHERE VID = " . intval($vid) . " LIMIT 1");
+    worker_cleanup_tmp($uniqId);
     worker_fail_job($jobId, $jobMgr, 'MOVE_FAILED', 'Falha ao mover arquivo para ' . $vdoPath);
     exit(1);
 }
@@ -253,4 +273,5 @@ grabber_log("Worker concluído VID=$vid");
 worker_complete_job($vid, $jobId, $jobMgr);
 grabber_log("Job #$jobId marcado como COMPLETED");
 
+worker_cleanup_tmp($uniqId);
 exit(0);

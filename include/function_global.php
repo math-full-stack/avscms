@@ -134,16 +134,24 @@ function video_cover_trio($video)
     $covers = video_cover_list($video);
     $n      = count($covers);
 
-    static $rot_seed = null;
-    if ( $rot_seed === null ) {
-        $rot_seed = mt_rand(0, 100000);
+    $vid = ( isset($video['VID']) ) ? (int)$video['VID'] : 0;
+
+    if ( $n <= 3 ) {
+        $trio = $covers;
+        return array($trio, 0, $covers);
     }
 
-    $vid   = ( isset($video['VID']) ) ? (int)$video['VID'] : 0;
-    $start = ($rot_seed + $vid) % $n;
+    mt_srand($vid ^ (int)microtime(true));
+    $indices = range(0, $n - 1);
+    for ( $i = $n - 1; $i > 0; $i-- ) {
+        $j = mt_rand(0, $i);
+        $tmp = $indices[$i];
+        $indices[$i] = $indices[$j];
+        $indices[$j] = $tmp;
+    }
 
-    $trio = array($covers[$start], $covers[($start + 1) % $n], $covers[($start + 2) % $n]);
-    return array($trio, $start, $covers);
+    $trio = array($covers[$indices[0]], $covers[$indices[1]], $covers[$indices[2]]);
+    return array($trio, 0, $covers);
 }
 
 /**

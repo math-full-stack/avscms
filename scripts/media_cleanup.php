@@ -110,15 +110,36 @@ if (is_dir($vidDir)) {
     }
 }
 
+// 2d) Diretórios legados: hd/, flv/, iphone/
+$legacyDirs = array(
+    'hd'     => isset($config['HD_DIR']) ? $config['HD_DIR'] : $thumbsRoot . '/hd',
+    'flv'    => isset($config['FLVDO_DIR']) ? $config['FLVDO_DIR'] : $thumbsRoot . '/flv',
+    'iphone' => isset($config['IPHONE_DIR']) ? $config['IPHONE_DIR'] : $thumbsRoot . '/iphone',
+);
+foreach ($legacyDirs as $type => $dir) {
+    if (!is_dir($dir)) {
+        continue;
+    }
+    foreach (glob($dir . '/*') as $file) {
+        if (!is_file($file)) {
+            continue;
+        }
+        $name = basename($file);
+        if (preg_match('/^(\d+)\./', $name, $m)) {
+            $found[(int) $m[1]][$type][] = $file;
+        }
+    }
+}
+
 if (empty($found)) {
-    echo "\nNenhuma mídia local restante em media/videos (thumbs/h264/vid). Limpo!\n";
+    echo "\nNenhuma mídia local restante em media/videos (thumbs/h264/vid/hd/flv/iphone). Limpo!\n";
     exit(0);
 }
 
 // 3) Para cada vídeo com mídia local, decide o que pode ser removido
 ksort($found);
-$removed = array('thumbs' => 0, 'h264' => 0, 'vid' => 0);
-$kept    = array('thumbs' => 0, 'h264' => 0, 'vid' => 0);
+$removed = array('thumbs' => 0, 'h264' => 0, 'vid' => 0, 'hd' => 0, 'flv' => 0, 'iphone' => 0);
+$kept    = array('thumbs' => 0, 'h264' => 0, 'vid' => 0, 'hd' => 0, 'flv' => 0, 'iphone' => 0);
 
 foreach ($found as $vid => $assets) {
     if ($onlyVid && $vid !== $onlyVid) {
@@ -229,11 +250,32 @@ foreach ($found as $vid => $assets) {
             ++$kept['vid'];
         }
     }
+
+    // mídia legada (hd, flv, iphone)
+    foreach (array('hd', 'flv', 'iphone') as $legacyType) {
+        if (empty($assets[$legacyType])) {
+            continue;
+        }
+        foreach ($assets[$legacyType] as $file) {
+            if ($hasFormats) {
+                echo "   " . basename($file) . " ($legacyType): " . ($dryRun ? "removeria" : "removido") . " (formatos confirmados no bucket)\n";
+                if (!$dryRun) {
+                    @unlink($file);
+                }
+                ++$removed[$legacyType];
+            } else {
+                echo "   " . basename($file) . " ($legacyType): mantido (bucket sem formatos)\n";
+                ++$kept[$legacyType];
+            }
+        }
+    }
 }
 
 echo "\n===== Resumo =====\n";
-echo "Removeria/Removidos:  thumbs=" . $removed['thumbs'] . " h264=" . $removed['h264'] . " vid=" . $removed['vid'] . "\n";
-echo "Mantidos (sem cópia no bucket / não-GCS): thumbs=" . $kept['thumbs'] . " h264=" . $kept['h264'] . " vid=" . $kept['vid'] . "\n";
+echo "Removeria/Removidos:  thumbs=" . $removed['thumbs'] . " h264=" . $removed['h264'] . " vid=" . $removed['vid']
+    . " hd=" . $removed['hd'] . " flv=" . $removed['flv'] . " iphone=" . $removed['iphone'] . "\n";
+echo "Mantidos (sem cópia no bucket / não-GCS): thumbs=" . $kept['thumbs'] . " h264=" . $kept['h264'] . " vid=" . $kept['vid']
+    . " hd=" . $kept['hd'] . " flv=" . $kept['flv'] . " iphone=" . $kept['iphone'] . "\n";
 if ($dryRun) {
     echo "Dry-run: nada foi alterado. Rode com --delete para executar.\n";
 }
