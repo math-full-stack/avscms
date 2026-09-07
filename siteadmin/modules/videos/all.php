@@ -158,11 +158,17 @@ if ($videos) {
                     $queue_status = $qrs2->fields['status'];
                     $queue_detail = ($queue_status == '1') ? 'Convertendo (2ª passagem)' : 'Na Fila (2ª passagem)';
                 } else {
-                    // Active 2 but not in queue = Baixando
+                    // Not in any queue: either downloading or marked for local/mediabunny processing.
                     if ($v['active'] == '2') {
                         $queue_detail = 'Baixando';
                     } else {
-                        $queue_detail = 'Aguardando fila';
+                        // active=3 with no queue row = processor=local or mediabunny skipped it.
+                        $processor = isset($config['processor']) ? $config['processor'] : 'ffmpeg';
+                        if (in_array($processor, array('local', 'mediabunny', 'auto'), true)) {
+                            $queue_detail = 'Processamento '.($processor === 'mediabunny' ? 'browser' : 'local').' pendente';
+                        } else {
+                            $queue_detail = 'Aguardando fila';
+                        }
                     }
                 }
             }

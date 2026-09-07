@@ -15,6 +15,18 @@ require $basedir. '/include/function_video.php';
 require $basedir. '/include/function_conversion_fp.php';
 
 
+// Processor dispatch
+$processor = isset($config['processor']) ? $config['processor'] : 'ffmpeg';
+if (in_array($processor, array('mediabunny', 'local'), true)) {
+	// Client-side processing: skip FFmpeg, mark video for browser/local worker.
+	$conn->execute("UPDATE video SET active = '3', last_update = '".time()."' WHERE VID = '".intval($vid)."' LIMIT 1");
+	// Delete the fp queue row so the server queue keeps moving.
+	$conn->execute("DELETE FROM conversion_queue_fp WHERE VID = '".intval($vid)."' LIMIT 1");
+	echo "\n[".ucfirst($processor)."] Processor set to $processor — VID $vid marked for client-side processing.\n";
+	echo "\n<-- End of Script -->\n\n";
+	exit();
+}
+
 $vi = array();
 $video_info = array();
 $nl = "=========================================================\n";

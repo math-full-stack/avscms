@@ -179,7 +179,10 @@ $modules_allowed    = array(
 	'user_block' => 1,
 	'user_report' => 1,
 	'user_message' => 1,
-	'delete_blog' => 1
+	'delete_blog' => 1,
+	'mediabunny_pending' => 1,
+	'mediabunny_complete' => 1,
+	'mediabunny_serve' => 1
 );
   
 if ( isset($modules_allowed[$module]) && $modules_allowed[$module] === 1 ) {

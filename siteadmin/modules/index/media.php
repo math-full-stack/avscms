@@ -6,6 +6,7 @@ Auth::checkAdmin();
 $phppath    = $config['phppath'];
 $ffmpeg     = $config['ffmpeg'];
 $ffprobe    = $config['ffprobe'];
+$processor  = isset($config['processor']) ? $config['processor'] : 'ffmpeg';
 
 if ( file_exists($phppath) && is_file($phppath) && is_executable($phppath) ) {
 	$binaries['phppath'] = '1';
@@ -53,7 +54,11 @@ if ( isset($_POST['submit_media']) ) {
     $filter                     = new VFilter();
     $phppath			        = $filter->get('phppath');
 	$ffmpeg		   			    = $filter->get('ffmpeg');	
-	$ffprobe				    = $filter->get('ffprobe');		
+	$ffprobe				    = $filter->get('ffprobe');
+	$processor				    = $filter->get('processor');
+	if (!in_array($processor, array('ffmpeg', 'local', 'mediabunny', 'auto'), true)) {
+		$processor = 'ffmpeg';
+	}		
 
 	$img_max_width			    = $filter->get('img_max_width', 'INTEGER');
 	$img_max_height			    = $filter->get('img_max_height', 'INTEGER');
@@ -170,7 +175,8 @@ if ( isset($_POST['submit_media']) ) {
 	if ( !$errors ) {
         $config['phppath']                   = $phppath;
         $config['ffmpeg']                    = $ffmpeg;
-        $config['ffprobe']                   = $ffprobe;	
+        $config['ffprobe']                   = $ffprobe;
+		$config['processor']                 = $processor;	
         $config['img_max_width']             = $img_max_width;
         $config['img_max_height']            = $img_max_height;
         $config['video_max_size']            = $video_max_size;
@@ -236,6 +242,7 @@ if ( isset($_POST['submit_media']) ) {
 	$smarty->assign('phppath', $phppath);
 	$smarty->assign('ffmpeg', $ffmpeg);
 	$smarty->assign('ffprobe', $ffprobe);
+	$smarty->assign('processor', $processor);
 
 	$smarty->assign('img_max_width', $img_max_width);
 	$smarty->assign('img_max_height', $img_max_height);
