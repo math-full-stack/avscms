@@ -3,52 +3,33 @@ defined('_VALID') or die('Restricted Access!');
 
 Auth::checkAdmin();
 
+// Reuse auto-detect function (defined in config.local.php).
+function detect_binary($currentPath, $candidates = array()) {
+    return _avscms_detect_binary($currentPath, $candidates);
+}
+
+$phpCandidates     = array('/Applications/XAMPP/xamppfiles/bin/php', '/usr/local/bin/php', '/usr/bin/php');
+$ffmpegCandidates  = array('/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg');
+$ffprobeCandidates = array('/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe', '/usr/bin/ffprobe');
+
 $phppath    = $config['phppath'];
 $ffmpeg     = $config['ffmpeg'];
 $ffprobe    = $config['ffprobe'];
 $processor  = isset($config['processor']) ? $config['processor'] : 'ffmpeg';
 
-if ( file_exists($phppath) && is_file($phppath) && is_executable($phppath) ) {
-	$binaries['phppath'] = '1';
-} else {
-	if ( file_exists('/Applications/XAMPP/xamppfiles/bin/php') && is_file('/Applications/XAMPP/xamppfiles/bin/php') && is_executable('/Applications/XAMPP/xamppfiles/bin/php') ) {
-		$binaries['phppath'] = '/Applications/XAMPP/xamppfiles/bin/php';
-	} else if ( file_exists('/usr/local/bin/php') && is_file('/usr/local/bin/php') && is_executable('/usr/local/bin/php') ) {
-		$binaries['phppath'] = '/usr/local/bin/php';
-	} else {
-		if ( file_exists('/usr/bin/php') && is_file('/usr/bin/php') && is_executable('/usr/bin/php') ) {
-			$binaries['phppath'] = '/usr/bin/php';
-		}
-	}
+// Persist auto-detected paths on first visit (config.local.php detects but doesn't save).
+$save = false;
+if (empty($phppath) || empty($ffmpeg) || empty($ffprobe)) {
+    if (empty($phppath))  { $config['phppath'] = detect_binary('', $phpCandidates);     $phppath  = $config['phppath']; $save = true; }
+    if (empty($ffmpeg))   { $config['ffmpeg']  = detect_binary('', $ffmpegCandidates);   $ffmpeg   = $config['ffmpeg'];  $save = true; }
+    if (empty($ffprobe))  { $config['ffprobe'] = detect_binary('', $ffprobeCandidates);  $ffprobe  = $config['ffprobe']; $save = true; }
+    if ($save) update_config($config);
 }
 
-if ( file_exists($ffmpeg) && is_file($ffmpeg) && is_executable($ffmpeg) ) {
-	$binaries['ffmpeg'] = '1';
-} else {
-	if ( file_exists('/opt/homebrew/bin/ffmpeg') && is_file('/opt/homebrew/bin/ffmpeg') && is_executable('/opt/homebrew/bin/ffmpeg') ) {
-		$binaries['ffmpeg'] = '/opt/homebrew/bin/ffmpeg';
-	} elseif ( file_exists('/usr/local/bin/ffmpeg') && is_file('/usr/local/bin/ffmpeg') && is_executable('/usr/local/bin/ffmpeg') ) {
-		$binaries['ffmpeg'] = '/usr/local/bin/ffmpeg';
-	} else {
-		if ( file_exists('/usr/bin/ffmpeg') && is_file('/usr/bin/ffmpeg') && is_executable('/usr/bin/ffmpeg') ) {
-			$binaries['ffmpeg'] = '/usr/bin/ffmpeg';
-		}
-	}
-}
-
-if ( file_exists($ffprobe) && is_file($ffprobe) && is_executable($ffprobe) ) {
-	$binaries['ffprobe'] = '1';
-} else {
-	if ( file_exists('/opt/homebrew/bin/ffprobe') && is_file('/opt/homebrew/bin/ffprobe') && is_executable('/opt/homebrew/bin/ffprobe') ) {
-		$binaries['ffprobe'] = '/opt/homebrew/bin/ffprobe';
-	} elseif ( file_exists('/usr/local/bin/ffprobe') && is_file('/usr/local/bin/ffprobe') && is_executable('/usr/local/bin/ffprobe') ) {
-		$binaries['ffprobe'] = '/usr/local/bin/ffprobe';
-	} else {
-		if ( file_exists('/usr/bin/ffprobe') && is_file('/usr/bin/ffprobe') && is_executable('/usr/bin/ffprobe') ) {
-			$binaries['ffprobe'] = '/usr/bin/ffprobe';
-		}
-	}
-}
+$binaries = array();
+$binaries['phppath'] = (file_exists($phppath) && is_executable($phppath)) ? '1' : detect_binary($phppath, $phpCandidates);
+$binaries['ffmpeg']  = (file_exists($ffmpeg) && is_executable($ffmpeg)) ? '1' : detect_binary($ffmpeg, $ffmpegCandidates);
+$binaries['ffprobe'] = (file_exists($ffprobe) && is_executable($ffprobe)) ? '1' : detect_binary($ffprobe, $ffprobeCandidates);
 
 if ( isset($_POST['submit_media']) ) {
     $filter                     = new VFilter();
@@ -197,46 +178,9 @@ if ( isset($_POST['submit_media']) ) {
 		$messages[] = 'Conversion settings updated successfully!';	
 	}
 	
-	if ( file_exists($phppath) && is_file($phppath) && is_executable($phppath) ) {
-		$binaries['phppath'] = '1';
-	} else {
-		if ( file_exists('/usr/local/bin/php') && is_file('/usr/local/bin/php') && is_executable('/usr/local/bin/php') ) {
-			$binaries['phppath'] = '/usr/local/bin/php';
-		} else {
-			if ( file_exists('/usr/bin/php') && is_file('/usr/bin/php') && is_executable('/usr/bin/php') ) {
-				$binaries['phppath'] = '/usr/bin/php';
-			}
-		}
-	}
-
-	if ( file_exists($ffmpeg) && is_file($ffmpeg) && is_executable($ffmpeg) ) {
-		$binaries['ffmpeg'] = '1';
-	} else {
-		if ( file_exists('/opt/homebrew/bin/ffmpeg') && is_file('/opt/homebrew/bin/ffmpeg') && is_executable('/opt/homebrew/bin/ffmpeg') ) {
-			$binaries['ffmpeg'] = '/opt/homebrew/bin/ffmpeg';
-		} elseif ( file_exists('/usr/local/bin/ffmpeg') && is_file('/usr/local/bin/ffmpeg') && is_executable('/usr/local/bin/ffmpeg') ) {
-			$binaries['ffmpeg'] = '/usr/local/bin/ffmpeg';
-		} else {
-			if ( file_exists('/usr/bin/ffmpeg') && is_file('/usr/bin/ffmpeg') && is_executable('/usr/bin/ffmpeg') ) {
-				$binaries['ffmpeg'] = '/usr/bin/ffmpeg';
-			}
-		}
-	}
-
-
-	if ( file_exists($ffprobe) && is_file($ffprobe) && is_executable($ffprobe) ) {
-		$binaries['ffprobe'] = '1';
-	} else {
-		if ( file_exists('/opt/homebrew/bin/ffprobe') && is_file('/opt/homebrew/bin/ffprobe') && is_executable('/opt/homebrew/bin/ffprobe') ) {
-			$binaries['ffprobe'] = '/opt/homebrew/bin/ffprobe';
-		} elseif ( file_exists('/usr/local/bin/ffprobe') && is_file('/usr/local/bin/ffprobe') && is_executable('/usr/local/bin/ffprobe') ) {
-			$binaries['ffprobe'] = '/usr/local/bin/ffprobe';
-		} else {
-			if ( file_exists('/usr/bin/ffprobe') && is_file('/usr/bin/ffprobe') && is_executable('/usr/bin/ffprobe') ) {
-				$binaries['ffprobe'] = '/usr/bin/ffprobe';
-			}
-		}
-	}	
+	$binaries['phppath'] = (file_exists($phppath) && is_executable($phppath)) ? '1' : detect_binary($phppath, $phpCandidates);
+	$binaries['ffmpeg']  = (file_exists($ffmpeg) && is_executable($ffmpeg)) ? '1' : detect_binary($ffmpeg, $ffmpegCandidates);
+	$binaries['ffprobe'] = (file_exists($ffprobe) && is_executable($ffprobe)) ? '1' : detect_binary($ffprobe, $ffprobeCandidates);
 
 	$smarty->assign('err', $err);	
 	$smarty->assign('phppath', $phppath);
