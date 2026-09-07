@@ -151,6 +151,24 @@
 											</div>
 											<div class="clearfix"></div>
 										</div>										
+										<!-- Conversion Engine -->
+										<div class="col-xs-12 m-b-5">
+											<h3>Conversion <span class="semi-bold">Engine</span></h3>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-4 control-label">Processor</label>
+											<div class="col-lg-8">
+											<select id="processor" name="processor" style="width:100%">
+												<option value="ffmpeg"{if $processor == 'ffmpeg' || $processor == ''} selected{/if}>FFmpeg (server)</option>
+												<option value="local"{if $processor == 'local'} selected{/if}>FFmpeg (local)</option>
+												<option value="mediabunny"{if $processor == 'mediabunny'} selected{/if}>Mediabunny (browser)</option>
+												<option value="auto"{if $processor == 'auto'} selected{/if}>Auto (Mediabunny + FFmpeg fallback)</option>
+											</select>
+											<span class="help">FFmpeg (server) runs on the VM. FFmpeg (local) skips server processing — video stays queued for local PC. Mediabunny runs in the user's browser via WebCodecs. Auto tries Mediabunny first, falls back to FFmpeg.</span>
+											</div>
+											<div class="clearfix"></div>
+										</div>
+										<!-- Conversion Engine -->
 										<!-- Conversion Q -->
 										<div class="col-xs-12 m-b-5">
 											<h3>Conversion Queue <span class="semi-bold">Configuration</span></h3>
