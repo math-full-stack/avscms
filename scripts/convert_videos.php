@@ -19,7 +19,13 @@ $processor = isset($config['processor']) ? $config['processor'] : 'ffmpeg';
 if (in_array($processor, array('mediabunny', 'local'), true)) {
 	// Client-side processing: skip FFmpeg, mark video for browser/local worker.
 	$conn->execute("UPDATE video SET active = '3', last_update = '".time()."' WHERE VID = '".intval($vid)."' LIMIT 1");
-	echo "\n[".ucfirst($processor)."] Processor set to $processor — VID $vid marked for client-side processing.\n";
+	// Audit log.
+	$logDir = $config['LOG_DIR'];
+	if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+	$logFile = $logDir.'/'.$vid.'.log';
+	$logMsg = "[".date('Y-m-d H:i:s')."] [".ucfirst($processor)."] Processor set to $processor — skipped server FFmpeg, VID $vid marked for client-side processing.\n";
+	@file_put_contents($logFile, $logMsg, FILE_APPEND);
+	echo $logMsg;
 	echo "\n<-- End of Script -->\n\n";
 	exit();
 }

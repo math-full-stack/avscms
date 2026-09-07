@@ -22,7 +22,13 @@ if (in_array($processor, array('mediabunny', 'local'), true)) {
 	$conn->execute("UPDATE video SET active = '3', last_update = '".time()."' WHERE VID = '".intval($vid)."' LIMIT 1");
 	// Delete the fp queue row so the server queue keeps moving.
 	$conn->execute("DELETE FROM conversion_queue_fp WHERE VID = '".intval($vid)."' LIMIT 1");
-	echo "\n[".ucfirst($processor)."] Processor set to $processor — VID $vid marked for client-side processing.\n";
+	// Audit log.
+	$logDir = $config['LOG_DIR'];
+	if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+	$logFile = $logDir.'/'.$vid.'.log';
+	$logMsg = "[".date('Y-m-d H:i:s')."] [".ucfirst($processor)."] Processor set to $processor — skipped server FFmpeg, VID $vid marked for client-side processing.\n";
+	@file_put_contents($logFile, $logMsg, FILE_APPEND);
+	echo $logMsg;
 	echo "\n<-- End of Script -->\n\n";
 	exit();
 }
