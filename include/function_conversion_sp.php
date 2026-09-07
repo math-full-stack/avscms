@@ -610,14 +610,26 @@ function _db_connect_raw() {
 	return $link;
 }
 
+function _adodb_reconnect() {
+	global $config, $conn;
+	if ($conn && is_object($conn)) {
+		@$conn->Close();
+		@$conn->Connect($config['db_host'], $config['db_user'], $config['db_pass'], $config['db_name']);
+		@$conn->execute("SET NAMES 'utf8mb4'");
+	}
+}
+
 function executeQuery($query) {
-	global $conn;
-	// Prefer the existing ADODB connection (no extra socket).
+	global $conn, $config;
 	if ($conn && is_object($conn) && $conn->_connectionID) {
-		$rs = $conn->execute($query);
-		if ($rs !== false) {
-			$id = $conn->Insert_ID();
-			return (intval($id) > 0) ? $id : true;
+		try {
+			$rs = $conn->execute($query);
+			if ($rs !== false) {
+				$id = $conn->Insert_ID();
+				return (intval($id) > 0) ? $id : true;
+			}
+		} catch (\mysqli_sql_exception $e) {
+			_adodb_reconnect();
 		}
 	}
 	for ($attempt = 1; $attempt <= 3; $attempt++) {
@@ -644,11 +656,15 @@ function executeQuery($query) {
 }
 	
 function selectQuery($query) {
-	global $conn;
+	global $conn, $config;
 	if ($conn && is_object($conn) && $conn->_connectionID) {
-		$rs = $conn->execute($query);
-		if ($rs !== false && !$rs->EOF) {
-			return $rs->fields;
+		try {
+			$rs = $conn->execute($query);
+			if ($rs !== false && !$rs->EOF) {
+				return $rs->fields;
+			}
+		} catch (\mysqli_sql_exception $e) {
+			_adodb_reconnect();
 		}
 	}
 	for ($attempt = 1; $attempt <= 3; $attempt++) {
