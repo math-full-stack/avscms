@@ -77,7 +77,7 @@ do {
         break;
     }
 
-    $video = $rs->getrow();
+    $video = $rs->fields;
     $vid       = intval($video['VID']);
     $vdoname   = $video['vdoname'];
     $videoPath = $config['VDO_DIR'].'/'.$vdoname;
