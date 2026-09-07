@@ -8,13 +8,31 @@ if ( !$conn->Connect($config['db_host'], $config['db_user'], $config['db_pass'],
 }
 $conn->execute("SET NAMES 'utf8mb4'");
 
-// Auto-close DB connection when script ends (CLI + web).
-// Prevents connection leak: without this, CLI scripts spawned by cron /
-// background processes leave MySQL connections in Sleep state until
-// wait_timeout (8h default) expires — exhausting max_connections.
-register_shutdown_function(function () use (&$conn) {
-    if ($conn && is_object($conn) && $conn->_connectionID) {
-        @$conn->Close();
+// Auto-expire idle connections after 60s (MySQL default is 8h = 28800s).
+// Critical for tunnel-based MySQL: when the tunnel drops, the MySQL server
+// keeps sleeping connections alive. With 151 max_connections, this fills up
+// in minutes. Setting per-session timeout ensures cleanup.
+$conn->execute("SET SESSION wait_timeout = 60");
+$conn->execute("SET SESSION interactive_timeout = 60");
+
+// Auto-close DB connection on script shutdown.
+// ADODB's _connectionID holds the raw mysqli resource — save it now and
+// close it directly in the shutdown function, guaranteeing the socket is
+// freed regardless of PHP's object destruction order.
+$_avscms_raw_mysqli = $conn->_connectionID;
+register_shutdown_function(function () use (&$_avscms_raw_mysqli, &$conn) {
+    // Nullify ADODB's handle first so its destructors don't touch the
+    // already-closed mysqli object (causes "mysqli object is already closed").
+    if ($conn && is_object($conn)) {
+        $conn->_connectionID = null;
+    }
+    // Now safely close the raw mysqli.
+    if ($_avscms_raw_mysqli) {
+        if (is_object($_avscms_raw_mysqli) && $_avscms_raw_mysqli instanceof \mysqli) {
+            @$_avscms_raw_mysqli->close();
+        } elseif (is_resource($_avscms_raw_mysqli)) {
+            @mysqli_close($_avscms_raw_mysqli);
+        }
     }
 });
 ?>
