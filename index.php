@@ -10,6 +10,7 @@ if ($uri !== '/' && $uri !== '') {
 
         // PHP files in subdirectories: execute directly (siteadmin/login.php, etc.)
         if ($ext === 'php' && dirname($file) !== __DIR__) {
+            chdir(dirname($file));
             require $file;
             exit(0);
         }
@@ -34,6 +35,7 @@ if ($uri !== '/' && $uri !== '') {
     if (is_dir($file)) {
         $index = rtrim($file, '/') . '/index.php';
         if (is_file($index)) {
+            chdir(dirname($index));
             require $index;
             exit(0);
         }
