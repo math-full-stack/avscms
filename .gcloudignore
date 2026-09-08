@@ -75,7 +75,6 @@ __pycache__/
 .opencode/
 
 # VM-only deploy tooling
-deploy.sh
 tunnel.sh
 aembed.sh
 
