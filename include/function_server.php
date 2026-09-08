@@ -270,7 +270,7 @@ function upload_video_formats_gcs($vid, $formats, $server)
 
     if ($success) {
         // A video_url do servidor GCS deve ser a URL pública do bucket
-        // ex: https://storage.googleapis.com/novinhasbr-cdn1
+        // ex: https://storage.googleapis.com/pornozinho-cdn1
         $videoUrl = rtrim($server['video_url'], '/');
         $conn->execute("UPDATE video SET server = " . $conn->qStr($videoUrl) . " WHERE VID = " . intval($vid) . " LIMIT 1");
         update_server($server);

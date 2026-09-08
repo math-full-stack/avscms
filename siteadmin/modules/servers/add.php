@@ -49,7 +49,7 @@ if (isset($_POST['add_server'])) {
             $errors[] = 'Por favor, insira o caminho do arquivo de chave JSON do Service Account!';
         }
         if (empty($video_url)) {
-            $errors[] = 'Por favor, insira a URL de Streaming do Bucket (ex: https://storage.googleapis.com/novinhasbr-cdn1)!';
+            $errors[] = 'Por favor, insira a URL de Streaming do Bucket (ex: https://storage.googleapis.com/pornozinho-cdn1)!';
         }
 
         // Validar arquivo de chave

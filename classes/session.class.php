@@ -11,14 +11,30 @@ class Session
         if (!self::$_sess_db || !@mysqli_ping(self::$_sess_db)) {
             $host = $config['db_host'];
             $port = 3306;
-            if (preg_match('/^(.+):(\d+)$/', $host, $m)) {
+            $socket = null;
+
+            // Cloud Run: use Unix socket for Cloud SQL Auth Proxy
+            if (isset($_ENV['K_SERVICE']) && file_exists('/cloudsql/novinhasbr:southamerica-east1:pornozinho-sql')) {
+                $host = 'localhost';
+                $port = 0;
+                $socket = '/cloudsql/novinhasbr:southamerica-east1:pornozinho-sql';
+            } elseif (preg_match('/^(.+):(\d+)$/', $host, $m)) {
                 $host = $m[1];
                 $port = intval($m[2]);
             }
-            if (self::$_sess_db = @mysqli_connect($host, $config['db_user'], $config['db_pass'], null, $port)) {
-                mysqli_select_db(self::$_sess_db, $config['db_name']);
-                mysqli_query(self::$_sess_db, "SET SESSION wait_timeout = 300");
-                return true;
+
+            if ($socket) {
+                if (self::$_sess_db = @mysqli_connect('localhost', $config['db_user'], $config['db_pass'], null, 0, $socket)) {
+                    mysqli_select_db(self::$_sess_db, $config['db_name']);
+                    mysqli_query(self::$_sess_db, "SET SESSION wait_timeout = 300");
+                    return true;
+                }
+            } else {
+                if (self::$_sess_db = @mysqli_connect($host, $config['db_user'], $config['db_pass'], null, $port)) {
+                    mysqli_select_db(self::$_sess_db, $config['db_name']);
+                    mysqli_query(self::$_sess_db, "SET SESSION wait_timeout = 300");
+                    return true;
+                }
             }
             return false;
         }

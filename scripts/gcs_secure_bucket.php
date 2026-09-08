@@ -10,7 +10,7 @@
  *      Media Bunny player, which reads objects cross-origin).
  *
  * Usage (run from the VM / project root, like the migrations runner):
- *   php scripts/gcs_secure_bucket.php <server_id> [--origin https://novinhasbr.net,http://localhost] [--dry-run]
+ *   php scripts/gcs_secure_bucket.php <server_id> [--origin https://pornozinho.com,http://localhost] [--dry-run]
  *
  *   --origin accepts a comma-separated list (or repeated flags) so both the
  *   production origin and localhost can be allowed in the same CORS rule.
@@ -157,7 +157,7 @@ if (empty($origins)) {
     }
 }
 if (empty($origins)) {
-    echo "\n[AVISO] --origin não informado (ex.: --origin=https://novinhasbr.net,http://localhost). CORS não alterado.\n";
+    echo "\n[AVISO] --origin não informado (ex.: --origin=https://pornozinho.com,http://localhost). CORS não alterado.\n";
     echo "        Rode novamente com --origin para liberar o Media Bunny ler os vídeos.\n";
 } else {
     if ($dryRun) {

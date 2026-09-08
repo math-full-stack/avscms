@@ -1,23 +1,44 @@
 <?php
 defined('_VALID') or die('Restricted Access!');
 
-$conn = ADONewConnection($config['db_type']);
-
-// Retry connection up to 3 times with delay (handles SSH tunnel hiccups)
 $connected = false;
-for ($i = 0; $i < 3; $i++) {
-    try {
-        if ($conn->Connect($config['db_host'], $config['db_user'], $config['db_pass'], $config['db_name'])) {
-            $connected = true;
-            break;
-        }
-    } catch (\mysqli_sql_exception $e) {
-        // Connection failed, will retry
+$last_error = '';
+
+// Cloud Run: Cloud SQL Auth Proxy listens on a Unix socket
+// Path format: /cloudsql/PROJECT:REGION:INSTANCE
+if (isset($_ENV['K_SERVICE'])) {
+    $socket_path = '/cloudsql/novinhasbr:southamerica-east1:pornozinho-sql';
+    $mysqli = @new \mysqli('localhost', $config['db_user'], $config['db_pass'], $config['db_name'], 0, $socket_path);
+    if ($mysqli->connect_error) {
+        $last_error = 'mysqli: ' . $mysqli->connect_error;
+    } else {
+        $mysqli->set_charset('utf8mb4');
+        $conn = ADONewConnection($config['db_type']);
+        $conn->_connectionID = $mysqli;
+        $conn->dialect = 'mysql';
+        $conn->fmtDate = 'Y-m-d';
+        $connected = true;
     }
-    if ($i < 2) sleep(1);
+}
+
+// Local / VM: use ADOdb with TCP
+if (!$connected) {
+    $conn = ADONewConnection($config['db_type']);
+    for ($i = 0; $i < 3; $i++) {
+        try {
+            if ($conn->Connect($config['db_host'], $config['db_user'], $config['db_pass'], $config['db_name'])) {
+                $connected = true;
+                break;
+            }
+            $last_error = $conn->ErrorMsg() ?: 'Connect returned false';
+        } catch (\mysqli_sql_exception $e) {
+            $last_error = $e->getMessage();
+        }
+        if ($i < 2) sleep(1);
+    }
 }
 if (!$connected) {
-    echo 'Could not connect to mysql! Please check your database settings!';
+    echo 'Could not connect to mysql! Error: ' . htmlspecialchars($last_error);
     die();
 }
 $conn->execute("SET NAMES 'utf8mb4'");

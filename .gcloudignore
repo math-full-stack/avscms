@@ -1,0 +1,91 @@
+# .gcloudignore — controls what Cloud Build (gcloud run deploy) excludes.
+# Unlike the VM deploy, Cloud Run does NOT need media, scripts, tmp, cache,
+# or .git.  Secrets (config.local.php, service-account key, cookies) are
+# injected via env vars / Secret Manager — still excluded here.
+
+.DS_Store
+.AppleDouble
+._*
+*~
+*.swp
+.idea/
+.vscode/
+*.bak
+*.debug*
+*.orig
+*.rej
+
+tmp/
+cache/
+logs/
+*.log
+templates_c/
+smarty_compile/
+
+media/videos/vid/
+media/videos/tmb/
+media/videos/h264/
+media/videos/iphone/
+media/videos/hd/
+media/videos/flv/
+media/photos/
+media/users/
+media/albums/
+media/categories/
+media/csv/
+
+*.mp4
+*.webm
+*.flv
+*.mov
+*.avi
+*.mkv
+*.m4v
+*.wmv
+*.mpg
+*.mpeg
+*.3gp
+*.ts
+*.mp3
+
+# Secrets & local config (Cloud Run uses env vars instead)
+include/config.local.php
+include/config.gcs.php
+include/gcs-service-account.json
+cookies.txt
+cookies2.txt
+cookies3.txt
+scripts/cookies.txt
+*.pem
+*.key
+
+# Third-party / nested repos
+scripts/bgutil-pot-provider/
+node_modules/
+__pycache__/
+*.pyc
+
+.env
+.env.*
+
+# Git / CI
+.git/
+.github/
+.gitignore
+.opencode/
+
+# VM-only deploy tooling
+deploy.sh
+tunnel.sh
+aembed.sh
+
+# Scripts that only run on Compute Engine
+scripts/yt-dlp
+scripts/cookies*.txt
+
+# Runtime directories that are ephemeral in Cloud Run
+scripts/convert_videos*.php
+scripts/grabber_*.php
+scripts/reprocess_videos.php
+scripts/media_cleanup.php
+scripts/local_worker.php

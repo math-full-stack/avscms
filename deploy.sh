@@ -25,7 +25,7 @@
 #   GCLOUD_PROJECT    (flashentrega)
 #   GCLOUD_SSH_USER   (unset -> gcloud uses your local user; CI sets e.g. matheussturiao)
 #   GCLOUD_REMOTE_DIR (/var/www/html/avscms)
-#   GCLOUD_SITE_URL   (https://novinhasbr.net)
+#   GCLOUD_SITE_URL   (https://pornozinho.com)
 #
 set -euo pipefail
 
@@ -34,7 +34,7 @@ INSTANCE="${GCLOUD_INSTANCE:-xbrasil}"
 PROJECT="${GCLOUD_PROJECT:-flashentrega}"
 SSH_USER="${GCLOUD_SSH_USER:-}"
 REMOTE_DIR="${GCLOUD_REMOTE_DIR:-/var/www/html/avscms}"
-SITE_URL="${GCLOUD_SITE_URL:-https://novinhasbr.net}"
+SITE_URL="${GCLOUD_SITE_URL:-https://pornozinho.com}"
 TARBALL="/tmp/avscms-code.$$.tar.gz"   # unique per run so a stale file from a failed run can never block scp
 
 # "user@instance" when SSH_USER is set, otherwise just the instance name

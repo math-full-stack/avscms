@@ -25,7 +25,7 @@ function get_thumb_url_local($vid)
 
 /**
  * Raiz pública dos thumbs no bucket GCS, quando existe um servidor GCS ativo
- * (ex.: https://storage.googleapis.com/novinhasbr-cdn1/thumbs).
+ * (ex.: https://storage.googleapis.com/pornozinho-cdn1/thumbs).
  *
  * Usada pelo JS do hover-preview/rotator: os vídeos em produção vivem no
  * bucket, então o cliente monta thumbs/{VID}/... a partir desta raiz.
