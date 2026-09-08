@@ -1,46 +1,51 @@
 <?php
 // Cloud Run: replicate .htaccess behavior (file/dir exists → serve, else → loader.php)
-$uri = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
-if ($uri !== '/' && $uri !== '') {
-    $file = __DIR__ . $uri;
+// Router state is kept in $_router_* variables on purpose: this file runs in
+// global scope and un-prefixed variables ($file, $uri, $ext, $mimes) leak
+// into every entrypoint/module required below (e.g. check.php does
+// $file[]['path'] = ... and would fatal on a string). See AGENTS.md.
+$_router_uri = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+if ($_router_uri !== '/' && $_router_uri !== '') {
+    $_router_file = __DIR__ . $_router_uri;
 
     // Serve existing static files (CSS, JS, images, etc.)
-    if (is_file($file)) {
-        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+    if (is_file($_router_file)) {
+        $_router_ext = strtolower(pathinfo($_router_file, PATHINFO_EXTENSION));
 
-        // PHP files in subdirectories: execute directly (siteadmin/login.php, etc.)
-        if ($ext === 'php' && dirname($file) !== __DIR__) {
-            chdir(dirname($file));
-            require $file;
+        // PHP entrypoints: execute directly (siteadmin/login.php, videos.php, ...)
+        // Guard: never require this file into itself - /index.php falls through
+        // to the homepage code below (same exception .htaccess made for index).
+        if (($_router_ext === 'php' || $_router_ext === 'phtml') && realpath($_router_file) !== __FILE__) {
+            chdir(dirname($_router_file));
+            require $_router_file;
             exit(0);
         }
 
-        if ($ext !== 'php' && $ext !== 'phtml') {
-            $mimes = ['css'=>'text/css','js'=>'application/javascript','json'=>'application/json',
-                'png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','gif'=>'image/gif',
-                'svg'=>'image/svg+xml','ico'=>'image/x-icon','webp'=>'image/webp',
-                'woff'=>'font/woff','woff2'=>'font/woff2','ttf'=>'font/ttf','eot'=>'application/vnd.ms-fontobject',
-                'mp4'=>'video/mp4','webm'=>'video/webm','txt'=>'text/plain','xml'=>'application/xml'];
-            header('Content-Type: ' . ($mimes[$ext] ?? mime_content_type($file) ?: 'application/octet-stream'));
-            header('Content-Length: ' . filesize($file));
-            if (in_array($ext, ['css','js','png','jpg','jpeg','gif','svg','ico','woff','woff2','ttf','eot','webp'])) {
-                header('Cache-Control: public, max-age=2592000');
-            }
-            readfile($file);
-            exit(0);
+        $_router_mimes = ['css'=>'text/css','js'=>'application/javascript','json'=>'application/json',
+            'png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','gif'=>'image/gif',
+            'svg'=>'image/svg+xml','ico'=>'image/x-icon','webp'=>'image/webp',
+            'woff'=>'font/woff','woff2'=>'font/woff2','ttf'=>'font/ttf','eot'=>'application/vnd.ms-fontobject',
+            'mp4'=>'video/mp4','webm'=>'video/webm','txt'=>'text/plain','xml'=>'application/xml'];
+        header('Content-Type: ' . ($_router_mimes[$_router_ext] ?? mime_content_type($_router_file) ?: 'application/octet-stream'));
+        header('Content-Length: ' . filesize($_router_file));
+        if (in_array($_router_ext, ['css','js','png','jpg','jpeg','gif','svg','ico','woff','woff2','ttf','eot','webp'])) {
+            header('Cache-Control: public, max-age=2592000');
         }
+        readfile($_router_file);
+        exit(0);
     }
 
     // Directories: serve index.php inside them (replicates Apache MultiViews)
-    if (is_dir($file)) {
-        $index = rtrim($file, '/') . '/index.php';
-        if (is_file($index)) {
-            chdir(dirname($index));
-            require $index;
+    if (is_dir($_router_file)) {
+        $_router_index = rtrim($_router_file, '/') . '/index.php';
+        if (is_file($_router_index)) {
+            chdir(dirname($_router_index));
+            require $_router_index;
             exit(0);
         }
     }
 }
+unset($_router_uri, $_router_file, $_router_ext, $_router_mimes, $_router_index);
 
 define('_VALID', true);
 require 'include/config.php';
