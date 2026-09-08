@@ -29,11 +29,14 @@ class Session
 
     public static function write($session_id, $session_data)
     {
-        $c = self::conn();
-        if (!$c) return false;
-
-        $c->Execute("REPLACE INTO `sessions` VALUES(" . $c->qStr($session_id) . ", " . $c->qStr(time()) . ", " . $c->qStr($session_data) . ")");
-        return true;
+        try {
+            $c = self::conn();
+            if (!$c || !$c->_connectionID) return false;
+            $c->Execute("REPLACE INTO `sessions` VALUES(" . $c->qStr($session_id) . ", " . $c->qStr(time()) . ", " . $c->qStr($session_data) . ")");
+            return true;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     public static function destroy($session_id)

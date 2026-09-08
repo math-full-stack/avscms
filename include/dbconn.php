@@ -48,24 +48,9 @@ $conn->execute("SET NAMES 'utf8mb4'");
 $conn->execute("SET SESSION wait_timeout = 300");
 $conn->execute("SET SESSION interactive_timeout = 300");
 
-// Auto-close DB connection on script shutdown.
-// ADODB's _connectionID holds the raw mysqli resource — save it now and
-// close it directly in the shutdown function, guaranteeing the socket is
-// freed regardless of PHP's object destruction order.
-$_avscms_raw_mysqli = $conn->_connectionID;
-register_shutdown_function(function () use (&$_avscms_raw_mysqli, &$conn) {
-    // Nullify ADODB's handle first so its destructors don't touch the
-    // already-closed mysqli object (causes "mysqli object is already closed").
-    if ($conn && is_object($conn)) {
-        $conn->_connectionID = null;
-    }
-    // Now safely close the raw mysqli.
-    if ($_avscms_raw_mysqli) {
-        if (is_object($_avscms_raw_mysqli) && $_avscms_raw_mysqli instanceof \mysqli) {
-            @$_avscms_raw_mysqli->close();
-        } elseif (is_resource($_avscms_raw_mysqli)) {
-            @mysqli_close($_avscms_raw_mysqli);
-        }
-    }
-});
+// Do NOT register a shutdown function to close the DB connection.
+// PHP destroys objects in an undefined order during shutdown — a custom
+// shutdown handler that nullifies $conn->_connectionID breaks
+// Session::write() (which runs later and needs the same $conn).
+// PHP's natural GC handles connection cleanup.
 ?>
