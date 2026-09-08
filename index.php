@@ -1,4 +1,45 @@
 <?php
+// Cloud Run: replicate .htaccess behavior (file/dir exists → serve, else → loader.php)
+$uri = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+if ($uri !== '/' && $uri !== '') {
+    $file = __DIR__ . $uri;
+
+    // Serve existing static files (CSS, JS, images, etc.)
+    if (is_file($file)) {
+        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+
+        // PHP files in subdirectories: execute directly (siteadmin/login.php, etc.)
+        if ($ext === 'php' && dirname($file) !== __DIR__) {
+            require $file;
+            exit(0);
+        }
+
+        if ($ext !== 'php' && $ext !== 'phtml') {
+            $mimes = ['css'=>'text/css','js'=>'application/javascript','json'=>'application/json',
+                'png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','gif'=>'image/gif',
+                'svg'=>'image/svg+xml','ico'=>'image/x-icon','webp'=>'image/webp',
+                'woff'=>'font/woff','woff2'=>'font/woff2','ttf'=>'font/ttf','eot'=>'application/vnd.ms-fontobject',
+                'mp4'=>'video/mp4','webm'=>'video/webm','txt'=>'text/plain','xml'=>'application/xml'];
+            header('Content-Type: ' . ($mimes[$ext] ?? mime_content_type($file) ?: 'application/octet-stream'));
+            header('Content-Length: ' . filesize($file));
+            if (in_array($ext, ['css','js','png','jpg','jpeg','gif','svg','ico','woff','woff2','ttf','eot','webp'])) {
+                header('Cache-Control: public, max-age=2592000');
+            }
+            readfile($file);
+            exit(0);
+        }
+    }
+
+    // Directories: serve index.php inside them (replicates Apache MultiViews)
+    if (is_dir($file)) {
+        $index = rtrim($file, '/') . '/index.php';
+        if (is_file($index)) {
+            require $index;
+            exit(0);
+        }
+    }
+}
+
 define('_VALID', true);
 require 'include/config.php';
 require 'include/function_global.php';
