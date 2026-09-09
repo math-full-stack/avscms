@@ -30,9 +30,10 @@ if ($workerRole !== 'converter') {
     exit(0);
 }
 
-// Processor dispatch
+// Processor dispatch: on the converter host, always run FFmpeg regardless of
+// processor setting. The processor gate only applies on web/VM hosts.
 $processor = isset($config['processor']) ? $config['processor'] : 'ffmpeg';
-if (in_array($processor, array('mediabunny', 'local'), true)) {
+if ($config['worker_role'] !== 'converter' && in_array($processor, array('mediabunny', 'local'), true)) {
 	// Client-side processing: skip FFmpeg, mark video for browser/local worker.
 	$conn->execute("UPDATE video SET active = '3', last_update = '".time()."' WHERE VID = '".intval($vid)."' LIMIT 1");
 	// Delete the sp queue row so the server queue keeps moving.
