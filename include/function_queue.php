@@ -22,6 +22,24 @@ function active_conversions($table) {
 	return $conn->Affected_Rows();
 }
 
+function queue_should_process() {
+	global $config;
+	$worker = isset($config['worker_role']) ? $config['worker_role'] : 'web';
+	$processor = isset($config['processor']) ? $config['processor'] : 'ffmpeg';
+	if ($worker !== 'converter') {
+		return false;
+	}
+	switch ($processor) {
+		case 'local':
+			return true;
+		case 'mediabunny':
+		case 'auto':
+			return false;
+		default:
+			return true;
+	}
+}
+
 function check_q() {
 
 	global $config, $conn;
@@ -30,7 +48,7 @@ function check_q() {
 	// not the declared 'converter' (the PC). This also covers explicit callers
 	// such as insert_into_q_fp()/insert_into_q_sp() on the web host: the row is
 	// enqueued, but only the converter host picks it up.
-	if ((isset($config['worker_role']) ? $config['worker_role'] : 'web') !== 'converter') {
+	if (!queue_should_process()) {
 		return false;
 	}
 
@@ -133,7 +151,7 @@ function pump_conversion_queue() {
         return 0;
     }
     // Host role gate (fail-closed): only the converter host pumps the queue.
-    if ((isset($config['worker_role']) ? $config['worker_role'] : 'web') !== 'converter') {
+    if (!queue_should_process()) {
         return 0;
     }
     remove_overdue('conversion_queue_fp');

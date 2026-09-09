@@ -310,7 +310,7 @@ if (!isset($config['worker_role']) || !in_array($config['worker_role'], array('c
 
 if($config['conversion_q'] == '1') {
 	require_once $config['BASE_DIR'].'/include/function_queue.php'; 
-	if ($config['worker_role'] === 'converter') {
+	if (queue_should_process()) {
 		check_q(); 
 		pump_conversion_queue();
 	}
