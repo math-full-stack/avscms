@@ -50,11 +50,11 @@ jobs:
           ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
         run: |
           python3 - <<'PY'
-import os
-src = open('deploy/config.local.prod.php').read()
-src = src.replace('__ADMIN_PASS__', os.environ['ADMIN_PASS'])
-open('/tmp/config.local.php', 'w').write(src)
-PY
+          import os
+          src = open('deploy/config.local.prod.php').read()
+          src = src.replace('__ADMIN_PASS__', os.environ['ADMIN_PASS'])
+          open('/tmp/config.local.php', 'w').write(src)
+          PY
 
       - name: Prepare GCS service account key
         env:
