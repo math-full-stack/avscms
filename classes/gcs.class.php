@@ -43,16 +43,45 @@ class GCS
 
     /**
      * Loads the service account key JSON and returns its contents.
+     *
+     * Priority (secure-first):
+     *   1. env GCS_KEY_JSON — chave inline (Cloud Run / .env / Secret Manager);
+     *   2. env GCS_KEY_PATH — caminho absoluto fora do webroot (VM);
+     *   3. $this->keyFilePath — legado (base da config; não usar em produção).
+     *
      * @return array|false
      */
     private function loadKey()
     {
-        if (!file_exists($this->keyFilePath)) {
-            $this->errorMsg = 'Arquivo de chave do Service Account não encontrado: ' . $this->keyFilePath;
-            return false;
+        $json = false;
+        $source = '';
+
+        $envJson = getenv('GCS_KEY_JSON');
+        if ($envJson !== false && $envJson !== '') {
+            $json = $envJson;
+            $source = 'env GCS_KEY_JSON';
+        } else {
+            $envPath = getenv('GCS_KEY_PATH');
+            if ($envPath !== false && $envPath !== '') {
+                if (!file_exists($envPath)) {
+                    $this->errorMsg = 'Chave (env GCS_KEY_PATH) não encontrada: ' . $envPath;
+                    return false;
+                }
+                $json = file_get_contents($envPath);
+                $source = 'env GCS_KEY_PATH';
+            }
         }
 
-        $json = file_get_contents($this->keyFilePath);
+        if ($json === false) {
+            // Legado: arquivo dentro do webroot (evitar em produção)
+            if (!file_exists($this->keyFilePath)) {
+                $this->errorMsg = 'Arquivo de chave do Service Account não encontrado: ' . $this->keyFilePath;
+                return false;
+            }
+            $json = file_get_contents($this->keyFilePath);
+            $source = $this->keyFilePath;
+        }
+
         if ($json === false) {
             $this->errorMsg = 'Falha ao ler o arquivo de chave JSON.';
             return false;

@@ -7,6 +7,9 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
+// Load .env variables before anything reads getenv() / $_ENV.
+require __DIR__ . '/dotenv.php';
+
 require 'debug.php';
 require 'config.paths.php';
 require 'config.db.php';

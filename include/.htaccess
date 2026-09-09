@@ -1,0 +1,5 @@
+# AVSCMS include/ — bloquear acesso HTTP direto.
+# Este diretório contém código PHP (incluído via filesystem, nunca via HTTP)
+# e segredos como gcs-service-account.json. Nada aqui deve ser servido.
+# Acesso via include/require do PHP continua funcionando (é filesystem, não HTTP).
+Require all denied

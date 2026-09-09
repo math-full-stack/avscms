@@ -179,19 +179,30 @@ function gcs_get_client($server)
 {
     global $config;
 
-    if (empty($server['gcs_key_path']) || empty($server['gcs_bucket'])) {
+    if (empty($server['gcs_bucket'])) {
         return false;
     }
 
-    $keyPath = $server['gcs_key_path'];
+    $keyPath = isset($server['gcs_key_path']) ? $server['gcs_key_path'] : '';
 
-    // Resolver caminho absoluto da chave (relativo ao BASE_DIR quando preciso)
-    if (!file_exists($keyPath)) {
-        $keyPathRelative = $config['BASE_DIR'] . '/' . $keyPath;
-        if (file_exists($keyPathRelative)) {
-            $keyPath = $keyPathRelative;
-        } else {
+    // Chave segura via env tem prioridade (GCS class lê GCS_KEY_JSON / GCS_KEY_PATH).
+    // Só exige o arquivo legado quando não há env configurado.
+    $envJson = getenv('GCS_KEY_JSON');
+    $envPath = getenv('GCS_KEY_PATH');
+    $hasEnv  = ($envJson !== false && $envJson !== '') || ($envPath !== false && $envPath !== '');
+
+    if (!$hasEnv) {
+        if (empty($keyPath)) {
             return false;
+        }
+        // Resolver caminho absoluto da chave (relativo ao BASE_DIR quando preciso)
+        if (!file_exists($keyPath)) {
+            $keyPathRelative = $config['BASE_DIR'] . '/' . $keyPath;
+            if (file_exists($keyPathRelative)) {
+                $keyPath = $keyPathRelative;
+            } else {
+                return false;
+            }
         }
     }
 

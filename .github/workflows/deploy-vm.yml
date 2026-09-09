@@ -7,15 +7,22 @@
 #   VM_USER        - ssh user (e.g. deploy)
 #   VM_SSH_KEY     - private key (OpenSSH format) whose public half is in
 #                    the VM's ~<user>/.ssh/authorized_keys (or project metadata)
-#   ADMIN_PASS     - $config['admin_pass'] to inject into include/config.local.php
-#   GCS_KEY_JSON   - contents of include/gcs-service-account.json (GCS SA key)
+#   ADMIN_PASS     - site admin password ($config['admin_pass'])
+#   DB_PASSWORD    - Cloud SQL password for DB_USER
+#   GCS_KEY_JSON   - contents of the GCS service account key (JSON)
+#
+# Optional secrets (sane defaults in the deploy code if omitted):
+#   DB_HOST, DB_USER, DB_NAME, GCS_BUCKET, GCS_STREAMING_URL
 #
 # Deployment model:
 #   - The VM serves (worker_role='web'); conversion runs on the local PC
 #     (worker_role='converter') against the same Cloud SQL.
-#   - config.local.php and config.gcs.php are gitignored, so they never
-#     leave this repo; the runner regenerates config.local.php from the
-#     committed template deploy/config.local.prod.php, substituting secrets.
+#   - config.local.php is a STATIC file (no secrets) copied from
+#     deploy/config.local.prod.php. All secrets live in /etc/avscms/.env
+#     (outside the webroot), written here from GitHub secrets, and read at
+#     runtime by include/dotenv.php. Real env vars always win over .env.
+#   - The GCS service account key is written to /etc/avscms/ (owned by
+#     www-data so Apache can sign URLs) and never placed in the webroot.
 #   - Media uploads are never committed; bigger disks keep them per-VM.
 # ============================================================
 name: Deploy AVSCMS to VM
@@ -45,23 +52,51 @@ jobs:
           echo "--- tarball size ---"
           ls -lh /tmp/avscms.tar
 
-      - name: Prepare production config.local.php
+      - name: Prepare config.local.php + /etc/avscms/.env (secrets out of webroot)
         env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
           ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+          GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
+          GCS_STREAMING_URL: ${{ secrets.GCS_STREAMING_URL }}
         run: |
+          # config.local.php é estático: não contém segredos.
+          cp deploy/config.local.prod.php /tmp/config.local.php
+          # Segredos vão para /etc/avscms/.env, fora do webroot. include/dotenv.php
+          # lê esse arquivo primeiro (precedência acima do .env do webroot).
           python3 - <<'PY'
           import os
-          src = open('deploy/config.local.prod.php').read()
-          src = src.replace('__ADMIN_PASS__', os.environ['ADMIN_PASS'])
-          open('/tmp/config.local.php', 'w').write(src)
+          parts = {
+              'DB_HOST':           os.environ.get('DB_HOST', '127.0.0.1'),
+              'DB_USER':           os.environ.get('DB_USER', 'avs_app'),
+              'DB_PASSWORD':       os.environ.get('DB_PASSWORD', ''),
+              'DB_NAME':           os.environ.get('DB_NAME', 'avs'),
+              'ADMIN_PASS':        os.environ.get('ADMIN_PASS', ''),
+              'GCS_KEY_PATH':      '/etc/avscms/gcs-service-account.json',
+              'GCS_BUCKET':        os.environ.get('GCS_BUCKET', 'pornozinho-cdn1'),
+              'GCS_STREAMING_URL': os.environ.get('GCS_STREAMING_URL', 'https://storage.googleapis.com/pornozinho-cdn1'),
+              'PHP_PATH':          '/usr/bin/php',
+              'FFMPEG_PATH':       '/usr/bin/ffmpeg',
+              'FFPROBE_PATH':      '/usr/bin/ffprobe',
+          }
+          lines = []
+          for k, v in parts.items():
+              # Sanitize: strip newlines so secrets cannot inject extra vars.
+              v = str(v).replace('\r', '').replace('\n', ' ')
+              lines.append('%s=%s' % (k, v))
+          open('/tmp/avscms.env', 'w').write('\n'.join(lines) + '\n')
+          print('wrote /tmp/avscms.env (%d vars)' % len(lines))
           PY
 
-      - name: Prepare GCS service account key
+      - name: Prepare GCS service account key (stored OUTSIDE webroot)
         env:
           GCS_KEY_JSON: ${{ secrets.GCS_KEY_JSON }}
         run: |
           echo "$GCS_KEY_JSON" | base64 -d > /tmp/gcs-service-account.json
           python3 -c "import json,io; json.load(io.open('/tmp/gcs-service-account.json','r')); print('gcs key is valid JSON')"
+          python3 -c "import json; k=json.load(open('/tmp/gcs-service-account.json')); print('email:', k.get('client_email'))"
 
       - name: Install SSH key
         run: |
@@ -95,13 +130,22 @@ jobs:
         run: |
           scp /tmp/avscms.tar avscms-vm:/tmp/avscms.tar
           scp /tmp/config.local.php avscms-vm:/tmp/config.local.php
+          scp /tmp/avscms.env avscms-vm:/tmp/avscms.env
           scp /tmp/gcs-service-account.json avscms-vm:/tmp/gcs-service-account.json
           scp deploy/avscms-prod.conf avscms-vm:/tmp/avscms-prod.conf
-          ssh avscms-vm 'sudo mkdir -p /var/www/avscms && \
+          ssh avscms-vm 'sudo mkdir -p /var/www/avscms /etc/avscms && \
             sudo chown -R deploy:deploy /var/www/avscms && \
             tar --overwrite -xf /tmp/avscms.tar -C /var/www/avscms && \
             sudo cp /tmp/config.local.php /var/www/avscms/include/config.local.php && \
-            sudo cp /tmp/gcs-service-account.json /var/www/avscms/include/gcs-service-account.json && \
+            sudo cp /tmp/avscms.env /etc/avscms/.env && \
+            sudo chown www-data:www-data /etc/avscms/.env && \
+            sudo chmod 600 /etc/avscms/.env && \
+            sudo cp /tmp/gcs-service-account.json /etc/avscms/gcs-service-account.json && \
+            sudo chown www-data:www-data /etc/avscms/gcs-service-account.json && \
+            sudo chmod 600 /etc/avscms/gcs-service-account.json && \
+            # Chave + .env nunca no webroot
+            sudo rm -f /var/www/avscms/include/gcs-service-account.json && \
+            sudo rm -f /var/www/avscms/.env && \
             sudo chown -R deploy:deploy /var/www/avscms'
 
       - name: Install apache vhost on VM

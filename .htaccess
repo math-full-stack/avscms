@@ -4,6 +4,11 @@ AcceptPathInfo On
 RewriteEngine On
 RewriteBase /
 
+# Never serve dotfiles / env files (.env carries secrets)
+<FilesMatch "^\.(env|env\..+|htaccess|htpasswd)$">
+    Require all denied
+</FilesMatch>
+
 # If requested resource exists as file or dir, serve it
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d

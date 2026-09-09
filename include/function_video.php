@@ -1041,15 +1041,26 @@ function get_video_sources($video, $mykey = null, $iv = null)
     $ttl  = 21600;
     $sign = false;
 
-    if ($serverType === 'gcs' && !empty($server['gcs_key_path']) && !empty($server['gcs_bucket'])) {
-        $keyPath = $server['gcs_key_path'];
-        if (!file_exists($keyPath)) {
-            $relative = $config['BASE_DIR'] . '/' . $keyPath;
-            if (file_exists($relative)) {
-                $keyPath = $relative;
+    if ($serverType === 'gcs' && !empty($server['gcs_bucket'])) {
+        $keyPath = isset($server['gcs_key_path']) ? $server['gcs_key_path'] : '';
+
+        // Chave via env (GCS_KEY_JSON / GCS_KEY_PATH) dispensa arquivo no webroot.
+        $envJson = getenv('GCS_KEY_JSON');
+        $envPath = getenv('GCS_KEY_PATH');
+        $hasEnv  = ($envJson !== false && $envJson !== '') || ($envPath !== false && $envPath !== '');
+        $keyOk   = false;
+        if ($hasEnv) {
+            $keyOk = true;
+        } elseif (!empty($keyPath)) {
+            if (!file_exists($keyPath)) {
+                $relative = $config['BASE_DIR'] . '/' . $keyPath;
+                if (file_exists($relative)) {
+                    $keyPath = $relative;
+                }
             }
+            $keyOk = file_exists($keyPath);
         }
-        if (file_exists($keyPath)) {
+        if ($keyOk) {
             require_once $config['BASE_DIR'] . '/classes/gcs.class.php';
             $gcs  = new GCS($keyPath, $server['gcs_bucket']);
             $ttl  = (isset($server['gcs_signed_ttl']) && intval($server['gcs_signed_ttl']) > 0)

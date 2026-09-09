@@ -22,6 +22,19 @@ REGION="${GCLOUD_REGION:-southamerica-east1}"
 SERVICE="${GCLOUD_SERVICE:-pornozinho}"
 SQL_INST="${GCLOUD_SQL_INST:-novinhasbr:southamerica-east1:pornozinho-sql}"
 
+# Credenciais vêm do .env local (gitignored) ou de env vars — nunca hardcode.
+DB_HOST="${DB_HOST:-$(grep -E '^DB_HOST=' .env 2>/dev/null | head -1 | cut -d= -f2-)}"
+DB_USER="${DB_USER:-$(grep -E '^DB_USER=' .env 2>/dev/null | head -1 | cut -d= -f2-)}"
+DB_PASSWORD="${DB_PASSWORD:-$(grep -E '^DB_PASSWORD=' .env 2>/dev/null | head -1 | cut -d= -f2-)}"
+DB_NAME="${DB_NAME:-$(grep -E '^DB_NAME=' .env 2>/dev/null | head -1 | cut -d= -f2-)}"
+: "${DB_HOST:=127.0.0.1}"
+: "${DB_USER:=avs_app}"
+: "${DB_NAME:=avs}"
+if [[ -z "$DB_PASSWORD" ]]; then
+    echo "ERROR: DB_PASSWORD não definido. Exporte a variável ou coloque-a no .env local (gitignored)." >&2
+    exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 step() { printf '\n==> %s\n' "$*"; }
 
@@ -37,7 +50,7 @@ if [[ "${1:-}" != "--no-build" ]]; then
         --region="$REGION" \
         --project="$PROJECT" \
         --add-cloudsql-instances="$SQL_INST" \
-        --set-env-vars="DB_HOST=127.0.0.1,DB_USER=avs_app,DB_PASSWORD=.)V>oZ2rHf{/zKM9,DB_NAME=avs" \
+        --set-env-vars="DB_HOST=${DB_HOST},DB_USER=${DB_USER},DB_PASSWORD=${DB_PASSWORD},DB_NAME=${DB_NAME}" \
         --quiet
 else
     step "Redeploying last image (no build)..."

@@ -3,10 +3,10 @@ defined('_VALID') or die('Restricted Access!');
 // ============================================================
 // AVSCMS production config.local.php — VM (pornozinho-vm)
 // ------------------------------------------------------------
-// Este arquivo é um template. O GitHub Action (deploy workflow)
-// copia este arquivo para include/config.local.php na VM e faz
-// a substituição de placeholders (__VARNAME__) pelas variáveis
-// do repositório secreto.
+// Este arquivo é estático: não contém segredos. O GitHub Action copia
+// este arquivo para include/config.local.php na VM. Segredos (DB, admin,
+// GCS) vêm do ambiente via include/dotenv.php, que lê /etc/avscms/.env
+// (fora do webroot) ou variáveis do ambiente real.
 //
 // A VM atua com worker_role = 'web' (serve páginas, não converte).
 // A conversão/FFmpeg roda no PC local (worker_role = 'converter'),
@@ -21,7 +21,7 @@ defined('_VALID') or die('Restricted Access!');
 $config['site_name']  = 'Pornozinho';
 $config['site_title'] = 'Pornozinho';
 $config['admin_name'] = 'admin';
-$config['admin_pass'] = '__ADMIN_PASS__';
+$config['admin_pass'] = getenv('ADMIN_PASS') ?: '';
 $config['noreply_email'] = 'noreply@pornozinho.com';
 $config['admin_email']   = 'admin@pornozinho.com';
 $config['emailsender']   = 'Pornozinho';
@@ -167,7 +167,9 @@ $config['recaptcha_secret_key'] = '';
 $config['gcs_enabled'] = '1';
 $config['gcs_bucket'] = 'pornozinho-cdn1';
 $config['gcs_streaming_url'] = 'https://storage.googleapis.com/pornozinho-cdn1';
-$config['gcs_key_path'] = $config['BASE_DIR'] . '/include/gcs-service-account.json';
+// Chave GCS fica FORA do webroot (/etc/avscms/gcs-service-account.json na VM)
+// ou inline via env GCS_KEY_JSON (Cloud Run). Nunca dentro de include/ (exposto).
+$config['gcs_key_path'] = getenv('GCS_KEY_PATH') ?: '/etc/avscms/gcs-service-account.json';
 $config['gcs_acl'] = 'publicRead';
 $config['gcs_cache_control'] = 'public, max-age=31536000';
 
