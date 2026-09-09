@@ -1,0 +1,126 @@
+# ============================================================
+# Deploy AVSCMS to the production VM (pornozinho-vm)
+# Triggers: push to main
+#
+# Required GitHub secrets:
+#   VM_HOST        - external IP or hostname of pornozinho-vm (e.g. 35.199.87.83)
+#   VM_USER        - ssh user (e.g. deploy)
+#   VM_SSH_KEY     - private key (OpenSSH format) whose public half is in
+#                    the VM's ~<user>/.ssh/authorized_keys (or project metadata)
+#   ADMIN_PASS     - $config['admin_pass'] to inject into include/config.local.php
+#   GCS_KEY_JSON   - contents of include/gcs-service-account.json (GCS SA key)
+#
+# Deployment model:
+#   - The VM serves (worker_role='web'); conversion runs on the local PC
+#     (worker_role='converter') against the same Cloud SQL.
+#   - config.local.php and config.gcs.php are gitignored, so they never
+#     leave this repo; the runner regenerates config.local.php from the
+#     committed template deploy/config.local.prod.php, substituting secrets.
+#   - Media uploads are never committed; bigger disks keep them per-VM.
+# ============================================================
+name: Deploy AVSCMS to VM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-avscms-vm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to pornozinho-vm
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build deploy tarball (exclude gitignored & secrets)
+        run: |
+          git archive --format=tar HEAD -o /tmp/avscms.tar
+          tar -tf /tmp/avscms.tar | grep -E '(^|/)(deploy|.github)(/|$)' | head
+          echo "--- tarball size ---"
+          ls -lh /tmp/avscms.tar
+
+      - name: Prepare production config.local.php
+        env:
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+        run: |
+          python3 - <<'PY'
+import os
+src = open('deploy/config.local.prod.php').read()
+src = src.replace('__ADMIN_PASS__', os.environ['ADMIN_PASS'])
+open('/tmp/config.local.php', 'w').write(src)
+PY
+
+      - name: Prepare GCS service account key
+        env:
+          GCS_KEY_JSON: ${{ secrets.GCS_KEY_JSON }}
+        run: |
+          echo "$GCS_KEY_JSON" > /tmp/gcs-service-account.json
+          python3 -c "import json,io; json.load(io.open('/tmp/gcs-service-account.json','r')); print('gcs key is valid JSON')"
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          touch ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          cat > ~/.ssh/config <<EOF
+            Host avscms-vm
+              HostName ${{ secrets.VM_HOST }}
+              User ${{ secrets.VM_USER }}
+              IdentityFile ~/.ssh/deploy_key
+              StrictHostKeyChecking no
+              ConnectTimeout 20
+          EOF
+
+      - name: Upload code to VM
+        run: |
+          scp /tmp/avscms.tar avscms-vm:/tmp/avscms.tar
+          scp /tmp/config.local.php avscms-vm:/tmp/config.local.php
+          scp /tmp/gcs-service-account.json avscms-vm:/tmp/gcs-service-account.json
+          scp deploy/avscms-prod.conf avscms-vm:/tmp/avscms-prod.conf
+          ssh avscms-vm 'sudo mkdir -p /var/www/avscms && \
+            sudo chown deploy:deploy /var/www/avscms && \
+            tar -xf /tmp/avscms.tar -C /var/www/avscms && \
+            sudo cp /tmp/config.local.php /var/www/avscms/include/config.local.php && \
+            sudo cp /tmp/gcs-service-account.json /var/www/avscms/include/gcs-service-account.json && \
+            sudo chown -R deploy:deploy /var/www/avscms'
+
+      - name: Install apache vhost on VM
+        run: |
+          ssh avscms-vm 'sudo cp /tmp/avscms-prod.conf /etc/apache2/sites-available/avscms.conf && \
+            sudo a2dissite 000-default >/dev/null 2>&1 || true && \
+            sudo a2ensite avscms >/dev/null 2>&1 || true && \
+            sudo a2enmod rewrite headers expires >/dev/null 2>&1 || true'
+
+      - name: Fix permissions (writable dirs) on VM
+        run: |
+          ssh avscms-vm 'cd /var/www/avscms && \
+            for d in tmp tmp/logs cache media media/users media/videos media/videos/vid media/videos/tmb media/videos/h264 media/videos/iphone media/videos/hd media/videos/flv; do \
+              mkdir -p "$d"; sudo chown -R www-data:www-data "$d" 2>/dev/null; sudo chmod -R 775 "$d" 2>/dev/null; \
+            done; \
+            sudo chown -R www-data:www-data tmp cache media 2>/dev/null || true'
+
+      - name: Validate & reload Apache
+        run: |
+          ssh avscms-vm 'sudo apache2ctl configtest && \
+            sudo systemctl reload apache2 || sudo systemctl restart apache2 && \
+            sudo systemctl is-active apache2'
+
+      - name: Smoke test (VM local + LB/domain)
+        run: |
+          echo "--- localhost on VM ---"
+          ssh avscms-vm 'curl -s -o /dev/null -w "VM / -> %{http_code}\n" http://localhost/ || echo "VM curl failed"'
+          echo "--- public domain ---"
+          for i in 1 2 3; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://pornozinho.com/ || echo "000")
+            echo "https://pornozinho.com/ -> $CODE"
+            [ "$CODE" = "200" ] && break
+            sleep 8
+          done

@@ -2,17 +2,25 @@
 defined('_VALID') or die('Restricted Access!');
 $config = array();
 
-// Detect Cloud Run environment: K_SERVICE is set by Cloud Run
-$is_cloud_run = isset($_ENV['K_SERVICE']) || isset(getenv()['K_SERVICE']);
-
-if ($is_cloud_run) {
-    $scheme = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'https';
-    $host = $_SERVER['HTTP_HOST'] ?? ($_ENV['K_SERVICE'] . '.run.app');
-    $base_url = $scheme . '://' . $host;
-    $relative = '';
+// Production VM / container override: SITE_BASE_URL env var wins when set.
+// Set via Apache SetEnv (VM) or container env. Reading it here (not in
+// config.local.php) ensures every *.URL constant below uses the real base.
+$env_site_url = getenv('SITE_BASE_URL');
+if ($env_site_url) {
+    $base_url = rtrim($env_site_url, '/');
+    $relative = getenv('SITE_RELATIVE') ?: '';
 } else {
-    $base_url = 'http://localhost/avscms';
-    $relative = '/avscms';
+    // Detect Cloud Run environment: K_SERVICE is set by Cloud Run
+    $is_cloud_run = isset($_ENV['K_SERVICE']) || isset(getenv()['K_SERVICE']);
+    if ($is_cloud_run) {
+        $scheme = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'https';
+        $host = $_SERVER['HTTP_HOST'] ?? ($_ENV['K_SERVICE'] . '.run.app');
+        $base_url = $scheme . '://' . $host;
+        $relative = '';
+    } else {
+        $base_url = 'http://localhost/avscms';
+        $relative = '/avscms';
+    }
 }
 
 $config['BASE_URL'] = $base_url;
