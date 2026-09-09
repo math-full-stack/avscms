@@ -98,8 +98,8 @@ jobs:
           scp /tmp/gcs-service-account.json avscms-vm:/tmp/gcs-service-account.json
           scp deploy/avscms-prod.conf avscms-vm:/tmp/avscms-prod.conf
           ssh avscms-vm 'sudo mkdir -p /var/www/avscms && \
-            sudo chown deploy:deploy /var/www/avscms && \
-            tar -xf /tmp/avscms.tar -C /var/www/avscms && \
+            sudo chown -R deploy:deploy /var/www/avscms && \
+            tar --overwrite -xf /tmp/avscms.tar -C /var/www/avscms && \
             sudo cp /tmp/config.local.php /var/www/avscms/include/config.local.php && \
             sudo cp /tmp/gcs-service-account.json /var/www/avscms/include/gcs-service-account.json && \
             sudo chown -R deploy:deploy /var/www/avscms'
