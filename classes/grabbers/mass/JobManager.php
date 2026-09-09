@@ -261,6 +261,16 @@ class JobManager {
     }
 
     /**
+     * Restart a stuck/processing job (PROCESSING -> PENDING, reset attempts).
+     */
+    public function restart($jobId) {
+        $now = time();
+        $this->safeExec("UPDATE grabber_jobs SET status = 'PENDING', attempts = 0, scheduled_at = $now,
+                            started_at = 0, worker_pid = 0, error_code = NULL, error_message = '', updated_at = $now
+                            WHERE id = " . intval($jobId) . " AND status = 'PROCESSING' LIMIT 1");
+    }
+
+    /**
      * Pause all pending jobs.
      * @return int  Number of jobs paused
      */

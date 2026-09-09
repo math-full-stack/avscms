@@ -480,6 +480,17 @@ if ($action === 'retry_job') {
     exit();
 }
 
+// --- AJAX: Restart processing job ---
+if ($action === 'restart_job') {
+    header('Content-Type: application/json; charset=utf-8');
+    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+    if ($id <= 0) { echo json_encode(array('status' => false, 'error' => 'Invalid job ID')); exit(); }
+    $jobMgr = new JobManager();
+    $jobMgr->restart($id);
+    echo json_encode(array('status' => true, 'message' => 'Job restarted'));
+    exit();
+}
+
 // --- AJAX: Process queue now (run cron in background) ---
 if ($action === 'process_now') {
     header('Content-Type: application/json; charset=utf-8');
