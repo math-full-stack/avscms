@@ -18,13 +18,13 @@ defined('_VALID') or die('Restricted Access!');
 // include/config.paths.php a partir da env var SITE_BASE_URL
 // (definida via Apache SetEnv na VM = https://pornozinho.com).
 // Não sobrescreva aqui para manter consistência com IMG_URL etc.
-$config['site_name']  = 'NovinhasBR';
-$config['site_title'] = 'NovinhasBR';
+$config['site_name']  = 'Pornozinho';
+$config['site_title'] = 'Pornozinho';
 $config['admin_name'] = 'admin';
 $config['admin_pass'] = '__ADMIN_PASS__';
 $config['noreply_email'] = 'noreply@pornozinho.com';
 $config['admin_email']   = 'admin@pornozinho.com';
-$config['emailsender']   = 'NovinhasBR';
+$config['emailsender']   = 'Pornozinho';
 $config['meta_description'] = 'Free Porn Videos';
 $config['meta_keywords']    = 'porn, sex, porno, free porn, porn tube, free streaming porn, full sex videos';
 
@@ -128,7 +128,7 @@ $config['force_utf8'] = '1';
 // --- Idiomas / template ---
 $config['language'] = 'pt_BR';
 $config['multi_language'] = '0';
-$config['template'] = 'novinhasbr';
+$config['template'] = 'pornozinho';
 $config['template_admin'] = 'default';
 
 // --- Redes sociais ---

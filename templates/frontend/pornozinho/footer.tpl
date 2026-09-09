@@ -109,7 +109,7 @@
 						time: 200
 					}
 				},
-				theme: "novinhasbr"
+				theme: "pornozinho"
 			};
 			$("#search_query").easyAutocomplete(options);
 			$("#search_query_xs").easyAutocomplete(options);

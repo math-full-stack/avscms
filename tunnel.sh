@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Tunnel para o MySQL/MariaDB da VM GCP (xbrasil -> NovinhasBR).
+# Tunnel para o MySQL/MariaDB da VM GCP (xbrasil -> Pornozinho).
 #   ./tunnel.sh          -> inicia o túnel (se já estiver ativo, não duplica)
 #   ./tunnel.sh status   -> mostra se a porta 3307 está de pé
 #   ./tunnel.sh stop     -> encerra o túnel

@@ -205,11 +205,11 @@
 	border-radius: 0 0 6px 6px;
 }
 
-/* NovinhasBR Theme */
-.easy-autocomplete.eac-novinhasbr {
+/* Pornozinho Theme */
+.easy-autocomplete.eac-pornozinho {
 	font-family: inherit;
 }
-.easy-autocomplete.eac-novinhasbr input {
+.easy-autocomplete.eac-pornozinho input {
 	border: 1px solid #262626;
 	border-radius: 24px;
 	background: #151515;
@@ -218,12 +218,12 @@
 	padding: 9px 16px;
 	min-width: 0;
 }
-.easy-autocomplete.eac-novinhasbr input:focus {
+.easy-autocomplete.eac-pornozinho input:focus {
 	border-color: #ff1493;
 	box-shadow: 0 0 0 3px rgba(255, 20, 147, .12);
 	outline: none;
 }
-.easy-autocomplete.eac-novinhasbr ul {
+.easy-autocomplete.eac-pornozinho ul {
 	background: #151515;
 	border: 1px solid #262626;
 	border-radius: 10px;
@@ -231,26 +231,26 @@
 	top: 8px;
 	overflow: hidden;
 }
-.easy-autocomplete.eac-novinhasbr ul li, .easy-autocomplete.eac-novinhasbr ul .eac-category {
+.easy-autocomplete.eac-pornozinho ul li, .easy-autocomplete.eac-pornozinho ul .eac-category {
 	border: none;
 	color: #ccc;
 	font-size: 13px;
 	padding: 10px 16px;
 	transition: all .15s ease;
 }
-.easy-autocomplete.eac-novinhasbr ul li.selected, .easy-autocomplete.eac-novinhasbr ul .eac-category.selected {
+.easy-autocomplete.eac-pornozinho ul li.selected, .easy-autocomplete.eac-pornozinho ul .eac-category.selected {
 	background: rgba(255, 20, 147, .12);
 	color: #fff;
 }
-.easy-autocomplete.eac-novinhasbr ul li:hover, .easy-autocomplete.eac-novinhasbr ul .eac-category:hover {
+.easy-autocomplete.eac-pornozinho ul li:hover, .easy-autocomplete.eac-pornozinho ul .eac-category:hover {
 	background: rgba(255, 255, 255, .06);
 	color: #fff;
 }
-.easy-autocomplete.eac-novinhasbr ul li b, .easy-autocomplete.eac-novinhasbr ul .eac-category b {
+.easy-autocomplete.eac-pornozinho ul li b, .easy-autocomplete.eac-pornozinho ul .eac-category b {
 	color: #ff1493;
 	font-weight: 600;
 }
-.easy-autocomplete.eac-novinhasbr ul li .eac-category {
+.easy-autocomplete.eac-pornozinho ul li .eac-category {
 	font-weight: 700;
 	text-transform: uppercase;
 	font-size: 11px;

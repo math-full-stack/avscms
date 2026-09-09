@@ -10,7 +10,7 @@ Os itais abaixo correspondem ao que foi inspecionado e ao que foi concluído no 
 ## 1. Pré-visualização de vídeo no hover do card
 
 ### Estado atual
-O HTML do card pode renderizar um elemento com id `playvthumb_<VID>` quando `$videos[i].vthumbs == '1'`. O JS em `templates/frontend/novinhasbr/js/jquery.rotator.js` possui um handler de `mouseenter` que:
+O HTML do card pode renderizar um elemento com id `playvthumb_<VID>` quando `$videos[i].vthumbs == '1'`. O JS em `templates/frontend/pornozinho/js/jquery.rotator.js` possui um handler de `mouseenter` que:
 - insere um elemento `<video>` sobre o thumbnail com sources apontando para `video.webm` e `video.mp4` no caminho de thumbnail;
 - esconde o img e faz fadeIn do vídeo na entrada;
 - remove o vídeo e o loader no `mouseleave`.

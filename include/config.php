@@ -35,7 +35,7 @@ if (file_exists(__DIR__ . '/config.local.php')) {
     $config['meta_keywords']  = getenv('META_KEYWORDS')  ?: 'porn, sex, free videos, porn videos';
     $config['language']       = 'pt_BR';
     $config['multi_language'] = '0';
-    $config['template']       = 'novinhasbr';
+    $config['template']       = 'pornozinho';
     $config['template_admin'] = 'default';
     $config['worker_role']    = 'web';
     $config['conversion_q']   = '0';
