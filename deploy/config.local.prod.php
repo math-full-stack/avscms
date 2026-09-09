@@ -172,7 +172,7 @@ $config['gcs_acl'] = 'publicRead';
 $config['gcs_cache_control'] = 'public, max-age=31536000';
 
 // --- Rejeitos: conversão em lote (feita pelo PC) ---
-$config['conversion_q'] = '1';
+$config['conversion_q'] = '0';
 $config['q_limit'] = '4';
 $config['q_timeout'] = '6';
 $config['max_thumb_folders'] = '32000';
