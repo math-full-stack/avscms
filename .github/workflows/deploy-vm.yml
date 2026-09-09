@@ -60,7 +60,7 @@ jobs:
         env:
           GCS_KEY_JSON: ${{ secrets.GCS_KEY_JSON }}
         run: |
-          echo "$GCS_KEY_JSON" > /tmp/gcs-service-account.json
+          echo "$GCS_KEY_JSON" | base64 -d > /tmp/gcs-service-account.json
           python3 -c "import json,io; json.load(io.open('/tmp/gcs-service-account.json','r')); print('gcs key is valid JSON')"
 
       - name: Install SSH key
