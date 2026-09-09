@@ -148,6 +148,16 @@ jobs:
             sudo rm -f /var/www/avscms/.env && \
             sudo chown -R deploy:deploy /var/www/avscms'
 
+      - name: Run database migrations on VM
+        run: |
+          # Aplica migrations pendentes via include/function_migrations.php.
+          # O CLI embutido lê DB_PASS; aqui carregamos o dotenv (lê
+          # /etc/avscms/.env primeiro) e mapeamos DB_PASSWORD. Rodamos como
+          # www-data (dono do .env, 0600) sem expor segredos no log.
+          PHP_CODE='require "include/dotenv.php"; require "include/function_migrations.php"; $db = new mysqli(getenv("DB_HOST") ?: "localhost", getenv("DB_USER") ?: "root", getenv("DB_PASSWORD") ?: "", getenv("DB_NAME") ?: "avs"); if ($db->connect_error) { echo "DB connection failed: " . $db->connect_error . PHP_EOL; exit(1); } $db->set_charset("utf8"); $res = migrations_run($db); if ($res) { foreach ($res as $f => $s) { echo "  " . $s . "  " . $f . PHP_EOL; } } else { echo "No pending migrations." . PHP_EOL; } $db->close();'
+          B64=$(printf '%s' "$PHP_CODE" | base64 | tr -d '\n')
+          ssh avscms-vm "cd /var/www/avscms && echo $B64 | base64 -d > /tmp/avscms-migrate.php && sudo -u www-data php /tmp/avscms-migrate.php && rm -f /tmp/avscms-migrate.php"
+
       - name: Install apache vhost on VM
         run: |
           ssh avscms-vm 'sudo cp /tmp/avscms-prod.conf /etc/apache2/sites-available/avscms.conf && \
