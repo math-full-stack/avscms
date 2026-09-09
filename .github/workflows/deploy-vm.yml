@@ -79,6 +79,18 @@ PY
               ConnectTimeout 20
           EOF
 
+      - name: Provision Python scraper deps (curl_cffi) on VM
+        run: |
+          ssh avscms-vm 'if python3 -c "import curl_cffi" 2>/dev/null; then
+              echo "curl_cffi already installed"
+            else
+              echo "Installing python3-pip..."
+              sudo apt-get update -qq && sudo apt-get install -y -qq python3-pip
+              echo "Installing curl_cffi (system python, PEP 668 --break-system-packages)..."
+              python3 -m pip install --break-system-packages -q curl_cffi
+              python3 -c "import curl_cffi, platform; print(\"curl_cffi\", curl_cffi.__version__, \"on\", platform.python_version())"
+            fi'
+
       - name: Upload code to VM
         run: |
           scp /tmp/avscms.tar avscms-vm:/tmp/avscms.tar

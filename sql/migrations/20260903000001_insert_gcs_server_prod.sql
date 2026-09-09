@@ -3,10 +3,10 @@
 
 INSERT INTO servers (url, video_url, server_type, gcs_bucket, gcs_key_path, gcs_signed_ttl, current_used, status)
 SELECT
-    'https://storage.googleapis.com/novinhasbr-cdn1',
-    'https://storage.googleapis.com/novinhasbr-cdn1',
+    'https://storage.googleapis.com/pornozinho-cdn1',
+    'https://storage.googleapis.com/pornozinho-cdn1',
     'gcs',
-    'novinhasbr-cdn1',
+    'pornozinho-cdn1',
     'include/gcs-service-account.json',
     21600,
     '0',

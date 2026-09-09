@@ -127,7 +127,7 @@
 											<label class="col-lg-4 control-label">Video Streaming URL</label>
 											<div class="col-lg-8">
 												<input class="form-control" name="video_url" id="srv_video_url_gcs" type="text" value="{$server.video_url|escape:'html'}" required>
-												<span class="help">URL pública do bucket para streaming (ex: <code>https://storage.googleapis.com/novinhasbr-cdn1</code>)</span>
+												<span class="help">URL pública do bucket para streaming (ex: <code>https://storage.googleapis.com/pornozinho-cdn1</code>)</span>
 											</div>
 											<div class="clearfix"></div>
 										</div>
