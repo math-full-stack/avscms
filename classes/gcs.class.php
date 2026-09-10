@@ -524,6 +524,42 @@ class GCS
     }
 
     /**
+     * Deletes a folder in an HNS (Hierarchical Namespace) bucket.
+     * Requires the force=true parameter: a folder keeps existing as a
+     * directory object even after all its objects are removed.
+     * @param string $folderName e.g. "h264/88/"
+     * @return bool
+     */
+    public function deleteFolder($folderName)
+    {
+        $token = $this->getAccessToken();
+        if (!$token) {
+            return false;
+        }
+
+        $url = 'https://storage.googleapis.com/storage/v1/b/'
+             . urlencode($this->bucket) . '/o/' . urlencode($folderName)
+             . '?force=true';
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, array(
+            CURLOPT_CUSTOMREQUEST  => 'DELETE',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_HTTPHEADER     => array(
+                'Authorization: Bearer ' . $token
+            )
+        ));
+
+        curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return ($httpCode === 204);
+    }
+
+    /**
      * Server-side copy of an object within the same bucket (no download).
      * Used to reorganize objects (e.g. h264/88_720p.mp4 -> h264/88/720p.mp4).
      * @param string $sourceObject

@@ -1025,6 +1025,11 @@ function delete_video_gcs( $video_id, $server )
         }
     }
 
+    // Buckets HNS materializam a pasta como objeto de diretório: mesmo vazia,
+    // ela persiste até ser removida explicitamente (force=true).
+    $gcs->deleteFolder('h264/' . $video_id . '/');
+    $gcs->deleteFolder('thumbs/' . $video_id . '/');
+
     return $deleted;
 }
 
@@ -1052,6 +1057,9 @@ function delete_video_thumbs_gcs( $video_id, $server )
             }
         }
     }
+
+    // HNS: folder persiste vazia sem remoção explícita.
+    $gcs->deleteFolder('thumbs/' . $video_id . '/');
 
     return $deleted;
 }
