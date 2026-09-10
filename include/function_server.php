@@ -396,6 +396,15 @@ function gcs_stream_object($server, $object)
         return false;
     }
 
+    // Streaming de mídia NUNCA passa pelo output buffer iniciado no config.php
+    // (gzip_encoding=1): o corpo inteiro do vídeo acumulado em memória estoura
+    // o memory_limit (fatal -> HTTP 500 com Content-Length 0) em arquivos
+    // grandes (ex.: 1080p ~240 MB). Fecha os buffers ANTES do primeiro byte
+    // para o corpo fluir direto para o Apache/nginx.
+    while (ob_get_level() > 0) {
+        ob_end_flush();
+    }
+
     $headers = array('Authorization: Bearer ' . $token);
     $range   = isset($_SERVER['HTTP_RANGE']) ? trim((string)$_SERVER['HTTP_RANGE']) : '';
     if ($range !== '') {
@@ -641,8 +650,10 @@ function upload_video_thumbs_gcs($vid, $server, $onlyFile = null, $silent = fals
     require_once $config['BASE_DIR'] . '/include/function_thumbs.php';
     $thumbDir = get_thumb_dir(intval($vid));
     if (!is_dir($thumbDir)) {
+        // Falha explícita (não sucesso silencioso): sem mídia local não há o
+        // que sincronizar e o vídeo fica com thumbs ausentes no bucket.
         $log("\n[Multi-Server-GCS] Thumbs do vídeo " . intval($vid) . " não encontrados localmente (nada a sincronizar).\n");
-        return true;
+        return false;
     }
 
     // Sprite do timeline preview: quando sincronizamos a pasta inteira e o
@@ -718,6 +729,16 @@ function upload_video_thumbs_gcs($vid, $server, $onlyFile = null, $silent = fals
         } else {
             $log(" [FALHA] " . $gcs->getError() . "\n");
             $success = false;
+        }
+    }
+
+    // Verificação pós-upload: sem o conjunto essencial no bucket (default +
+    // frames + sprite quando o player Main usa preview) o sync é considerado
+    // FALHO — a pasta local permanece como única cópia para re-tentar.
+    if ($success && $onlyFile === null) {
+        if (!gcs_thumbs_complete_on_bucket($vid, $server)) {
+            $success = false;
+            $log("\n[Multi-Server-GCS] ATENÇÃO: bucket sem o conjunto essencial de thumbs do vídeo " . $vid . " após o upload (upload parcial?) — local mantido como fallback.\n");
         }
     }
 
@@ -909,6 +930,76 @@ function ensure_video_sprite_local($vid)
     }
 
     return is_file($thumb_dir . '/sprite.jpg') ? 'ok' : 'failed';
+}
+
+/**
+ * Confere se o bucket GCS já guarda a mídia derivada ESSENCIAL de um vídeo:
+ * default.jpg (poster) + os frames numerados 1..N (grade/rotator) + sprite.jpg
+ * (timeline preview, apenas quando o player Main o usa).
+ *
+ * Só com esse conjunto presente a pasta local tmb/{VID} pode ser removida sem
+ * perder nada que não seja regenerável — um upload parcial (ex.: apenas
+ * 1.jpg/10.jpg no bucket) NÃO autoriza apagar a única cópia local restante.
+ *
+ * @param int   $vid            ID do vídeo
+ * @param array $server         Linha da tabela servers (server_type = 'gcs')
+ * @param int   $expectedFrames Quantidade de frames esperada (video.thumbs;
+ *                              default 20 quando 0/ausente), cap 20
+ * @return bool
+ */
+function gcs_thumbs_complete_on_bucket($vid, $server, $expectedFrames = null)
+{
+    global $conn;
+
+    $gcs = gcs_get_client($server);
+    if (!$gcs) {
+        return false;
+    }
+
+    $vid      = intval($vid);
+    $expected = intval($expectedFrames);
+    if ($expected <= 0) {
+        $expected = 20;
+    }
+    $expected = min($expected, 20);
+
+    $list = $gcs->listObjects('thumbs/' . $vid . '/');
+    if (!is_array($list)) {
+        return false;
+    }
+
+    $have = array();
+    foreach ($list as $name) {
+        if (substr($name, -1) !== '/') {
+            $have[basename($name)] = true;
+        }
+    }
+
+    if (!isset($have['default.jpg'])) {
+        return false;
+    }
+    for ($i = 1; $i <= $expected; $i++) {
+        if (!isset($have[$i . '.jpg'])) {
+            return false;
+        }
+    }
+
+    // Sprite só é essencial quando o player Main usa timeline preview (mesma
+    // regra do ensure_video_sprite_local) — sem preview, ausência é inofensiva.
+    static $timelinePreview = null;
+    if ($timelinePreview === null) {
+        $timelinePreview = '0';
+        $sql = "SELECT timeline_preview FROM player WHERE profile = 'Main' LIMIT 1";
+        $rs  = $conn->execute($sql);
+        if ($conn->Affected_Rows() == 1) {
+            $timelinePreview = $rs->fields['timeline_preview'];
+        }
+    }
+    if ($timelinePreview == '1' && !isset($have['sprite.jpg'])) {
+        return false;
+    }
+
+    return true;
 }
 
 /**

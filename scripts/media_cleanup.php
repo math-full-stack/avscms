@@ -147,7 +147,7 @@ foreach ($found as $vid => $assets) {
     }
 
     // Registro do vídeo
-    $sql = "SELECT VID, server, active, vdoname FROM video WHERE VID = " . $vid . " LIMIT 1";
+    $sql = "SELECT VID, server, active, vdoname, thumbs FROM video WHERE VID = " . $vid . " LIMIT 1";
     $rs  = $conn->execute($sql);
     if ($conn->Affected_Rows() != 1) {
         echo "\n[" . $vid . "] ÓRFÃO (sem registro na tabela video): ";
@@ -211,14 +211,14 @@ foreach ($found as $vid => $assets) {
         continue;
     }
 
-    // Confirma no bucket o que existe por tipo de mídia
+    // Confirma no bucket o que existe por tipo de mídia.
+    // Thumbs: só remove a pasta local quando o bucket tem o conjunto ESSENCIAL
+    // (default.jpg + frames 1..N + sprite quando o player Main usa preview).
+    // Um upload parcial (ex.: apenas 1.jpg/10.jpg no bucket) NÃO autoriza
+    // apagar o local — senão a única cópia restante se perde e os 404s viram
+    // permanentes (caso real: vídeo 115).
     $hasFormats = gcs_video_has_formats($vid, $server);
-    $hasThumbs  = false;
-    $gcs        = gcs_get_client($server);
-    if ($gcs) {
-        $list = $gcs->listObjects('thumbs/' . $vid . '/');
-        $hasThumbs = (is_array($list) && count($list) > 0);
-    }
+    $hasThumbs  = gcs_thumbs_complete_on_bucket($vid, $server, intval(isset($row['thumbs']) ? $row['thumbs'] : 0));
 
     echo "\n[" . $vid . "] GCS (" . $row['server'] . ") active=" . $row['active']
         . " | bucket h264=" . ($hasFormats ? 'OK' : 'ausente') . " thumbs=" . ($hasThumbs ? 'OK' : 'ausente') . "\n";
