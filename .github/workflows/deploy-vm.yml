@@ -98,26 +98,6 @@ jobs:
           python3 -c "import json,io; json.load(io.open('/tmp/gcs-service-account.json','r')); print('gcs key is valid JSON')"
           python3 -c "import json; k=json.load(open('/tmp/gcs-service-account.json')); print('email:', k.get('client_email'))"
 
-      - name: Install SSH key
-        run: |
-          mkdir -p ~/.ssh
-          # Ensure key has proper line endings and ends with newline
-          printf '%s' "${{ secrets.VM_SSH_KEY }}" | sed 's/\r$//' > ~/.ssh/deploy_key
-          echo '' >> ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          # Validate key format
-          ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null 2>&1 || { echo "ERROR: Invalid SSH private key format (must be OpenSSH, not PuTTY .ppk)"; exit 1; }
-          touch ~/.ssh/known_hosts
-          ssh-keyscan -H "${{ secrets.VM_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
-          cat > ~/.ssh/config <<EOF
-            Host avscms-vm
-              HostName ${{ secrets.VM_HOST }}
-              User ${{ secrets.VM_USER }}
-              IdentityFile ~/.ssh/deploy_key
-              StrictHostKeyChecking no
-              ConnectTimeout 20
-          EOF
-
       - name: Provision Python scraper deps (curl_cffi) on VM
         run: |
           ssh avscms-vm 'if sudo -u www-data python3 -c "import curl_cffi" 2>/dev/null; then
