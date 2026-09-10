@@ -9,31 +9,27 @@ require 'include/function_thumbs.php';
 // (até o gcloud oficial gera SignatureDoesNotMatch), então entregamos a mídia
 // via streaming server-side com OAuth2 Bearer + Cache-Control. Os callers
 // (templates/JS) continuam montando a mesma URL base concatenando o arquivo.
+// O parsing de {v}/{arquivo} é unificado em gcs_parse_proxy_request().
 
-$vidFile = ltrim(isset($_GET['v']) ? trim((string)$_GET['v']) : '', '/');
-$file    = isset($_GET['f']) ? trim((string)$_GET['f']) : '';
-
-if (strpos($vidFile, '/') !== false) {
-    list($vidFile, $file) = explode('/', $vidFile, 2);
-    $file = isset($file) ? trim((string)$file) : '';
-}
-
-$vid = intval($vidFile);
-if ($vid <= 0 || $file === '') {
+$parsed = gcs_parse_proxy_request();
+if ($parsed === false) {
     http_response_code(404);
     exit;
 }
+list($vid, $file) = $parsed;
 
 $file = basename($file);
+// Cache-buster de query-string ({url}?{ts}) não faz parte do objeto no bucket.
+$file = preg_replace('/\?.*$/', '', $file);
 if (!preg_match('/^[A-Za-z0-9._-]+$/', $file)
     || !preg_match('/\.(jpe?g|png|gif|webp|webm|mp4)$/i', $file)) {
     http_response_code(404);
     exit;
 }
 
-$sql = "SELECT server FROM video WHERE VID = " . $vid . " LIMIT 1";
-$rs  = $conn->execute($sql);
-if ($conn->Affected_Rows() != 1 || empty($rs->fields['server'])) {
+$server = gcs_get_server_by_vid($vid);
+if (!$server) {
+    // Sem servidor GCS vinculado: cai no fallback das thumbs locais.
     $local = get_thumb_dir($vid) . '/' . $file;
     if (file_exists($local)) {
         header('Location: ' . get_thumb_url_local($vid) . '/' . $file, true, 302);
@@ -43,39 +39,20 @@ if ($conn->Affected_Rows() != 1 || empty($rs->fields['server'])) {
     exit;
 }
 
-$server = get_server_by_video_url($rs->fields['server']);
-if (!$server || !isset($server['server_type']) || $server['server_type'] !== 'gcs') {
-    http_response_code(404);
-    exit;
-}
-
-$gcs = gcs_get_client($server);
-if (!$gcs) {
-    http_response_code(404);
-    exit;
-}
-
-$token = $gcs->getReadAccessToken();
-if ($token === false) {
-    http_response_code(404);
-    exit;
-}
-
 $object = 'thumbs/' . $vid . '/' . $file;
-$url    = 'https://storage.googleapis.com/storage/v1/b/' . urlencode($server['gcs_bucket'])
-        . '/o/' . rawurlencode($object) . '?alt=media';
 
-$ch = curl_init($url);
-curl_setopt_array($ch, array(
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_HTTPHEADER     => array('Authorization: Bearer ' . $token),
-    CURLOPT_CONNECTTIMEOUT => 10,
-    CURLOPT_TIMEOUT        => 30
-));
-$body    = curl_exec($ch);
-$code    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-curl_close($ch);
+// Mini-clipes do hover-preview (video.mp4/webm) são entregues via streaming
+// server-side com suporte a Range: gcs_fetch_object carrega o arquivo inteiro
+// na memória (CURLOPT_RETURNTRANSFER=true) e estoura timeout/memória para
+// vídeo. gcs_stream_object espelha status e headers e faz Range passthrough.
+if (preg_match('/\.(mp4|webm)$/i', $file)) {
+    if (!gcs_stream_object($server, $object)) {
+        http_response_code(404);
+    }
+    exit;
+}
+
+list($code, $body, $contentType) = gcs_fetch_object($server, $object);
 
 if ($code !== 200 || $body === false) {
     http_response_code(404);

@@ -15,7 +15,7 @@ $basedir = dirname(dirname(__FILE__));
 require $basedir. '/include/config.php';
 require $basedir. '/include/function_video.php';
 require $basedir. '/include/function_conversion_sp.php';
-require $basedir. '/include/function_server.php';
+require_once $basedir. '/include/function_server.php';
 
 
 // Host role gate (fail-closed): conversion/FFmpeg runs ONLY on the converter

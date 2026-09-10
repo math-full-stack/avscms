@@ -1,6 +1,7 @@
 <?php
 defined('_VALID') or die('Restricted Access!');
 require_once ($config['BASE_DIR']. '/include/function_thumbs.php');
+require_once ($config['BASE_DIR']. '/include/function_server.php');
 require $config['BASE_DIR']. '/classes/image.class.php';
 
 if (!function_exists('file_url_exists')) {
@@ -1089,13 +1090,17 @@ function get_video_sources($video, $mykey = null, $iv = null)
     /**
      * Builds the playback URL for an object path (GCS: "h264/12/480p.mp4",
      * local/FTP: "h264/12_480p.mp4").
+     *
+     * GCS: entrega via proxy same-origin (gcs_video.php) com OAuth2 Bearer +
+     * Range — o V4 signed-URL retorna SignatureDoesNotMatch para a SA
+     * avscms-gcs (mesma limitação documentada no gcs_thumbs.php).
      * @param string $object
      * @return string
      */
-    $makeUrl = function ($object) use ($sign, $gcs, $ttl, $videoRoot) {
+    $vid = intval($video['VID']);
+    $makeUrl = function ($object) use ($sign, $videoRoot, $config, $vid) {
         if ($sign) {
-            $signed = $gcs->getSignedUrl($object, $ttl);
-            return $signed !== false ? $signed : $videoRoot . '/' . $object;
+            return gcs_media_proxy_url($vid, $object);
         }
         return $videoRoot . '/' . ltrim($object, '/');
     };
@@ -1108,8 +1113,6 @@ function get_video_sources($video, $mykey = null, $iv = null)
     if (!empty($video['formats'])) {
         $formats = explode(',', $video['formats']);
     }
-
-    $vid = intval($video['VID']);
 
     foreach ($formats as $value) {
         $f = explode('.', trim($value));

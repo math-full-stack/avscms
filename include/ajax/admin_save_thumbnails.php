@@ -65,7 +65,7 @@ if (file_exists($temp_thumb_file)) {
 require_once $config['BASE_DIR']. '/include/function_server.php';
 sync_video_thumbs($vid, null, true);
 
-$response['src'] = get_thumb_url($vid).'/'.$thumb.'.jpg';
+$response['src'] = get_video_thumb_src($vid, $thumb);
 
 // Frames ordenados para o carousel da listagem: principal primeiro, depois as capas.
 $frames = array_unique(array_merge(array($thumb), $covers));

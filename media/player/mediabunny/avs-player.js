@@ -143,6 +143,30 @@ import {
         return fallbackVideo;
     };
 
+    // WebCodecs decode failures surface on later iterator.next() calls (Media
+    // Bunny creates its decoders lazily), which the fire-and-forget loops in
+    // updateNextFrame()/runAudioIterator() would otherwise turn into unhandled
+    // "EncodingError: Decoding error" rejections. Recover like startPlayer()
+    // does: drop to the native <video> fallback and resume from the current
+    // position so playback keeps working without a page reload.
+    let activeSource = null;
+    let decodeFailureHandled = false;
+    const handleDecodeFailure = (err) => {
+        if (decodeFailureHandled) return;
+        decodeFailureHandled = true;
+        console.warn('[AVS Mediabunny] falha de decodificação:', err);
+        const wasPlaying = playing;
+        const resumeAt = getPlaybackTime();
+        disposePlayback();
+        const fv = useNativeFallback(err && err.message ? err.message : String(err));
+        fv.src = (activeSource || pickSource()).src;
+        fv.load();
+        fv.addEventListener('loadedmetadata', () => {
+            try { fv.currentTime = Math.min(resumeAt, fv.duration || resumeAt); } catch (e) { /* keep 0 */ }
+            if (wasPlaying) void fv.play().catch(() => {});
+        }, { once: true });
+    };
+
     // Keeps the custom control bar + timeline (and the sprite preview) working
     // on top of the native <video> fallback. Only registers listeners — the
     // callbacks run after the module has fully initialized.
@@ -300,6 +324,7 @@ import {
     const initMediaPlayer = async (source) => {
         disposePlayback();
         asyncId++;
+        decodeFailureHandled = false;
         fileLoaded = false;
         showError('');
         posterImg.style.display = poster ? '' : 'none';
@@ -441,6 +466,7 @@ import {
                     throw new Error('Fonte sem trilha de vídeo utilizável.');
                 }
                 syncQualitySel(src);
+                activeSource = src;
                 return;
             } catch (err) {
                 lastErr = err;
@@ -455,6 +481,7 @@ import {
         for (const src of order) {
             if (await loadNativeSource(fv, src)) {
                 syncQualitySel(src);
+                activeSource = src;
                 return;
             }
         }
@@ -504,16 +531,20 @@ import {
 
     const updateNextFrame = async () => {
         const id = asyncId;
-        while (true) {
-            const frame = (await videoFrameIterator.next()).value ?? null;
-            if (!frame || id !== asyncId) break;
-            if (frame.timestamp <= getPlaybackTime()) {
-                context2d.clearRect(0, 0, canvas.width, canvas.height);
-                context2d.drawImage(frame.canvas, 0, 0);
-            } else {
-                nextFrame = frame;
-                break;
+        try {
+            while (true) {
+                const frame = (await videoFrameIterator.next()).value ?? null;
+                if (!frame || id !== asyncId) break;
+                if (frame.timestamp <= getPlaybackTime()) {
+                    context2d.clearRect(0, 0, canvas.width, canvas.height);
+                    context2d.drawImage(frame.canvas, 0, 0);
+                } else {
+                    nextFrame = frame;
+                    break;
+                }
             }
+        } catch (err) {
+            if (id === asyncId) handleDecodeFailure(err);
         }
     };
 
@@ -522,27 +553,31 @@ import {
     // ------------------------------------------------------------------
     const runAudioIterator = async () => {
         if (!audioSink) return;
-        for await (const { buffer, timestamp } of audioBufferIterator) {
-            const node = audioContext.createBufferSource();
-            node.buffer = buffer;
-            node.connect(gainNode);
-            node.playbackRate.value = playbackRate;
-            let start = audioContextStartTime + (timestamp - playbackTimeAtStart) / playbackRate;
-            start = Math.round(audioContext.sampleRate * start) / audioContext.sampleRate;
-            if (start >= audioContext.currentTime) {
-                node.start(start);
-            } else {
-                node.start(audioContext.currentTime, (audioContext.currentTime - start) * playbackRate);
+        try {
+            for await (const { buffer, timestamp } of audioBufferIterator) {
+                const node = audioContext.createBufferSource();
+                node.buffer = buffer;
+                node.connect(gainNode);
+                node.playbackRate.value = playbackRate;
+                let start = audioContextStartTime + (timestamp - playbackTimeAtStart) / playbackRate;
+                start = Math.round(audioContext.sampleRate * start) / audioContext.sampleRate;
+                if (start >= audioContext.currentTime) {
+                    node.start(start);
+                } else {
+                    node.start(audioContext.currentTime, (audioContext.currentTime - start) * playbackRate);
+                }
+                queuedAudioNodes.add(node);
+                node.onended = () => queuedAudioNodes.delete(node);
+                if (timestamp - getPlaybackTime() >= 1) {
+                    await new Promise((resolve) => {
+                        const id = setInterval(() => {
+                            if (timestamp - getPlaybackTime() < 1) { clearInterval(id); resolve(); }
+                        }, 100);
+                    });
+                }
             }
-            queuedAudioNodes.add(node);
-            node.onended = () => queuedAudioNodes.delete(node);
-            if (timestamp - getPlaybackTime() >= 1) {
-                await new Promise((resolve) => {
-                    const id = setInterval(() => {
-                        if (timestamp - getPlaybackTime() < 1) { clearInterval(id); resolve(); }
-                    }, 100);
-                });
-            }
+        } catch (err) {
+            handleDecodeFailure(err);
         }
     };
 
@@ -751,6 +786,7 @@ import {
         qualitySel.addEventListener('change', () => {
             const src = sources[parseInt(qualitySel.value, 10)];
             if (!src) return;
+            activeSource = src;
             if (fallbackVideo) {
                 fallbackVideo.src = src.src;
                 void fallbackVideo.play().catch(() => {});

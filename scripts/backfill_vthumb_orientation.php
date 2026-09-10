@@ -34,8 +34,9 @@ require_once $basedir . '/include/function_server.php';
 require_once $basedir . '/include/function_video.php';
 
 /**
- * Baixa o melhor formato (maior altura) de um vídeo do bucket GCS para o
- * TMP_DIR, via V4 Signed URL. Retorna o caminho local, ou '' em caso de falha.
+ * Baixa a melhor fonte H.264 de um vídeo do bucket GCS para o TMP_DIR via
+ * OAuth2 Bearer (o V4 signed-URL retorna SignatureDoesNotMatch para a SA).
+ * Retorna o caminho local, ou '' em caso de falha.
  * Usado pelo modo --missing quando a fonte local já foi removida.
  */
 function download_gcs_source($vid, $formats, $server)
@@ -46,40 +47,15 @@ function download_gcs_source($vid, $formats, $server)
         return '';
     }
 
-    $gcs = gcs_get_client($server);
-    if (!$gcs) {
+    $target = $config['TMP_DIR'] . '/vthumb_' . intval($vid);
+    @unlink($target);
+    if (!gcs_download_h264_source(intval($vid), $target)) {
         return '';
     }
-
-    $best  = '';
-    $bestH = 0;
-    foreach (explode(',', $formats) as $fmt) {
-        $parts = explode('.', trim($fmt));
-        if (count($parts) < 3) {
-            continue;
-        }
-        $h = (int) $parts[0];
-        if ($h > $bestH) {
-            $bestH = $h;
-            $best  = $parts[1] . '.' . $parts[2]; // ex.: '720p.mp4'
-        }
-    }
-    if ($best === '') {
-        return '';
-    }
-
-    $url = $gcs->getSignedUrl('h264/' . intval($vid) . '/' . $best, 3600);
-    if (!$url) {
-        return '';
-    }
-
-    $target = $config['TMP_DIR'] . '/vthumb_' . intval($vid) . '_' . $best;
-    $data   = @file_get_contents($url);
-    if ($data === false || strlen($data) < 1000) {
+    if (filesize($target) < 1000) {
         @unlink($target);
         return '';
     }
-    file_put_contents($target, $data);
     return $target;
 }
 

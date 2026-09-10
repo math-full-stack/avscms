@@ -17,74 +17,9 @@ $target     = $filter->get('target', 'STRING');
 $black_bars = $filter->get('black_bars', 'INTEGER');
 $keep_ar = $filter->get('keep_ar', 'INTEGER');
 
-// V4 signed URLs estão quebradas para esta Service Account (SignatureDoesNotMatch
-// mesmo com o gcloud oficial), então regenerar thumbs de vídeo GCS não pode depender
-// de file_url_exists() sobre o URL assinado. Baixamos o h264 do bucket via OAuth2
-// Bearer (mesmo transporte do gcs_thumbs.php) e extraímos de um arquivo local.
-if (!function_exists('gcs_download_h264_source')) {
-function gcs_download_h264_source($vid)
-{
-	global $config, $conn;
-
-	$sql = "SELECT server, formats FROM video WHERE VID = " .$conn->qStr($vid). " LIMIT 1";
-	$rs  = $conn->execute($sql);
-	if ($conn->Affected_Rows() != 1) {
-		return false;
-	}
-	$serverUrl = trim($rs->fields['server'] ?? '');
-	$formats   = trim($rs->fields['formats'] ?? '');
-	if ($serverUrl == '' || $formats == '') {
-		return false;
-	}
-
-	require_once $config['BASE_DIR']. '/include/function_server.php';
-	$server = get_server_by_video_url($serverUrl);
-	if (!$server || !isset($server['server_type']) || $server['server_type'] !== 'gcs') {
-		return false;
-	}
-
-	// formats = "720.720p.mp4,480.480p.mp4" -> prefere o maior primeiro.
-	$suffixes = array();
-	foreach (explode(',', $formats) as $f) {
-		$parts = explode('.', trim($f));
-		if (count($parts) >= 3) {
-			$suffixes[] = $parts[1].'.'.$parts[2];
-		}
-	}
-	if (!$suffixes) {
-		$suffixes[] = '480p.mp4';
-	}
-
-	$gcs   = gcs_get_client($server);
-	$token = ($gcs) ? $gcs->getReadAccessToken() : false;
-	if (!$gcs || $token === false) {
-		return false;
-	}
-
-	$tmp = $config['TMP_DIR']. '/vidsrc_'.$vid.'.mp4';
-	foreach ($suffixes as $suffix) {
-		$object = 'h264/'.$vid.'/'.$suffix;
-		$url    = 'https://storage.googleapis.com/storage/v1/b/'.urlencode($server['gcs_bucket'])
-		        . '/o/'.rawurlencode($object).'?alt=media';
-		$ch = curl_init($url);
-		curl_setopt_array($ch, array(
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_HTTPHEADER     => array('Authorization: Bearer '.$token),
-			CURLOPT_CONNECTTIMEOUT => 10,
-			CURLOPT_TIMEOUT        => 120
-		));
-		$body = curl_exec($ch);
-		$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		curl_close($ch);
-		if ($code === 200 && $body !== false) {
-			@file_put_contents($tmp, $body);
-			return (file_exists($tmp) && filesize($tmp) > 0) ? $tmp : false;
-		}
-	}
-
-	return false;
-}
-}
+// Vídeo GCS sem cópia local: o h264 é baixado do bucket via OAuth2 Bearer por
+// gcs_download_h264_source() (include/function_server.php) — file_url_exists()
+// falharia nos V4 signed URLs quebrados para esta Service Account.
 
 $thumb_dir = get_thumb_dir($vid);
 $thumb_url = get_thumb_url($vid);
@@ -106,7 +41,7 @@ foreach ($files['dir'] as $file) {
 if (!$found) {
 	// Vídeo GCS sem cópia local (del_original_video=1): baixa o h264 do bucket
 	// via Bearer — file_url_exists() falharia nos V4 signed URLs quebrados.
-	$src = gcs_download_h264_source($vid);
+	$src = gcs_download_h264_source($vid, $config['TMP_DIR'].'/vidsrc_'.$vid.'.mp4');
 	if ($src) {
 		extract_video_thumbs($src, $vid, $target, $black_bars, $keep_ar, true);
 		@unlink($src);

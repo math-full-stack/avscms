@@ -32,7 +32,7 @@ if (file_exists($tmp_thumb_dir)) {
 
 // Fonte única de verdade: bucket GCS para vídeos remotos, local caso contrário.
 $gcs_base = get_video_thumb_base($vid);
-$is_gcs   = (strpos($gcs_base, 'storage.googleapis.com') !== false);
+$is_gcs   = (strpos($gcs_base, 'gcs_thumbs.php') !== false);
 
 for ($i = 1; $i <= $count; $i++) {
 	if ($is_gcs) {
@@ -44,11 +44,10 @@ for ($i = 1; $i <= $count; $i++) {
 	}
 }
 
-
 if ($is_gcs) {
 	$response['player'] = $gcs_base.'/default.jpg';
 } elseif (file_exists($thumb_dir.'/default.jpg')) {
-	$response['player'] = $thumb_url.'/default.jpg';	
+	$response['player'] = $thumb_url.'/default.jpg';
 }
 $response['source'] = ($is_gcs ? $gcs_base : $thumb_url).'/'.$response['thumb'].'.jpg';
 $response['status'] = 1;

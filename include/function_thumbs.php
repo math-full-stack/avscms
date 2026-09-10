@@ -27,15 +27,16 @@ function get_thumb_url_local($vid)
  * Raiz das URLs de thumbs quando existe um servidor GCS ativo.
  *
  * O bucket é HNS/UBLA (nada é público); a base retornada aponta para o proxy
- * gcs_thumbs.php, que gera V4 signed URLs por arquivo. Usada pelo JS do
- * hover-preview/rotator e pelos callers de {insert name=thumb_path}.
+ * gcs_thumbs.php (slash-style: callers concatenam {vid}/{arquivo}), que gera
+ * V4 signed URLs por arquivo. Usada pelo JS do hover-preview/rotator e pelos
+ * callers de {insert name=thumb_path}.
  * Retorna '' quando não há servidor GCS (modo local/FTP intacto).
  *
  * @return string
  */
 function get_gcs_thumbs_base()
 {
-	global $conn;
+	global $conn, $config;
 
 	static $base = null;
 	if ($base !== null) {
@@ -48,7 +49,7 @@ function get_gcs_thumbs_base()
 	if ($conn->Affected_Rows() == 1) {
 		// Bucket GCS é HNS/UBLA (acesso por IAM, sem público): as thumbs são
 		// servidas via proxy que gera V4 signed URLs. Os callers montam
-		// {base}/{VID}/{arquivo}, e o proxy parseia o caminho.
+		// {base}{VID}/{arquivo}, e o proxy parseia o caminho (v={VID}/{arquivo}).
 		$base = $config['BASE_URL'] . '/gcs_thumbs.php?v=';
 	}
 
@@ -88,10 +89,10 @@ function get_video_thumb_base($vid)
 		require_once $config['BASE_DIR'] . '/include/function_server.php';
 		$server = get_server_by_video_url($rs->fields['server']);
 		if ($server && isset($server['server_type']) && $server['server_type'] === 'gcs') {
-			// Thumbs no bucket são privadas (HNS/UBLA) e são entregues via
-			// proxy de signed URLs; '&f=' contém o nome do arquivo que o
-			// caller adiciona após a base ({base}/{arquivo}).
-			$cache[$vid] = $config['BASE_URL'] . '/gcs_thumbs.php?v=' . $vid . '&f=';
+			// Thumbs no bucket são privadas (HNS/UBLA) e são entregues via proxy
+			// de signed URLs em slash-style. Os callers montam
+			// {base}/{arquivo} — e o proxy parseia v={VID}/{arquivo}.
+			$cache[$vid] = $config['BASE_URL'] . '/gcs_thumbs.php?v=' . $vid;
 		}
 	}
 
@@ -106,7 +107,8 @@ function get_thumb_url($vid)
 /**
  * URL pública de um frame de thumbnail — fonte única de verdade.
  *
- * - Vídeo no bucket GCS: serve direto da URL pública (thumbs/{VID}/{frame}.jpg).
+ * - Vídeo no bucket GCS: serve via proxy de signed URLs (slash-style,
+ *   thumb{...} do bucket).
  * - Vídeo local: só usa o frame se o arquivo existir em disco; senão fallback
  *   default.jpg.
  *
@@ -123,7 +125,7 @@ function get_video_thumb_src($vid, $frame)
 	$tmb_url_def = $config['BASE_URL'].'/media/videos/tmb/default.jpg';
 
 	if (strpos($base, 'gcs_thumbs.php') !== false) {
-		return $config['BASE_URL'].'/gcs_thumbs.php?v='.$vid.'&f='.$num.'.jpg';
+		return $config['BASE_URL'].'/gcs_thumbs.php?v='.$vid.'/'.$num.'.jpg';
 	}
 
 	$path_dir = get_thumb_dir($vid);

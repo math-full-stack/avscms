@@ -26,6 +26,28 @@ foreach ($files['dir'] as $file) {
 }
 
 if (!$found) {
+	// Reprocess pós-sincronização deixa a fonte original em VDO_DIR (media/videos/vid/<vid>.mp4),
+	// que o video_files() (all=false) não lista — checar antes de cair no GCS.
+	$vdo_src = $config['VDO_DIR'].'/'.$vid.'.mp4';
+	if (file_exists($vdo_src) && filesize($vdo_src) > 100) {
+		$duration = get_video_duration($vdo_src, $vid);
+		$found = true;
+	}
+}
+
+if (!$found) {
+	// Vídeo GCS sem cópia local: baixa o h264 do bucket via
+	// gcs_download_h264_source() (include/function_server.php, transporte
+	// OAuth2 Bearer compartilhado — file_url_exists() falharia nos signed URLs).
+	$src = gcs_download_h264_source($vid, $config['TMP_DIR'].'/vidsrc_'.$vid.'.mp4');
+	if ($src) {
+		$duration = get_video_duration($src, $vid);
+		@unlink($src);
+		$found = true;
+	}
+}
+
+if (!$found) {
 	foreach ($files['url'] as $file) {
 		if (file_url_exists($file)) {
 			$duration = get_video_duration($file, $vid);

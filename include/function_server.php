@@ -212,6 +212,314 @@ function gcs_get_client($server)
 }
 
 /**
+ * Resolve a linha do servidor GCS vinculada a um vídeo.
+ *
+ * Fonte única do padrão "query server do vídeo + get_server_by_video_url +
+ * validação server_type = gcs" usado pelos proxies de mídia e downloads.
+ *
+ * @param int $vid ID do vídeo
+ * @return array|false Linha da tabela servers (server_type = 'gcs') ou false
+ */
+function gcs_get_server_by_vid($vid)
+{
+    global $config, $conn;
+
+    $vid = intval($vid);
+    if ($vid <= 0) {
+        return false;
+    }
+
+    $sql = "SELECT server FROM video WHERE VID = " . $conn->qStr($vid) . " LIMIT 1";
+    $rs  = $conn->execute($sql);
+    if ($conn->Affected_Rows() != 1 || empty($rs->fields['server'])) {
+        return false;
+    }
+
+    $server = get_server_by_video_url(trim($rs->fields['server']));
+    if (!$server || !isset($server['server_type']) || $server['server_type'] !== 'gcs') {
+        return false;
+    }
+
+    return $server;
+}
+
+/**
+ * Parseia a URL dos proxies de mídia (gcs_thumbs.php / gcs_video.php).
+ *
+ * Fonte única dos dois formatos aceitos:
+ *   ?v={vid}/{objeto}      (slash-style, gerado pela app)
+ *   ?v={vid}&f={objeto}    (legado)
+ * O "objeto" é a chave no bucket depois do VID. Retorna [vid, objeto] ou
+ * false quando a URL é inválida (VID ausente/zero, objeto vazio ou com "..").
+ *
+ * @return array|false
+ */
+function gcs_parse_proxy_request()
+{
+    $vidFile = ltrim(isset($_GET['v']) ? trim((string)$_GET['v']) : '', '/');
+    $object  = isset($_GET['f']) ? trim((string)$_GET['f']) : '';
+
+    if (strpos($vidFile, '/') !== false) {
+        list($vidFile, $object) = explode('/', $vidFile, 2);
+        $object = isset($object) ? trim((string)$object) : '';
+    }
+
+    $vid = intval($vidFile);
+    if ($vid <= 0 || $object === '' || strpos($object, '..') !== false) {
+        return false;
+    }
+
+    return array($vid, ltrim($object, '/'));
+}
+
+/**
+ * URL de leitura (alt=media) de um objeto GCS via Storage JSON API.
+ *
+ * @param array  $server Linha da tabela servers (server_type = 'gcs')
+ * @param string $object Caminho do objeto no bucket
+ * @return string
+ */
+function gcs_object_read_url($server, $object)
+{
+    return 'https://storage.googleapis.com/storage/v1/b/'
+         . urlencode($server['gcs_bucket'])
+         . '/o/' . rawurlencode($object) . '?alt=media';
+}
+
+/**
+ * Token de leitura (OAuth2 Bearer) para a Service Account do servidor GCS.
+ *
+ * @param array $server Linha da tabela servers (server_type = 'gcs')
+ * @return string|false
+ */
+function gcs_read_token($server)
+{
+    $gcs = gcs_get_client($server);
+    if (!$gcs) {
+        return false;
+    }
+    return $gcs->getReadAccessToken();
+}
+
+/**
+ * Baixa o corpo inteiro de um objeto GCS via OAuth2 Bearer.
+ *
+ * @param array  $server Linha da tabela servers (server_type = 'gcs')
+ * @param string $object Caminho do objeto no bucket
+ * @return array [int $code, string|false $body, string|false $contentType]
+ */
+function gcs_fetch_object($server, $object)
+{
+    $token = gcs_read_token($server);
+    if ($token === false) {
+        return array(0, false, false);
+    }
+
+    $ch = curl_init(gcs_object_read_url($server, $object));
+    curl_setopt_array($ch, array(
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => array('Authorization: Bearer ' . $token),
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT        => 60
+    ));
+    $body = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+    curl_close($ch);
+
+    return array($code, $body, $type);
+}
+
+/**
+ * Baixa um objeto GCS direto para um arquivo local (streaming, sem carregar
+ * na memória) — substitui o padrão fetch_object + file_put_contents, que
+ * estoura o limite de memória para mídias de vídeo grandes.
+ *
+ * @param array  $server Linha da tabela servers (server_type = 'gcs')
+ * @param string $object Caminho do objeto no bucket
+ * @param string $target Caminho local de destino
+ * @return bool true em sucesso (arquivo não-vazio); false em falha
+ */
+function gcs_download_object_to_file($server, $object, $target)
+{
+    $token = gcs_read_token($server);
+    if ($token === false) {
+        return false;
+    }
+
+    $fp = @fopen($target, 'wb');
+    if (!$fp) {
+        return false;
+    }
+
+    $ch = curl_init(gcs_object_read_url($server, $object));
+    curl_setopt_array($ch, array(
+        CURLOPT_RETURNTRANSFER => false,
+        CURLOPT_FILE           => $fp,
+        CURLOPT_HTTPHEADER     => array('Authorization: Bearer ' . $token),
+        CURLOPT_CONNECTTIMEOUT => 15,
+        CURLOPT_TIMEOUT        => 0
+    ));
+    $ok   = curl_exec($ch);
+    $err  = curl_error($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    fclose($fp);
+
+    if ($ok === false || $err !== '' || $code !== 200
+        || !file_exists($target) || filesize($target) <= 0) {
+        @unlink($target);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Entrega um objeto GCS via streaming server-side (Bearer + alt=media),
+ * espelhando status e headers (Content-Type/Content-Length/Content-Range/
+ * Accept-Ranges) e respeitando Range do request (vídeo / progressive).
+ *
+ * O V4 signed-URL está quebrado para a Service Account deste projeto
+ * (SignatureDoesNotMatch), então todo playback de mídia privada passa por
+ * esta função — fonte única do transporte, usada por gcs_thumbs.php e
+ * gcs_video.php.
+ *
+ * @param array  $server Linha da tabela servers (server_type = 'gcs')
+ * @param string $object Caminho do objeto no bucket
+ * @return bool true quando a mídia foi entregue; false em falha de transporte
+ */
+function gcs_stream_object($server, $object)
+{
+    $token = gcs_read_token($server);
+    if ($token === false) {
+        return false;
+    }
+
+    $headers = array('Authorization: Bearer ' . $token);
+    $range   = isset($_SERVER['HTTP_RANGE']) ? trim((string)$_SERVER['HTTP_RANGE']) : '';
+    if ($range !== '') {
+        $headers[] = 'Range: ' . $range;
+    }
+
+    $captured = array();
+    $started  = false;
+
+    $flushHeaders = function () use (&$captured, &$started) {
+        if ($started) {
+            return;
+        }
+        $started = true;
+        foreach ($captured as $line) {
+            if (preg_match('#^HTTP/\S+\s+(\d{3})#', $line, $m)) {
+                http_response_code(intval($m[1]));
+            } elseif (preg_match('/^(Content-Type|Content-Length|Content-Range|Accept-Ranges):\s*(.+)$/i', $line, $m2)) {
+                header($m2[1] . ': ' . $m2[2]);
+            }
+        }
+    };
+
+    $ch = curl_init(gcs_object_read_url($server, $object));
+    curl_setopt_array($ch, array(
+        CURLOPT_RETURNTRANSFER => false,
+        CURLOPT_HTTPHEADER     => $headers,
+        CURLOPT_CONNECTTIMEOUT => 15,
+        CURLOPT_TIMEOUT        => 0,
+        CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_HEADERFUNCTION => function ($c, $line) use (&$captured) {
+            $captured[] = trim($line);
+            return strlen($line);
+        },
+        CURLOPT_WRITEFUNCTION  => function ($c, $data) use ($flushHeaders) {
+            $flushHeaders();
+            echo $data;
+            return strlen($data);
+        }
+    ));
+    $ok   = curl_exec($ch);
+    $err  = curl_error($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return ($ok !== false && $err === '' && ($code === 200 || $code === 206));
+}
+
+/**
+ * URL pública (proxy same-origin) de um objeto de vídeo no bucket GCS.
+ *
+ * Formato slash-style igual às thumbs: {base}/gcs_video.php?v={vid}/{objeto}.
+ * Usada pela montagem de playback/download em get_video_sources().
+ *
+ * @param int    $vid    ID do vídeo
+ * @param string $object Caminho do objeto no bucket (ex.: h264/109/720p.mp4)
+ * @return string
+ */
+function gcs_media_proxy_url($vid, $object)
+{
+    global $config;
+
+    return $config['BASE_URL'] . '/gcs_video.php?v=' . intval($vid)
+         . '/' . ltrim($object, '/');
+}
+
+/**
+ * Baixa a fonte H.264 de um vídeo GCS para um arquivo local.
+ *
+ * Vídeo GCS sem cópia local (del_original_video=1) não pode usar
+ * file_url_exists()/getSignedUrl (SignatureDoesNotMatch para a SA), então o
+ * h264 é baixado via OAuth2 Bearer do bucket. formats = "720.720p.mp4,..."
+ * prefere o maior formato disponível primeiro.
+ *
+ * @param int    $vid    ID do vídeo
+ * @param string $target Caminho local de destino
+ * @return string|false Caminho do arquivo em caso de sucesso; false em falha
+ */
+function gcs_download_h264_source($vid, $target)
+{
+    global $config, $conn;
+
+    $vid = intval($vid);
+    if ($vid <= 0 || $target === '') {
+        return false;
+    }
+
+    $sql = "SELECT server, formats FROM video WHERE VID = " . $conn->qStr($vid) . " LIMIT 1";
+    $rs  = $conn->execute($sql);
+    if ($conn->Affected_Rows() != 1) {
+        return false;
+    }
+    $serverUrl = trim($rs->fields['server'] ?? '');
+    $formats   = trim($rs->fields['formats'] ?? '');
+    if ($serverUrl === '' || $formats === '') {
+        return false;
+    }
+
+    $server = get_server_by_video_url($serverUrl);
+    if (!$server || !isset($server['server_type']) || $server['server_type'] !== 'gcs') {
+        return false;
+    }
+
+    $suffixes = array();
+    foreach (explode(',', $formats) as $f) {
+        $parts = explode('.', trim($f));
+        if (count($parts) >= 3) {
+            $suffixes[] = $parts[1] . '.' . $parts[2];
+        }
+    }
+    if (!$suffixes) {
+        $suffixes[] = '480p.mp4';
+    }
+
+    foreach ($suffixes as $suffix) {
+        if (gcs_download_object_to_file($server, 'h264/' . $vid . '/' . $suffix, $target)) {
+            return $target;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Upload via Google Cloud Storage
  */
 function upload_video_formats_gcs($vid, $formats, $server)

@@ -469,12 +469,14 @@ function postConversion($vid,$src) {
 	$sd_w        = isset($sd_vi['width']) ? intval($sd_vi['width']) : 0;
 	$sd_h        = isset($sd_vi['height']) ? intval($sd_vi['height']) : 0;
 	$sd_ar       = isset($sd_vi['display_aspect_ratio']) ? $sd_vi['display_aspect_ratio'] : '';
+	$sd_dur      = isset($sd_vi['duration']) ? floatval($sd_vi['duration']) : 0;
 
 	if (intval($sd_f[0]) > 480) {
 		$hd = 1;
 	}
 	$sql = 	"UPDATE video SET
 			active = '".$active."',
+			duration = '".$sd_dur."',
 			width_sd = '".$sd_w."',
 			height_sd = '".$sd_h."',
 			aspect_sd = '".$sd_ar."',
@@ -490,11 +492,13 @@ function postConversion($vid,$src) {
 		$hd_w        = isset($hd_vi['width']) ? intval($hd_vi['width']) : $sd_w;
 		$hd_h        = isset($hd_vi['height']) ? intval($hd_vi['height']) : $sd_h;
 		$hd_ar       = isset($hd_vi['display_aspect_ratio']) ? $hd_vi['display_aspect_ratio'] : $sd_ar;
+		$hd_dur      = isset($hd_vi['duration']) ? floatval($hd_vi['duration']) : $sd_dur;
 
 		if (intval($hd_f[0]) > 480) {
 			$hd = 1;
 			$sql = 	"UPDATE video SET
 					active = '".$active."',
+					duration = '".$hd_dur."',
 					width_hd = '".$hd_w."',
 					height_hd = '".$hd_h."',
 					aspect_hd = '".$hd_ar."',
@@ -510,6 +514,7 @@ function postConversion($vid,$src) {
 		if ($hd == 1) {
 			$sql = 	"UPDATE video SET
 					active = '".$active."',
+					duration = '".$sd_dur."',
 					width_hd = '".$sd_w."',
 					height_hd = '".$sd_h."',
 					aspect_hd = '".$sd_ar."',
