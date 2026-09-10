@@ -104,7 +104,6 @@ class GCS
      */
     private function getAccessToken()
     {
-        // Return cached token if still valid (with 60s buffer)
         if ($this->accessToken && $this->tokenExpiry && time() < ($this->tokenExpiry - 60)) {
             return $this->accessToken;
         }
@@ -196,6 +195,20 @@ class GCS
     }
 
     /**
+     * Obtém um access token OAuth2 com escopo de leitura/escrita (Bearer).
+     *
+     * Neste ambiente o V4 signed-URL não funciona com esta Service Account
+     * (até o gcloud oficial produz SignatureDoesNotMatch), então a mídia
+     * privada é entregue via streaming server-side usando o Bearer token.
+     *
+     * @return string|false
+     */
+    public function getReadAccessToken()
+    {
+        return $this->getAccessToken();
+    }
+
+    /**
      * Uploads a local file to the GCS bucket.
      *
      * By default objects are uploaded WITHOUT any public ACL (private bucket,
@@ -260,12 +273,6 @@ class GCS
         $url = 'https://storage.googleapis.com/upload/storage/v1/b/'
              . urlencode($this->bucket) . '/o?uploadType=multipart&name=' . urlencode($objectName);
 
-        // A API JSON ignora o header X-Goog-Acl (formato da API XML); o ACL
-        // predefinido vai como parâmetro de query (predefinedAcl=publicRead).
-        if ($acl) {
-            $url .= '&predefinedAcl=' . urlencode($acl);
-        }
-
         $headers = array(
             'Authorization: Bearer ' . $token,
             'Content-Type: multipart/related; boundary=' . $boundary
@@ -309,11 +316,6 @@ class GCS
         // Step 1: Initiate resumable session
         $url = 'https://storage.googleapis.com/upload/storage/v1/b/'
              . urlencode($this->bucket) . '/o?uploadType=resumable&name=' . urlencode($objectName);
-
-        // ACL predefinido (ex.: publicRead) vai no pedido de criação da sessão.
-        if ($acl) {
-            $url .= '&predefinedAcl=' . urlencode($acl);
-        }
 
         $meta = array(
             'cacheControl' => $cacheCtrl

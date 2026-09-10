@@ -362,12 +362,16 @@ function insert_video_thumbs( $options )
     $vkey   = $options['vkey'];
     $thumb  = $options['thumb'];
     $output = array();
+    // Vídeos no bucket GCS: thumbs são privadas/proxiadas e o local costuma
+    // ter sido removido — a grade passa a vir do proxy (fonte remota de verdade).
+    $base   = get_video_thumb_base($vid);
+    $remote = (strpos($base, 'gcs_thumbs.php') !== false);
     for ( $i=1; $i<=20; $i++ ) {
         $tmb            = get_thumb_dir($vid). '/' .$i. '.jpg';
-        if ( file_exists($tmb) && is_file($tmb) ) {
+        if ( ($remote || ( file_exists($tmb) && is_file($tmb) )) ) {
             $class      = ( $thumb == $i ) ? 'tmb-active img-responsive' : 'tmb img-responsive';
 			$output[]   = '<div class="col-sm-4 m-b-10">';
-            $output[]   = '<img src="' .get_thumb_url($vid). '/' .$i. '.jpg" id="change_tmb_' .$vkey. '_' .$i. '" class="' .$class. '">';
+            $output[]   = '<img src="' .$base. '/' .$i. '.jpg" id="change_tmb_' .$vkey. '_' .$i. '" class="' .$class. '">';
 			$output[]   = '</div>';
         }
     }
@@ -380,13 +384,16 @@ function insert_vvideo_thumbs( $options )
     global $config;
     
     $vid    = intval($options['VID']);
+    $vkey   = isset($options['vkey']) ? $options['vkey'] : '';
     $output = array();
+    $base   = get_video_thumb_base($vid);
+    $remote = (strpos($base, 'gcs_thumbs.php') !== false);
     for ( $i=1; $i<=20; $i++ ) {
         $tmb            = get_thumb_dir($vid). '/' .$i. '.jpg';
-        if ( file_exists($tmb) && is_file($tmb) ) {
+        if ( ($remote || ( file_exists($tmb) && is_file($tmb) )) ) {
             $class      = 'img-responsive';
 			$output[]   = '<div class="col-xs-6 col-sm-4 col-md-4 col-lg-3 m-b-10">';
-            $output[]   = '<img src="' .get_thumb_url($vid). '/' .$i. '.jpg" id="change_tmb_' .$vkey. '_' .$i. '" class="' .$class. '">';
+            $output[]   = '<img src="' .$base. '/' .$i. '.jpg" id="change_tmb_' .$vkey. '_' .$i. '" class="' .$class. '">';
 			$output[]   = '</div>';
         }
     }

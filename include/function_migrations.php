@@ -31,7 +31,7 @@ function migrations_ensure_table(mysqli $db): void
             `applied_at` int(11) unsigned NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`),
             UNIQUE KEY `uk_migration_filename` (`filename`)
-        ) ENGINE=MyISAM DEFAULT CHARSET=utf8
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8
     ");
 }
 

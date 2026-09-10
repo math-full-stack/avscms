@@ -359,6 +359,11 @@ function upload_video_thumbs_gcs($vid, $server, $onlyFile = null, $silent = fals
                 if ($entry === '.' || $entry === '..') {
                     continue;
                 }
+                // Intermediários de extract_video_vthumbs (*_copy.*) ficam na
+                // pasta quando a validação falha e não devem subir para o bucket.
+                if (strpos($entry, '_copy.') !== false) {
+                    continue;
+                }
                 $full = $thumbDir . '/' . $entry;
                 if (is_file($full)) {
                     $files[] = $entry;

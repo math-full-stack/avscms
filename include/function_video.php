@@ -740,6 +740,11 @@ function extract_video_vthumbs($video_path, $video_id, $img_thumbs = true) {
 		$conn->execute($sql);		
 		return true;
 	}
+
+	@unlink($copy_mp4);
+	@unlink($copy_webm);
+	@unlink($copy_default);
+	@unlink($copy_thumb);
 	return false;
 }       
 
