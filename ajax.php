@@ -5,6 +5,10 @@ header('Cache-Control: no-cache, must-revalidate');
 header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
 
 require 'include/config.paths.php';
+// Load .env before config.db.php reads DB env vars — otherwise every
+// ajax.php?module=* endpoint connects without DB_PASSWORD (fail-closed)
+// and returns an HTML error instead of JSON, which the JS silently drops.
+require 'include/dotenv.php';
 require 'include/config.db.php';
 require 'include/config.local.php';
 require 'include/security.php';
