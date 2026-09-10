@@ -13,6 +13,11 @@ require 'include/config.db.php';
 require 'include/config.local.php';
 require 'include/security.php';
 require 'include/function_global.php';
+// O handler de sessão é em DB e usa o $conn global (session.class.php). Sem a
+// conexão, Session::read() devolve '' e o admin AJAX perde a autenticação à
+// toda chamada (301 -> login.php => o JS engole o HTML e "nada acontece").
+require $config['BASE_DIR']. '/include/adodb/adodb.inc.php';
+require $config['BASE_DIR']. '/include/dbconn.php';
 require 'include/sessions.php';
 require $config['BASE_DIR']. '/classes/redirect.class.php';
 
