@@ -24,9 +24,13 @@ if (isset($_ENV['K_SERVICE'])) {
 // Local / VM: use ADOdb with TCP
 if (!$connected) {
     $conn = ADONewConnection($config['db_type']);
+    $host = $config['db_host'];
+    if (!empty($config['db_port']) && $config['db_port'] != '3306') {
+        $host .= ':' . $config['db_port'];
+    }
     for ($i = 0; $i < 3; $i++) {
         try {
-            if ($conn->Connect($config['db_host'], $config['db_user'], $config['db_pass'], $config['db_name'])) {
+            if ($conn->Connect($host, $config['db_user'], $config['db_pass'], $config['db_name'])) {
                 $connected = true;
                 break;
             }

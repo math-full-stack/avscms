@@ -355,12 +355,14 @@ function insert_q_sp($vid, $height, $info) {
 	// Prefer existing ADODB connection.
 	if ($conn && is_object($conn) && $conn->_connectionID) {
 		$existing = $conn->execute("SELECT VID FROM conversion_queue_sp WHERE VID = '".intval($vid)."' LIMIT 1");
-		if ($existing && $existing->RecordCount() > 0) { return; } // already queued
 		$qid = intval($info['UID']);
 		$vname = $conn->qStr($info['video_name']);
 		$vpath = $conn->qStr($info['video_path']);
 		$vtitle = $conn->qStr($info['title']);
-		$conn->execute("INSERT INTO conversion_queue_sp SET VID='".intval($vid)."', UID='".$qid."', video_name=".$vname.", video_path=".$vpath.", skip='".intval($height)."', title=".$vtitle.", addtime='".time()."'");
+		if (!($existing && $existing->RecordCount() > 0)) {
+			$conn->execute("INSERT INTO conversion_queue_sp SET VID='".intval($vid)."', UID='".$qid."', video_name=".$vname.", video_path=".$vpath.", skip='".intval($height)."', title=".$vtitle.", addtime='".time()."'");
+		}
+		// Always delete FP row: first pass produced a format, so it's done.
 		$conn->execute("DELETE FROM conversion_queue_fp WHERE VID='".intval($vid)."' LIMIT 1");
 		return;
 	}
@@ -610,7 +612,7 @@ function postConversion($vid,$src) {
 function executeQuery($query) {
 	global $config;
 	$host = $config['db_host'];
-	$port = 3306;
+	$port = isset($config['db_port']) ? intval($config['db_port']) : 3306;
 	if (preg_match('/^(.+):(\d+)$/', $host, $m)) {
 		$host = $m[1];
 		$port = intval($m[2]);
@@ -631,11 +633,26 @@ function executeQuery($query) {
 	$result = ($err != "") ? "Sql Error :: ".$err."<br/>" : $result;
 		return $result;
 }
+
+function _db_connect_raw() {
+	global $config;
+	$host = $config['db_host'];
+	$port = isset($config['db_port']) ? intval($config['db_port']) : 3306;
+	if (preg_match('/^(.+):(\d+)$/', $host, $m)) {
+		$host = $m[1];
+		$port = intval($m[2]);
+	}
+	$link = @mysqli_connect($host, $config['db_user'], $config['db_pass'], null, $port);
+	if ($link) {
+		@mysqli_select_db($link, $config['db_name']);
+	}
+	return $link;
+}
 	
 function selectQuery($query) {
 	global $config;
 	$host = $config['db_host'];
-	$port = 3306;
+	$port = isset($config['db_port']) ? intval($config['db_port']) : 3306;
 	if (preg_match('/^(.+):(\d+)$/', $host, $m)) {
 		$host = $m[1];
 		$port = intval($m[2]);

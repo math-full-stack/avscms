@@ -4,6 +4,7 @@ defined('_VALID') or die('Restricted Access!');
 // Sem fallback hardcoded: senha ausente = falha ao conectar (fail-closed).
 $config['db_type'] = 'mysqli';
 $config['db_host'] = getenv('DB_HOST') ?: '127.0.0.1';
+$config['db_port'] = getenv('DB_PORT') ?: '3306';
 $config['db_user'] = getenv('DB_USER') ?: 'avs_app';
 $config['db_pass'] = getenv('DB_PASSWORD') ?: '';
 $config['db_name'] = getenv('DB_NAME') ?: 'avs';

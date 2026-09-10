@@ -603,7 +603,7 @@ function postConversion($vid,$src) {
 function _db_connect_raw() {
 	global $config;
 	$host = $config['db_host'];
-	$port = 3306;
+	$port = isset($config['db_port']) ? intval($config['db_port']) : 3306;
 	if (preg_match('/^(.+):(\d+)$/', $host, $m)) {
 		$host = $m[1];
 		$port = intval($m[2]);
