@@ -3,10 +3,6 @@
 # Triggers: push to main
 #
 # Required GitHub secrets:
-#   VM_HOST        - external IP or hostname of pornozinho-vm (e.g. 35.199.87.83)
-#   VM_USER        - ssh user (e.g. deploy)
-#   VM_SSH_KEY     - private key (OpenSSH format) whose public half is in
-#                    the VM's ~<user>/.ssh/authorized_keys (or project metadata)
 #   ADMIN_PASS     - site admin password ($config['admin_pass'])
 #   DB_PASSWORD    - Cloud SQL password for DB_USER
 #   GCS_KEY_JSON   - contents of the GCS service account key (JSON)
@@ -97,83 +93,3 @@ jobs:
           echo "$GCS_KEY_JSON" | base64 -d > /tmp/gcs-service-account.json
           python3 -c "import json,io; json.load(io.open('/tmp/gcs-service-account.json','r')); print('gcs key is valid JSON')"
           python3 -c "import json; k=json.load(open('/tmp/gcs-service-account.json')); print('email:', k.get('client_email'))"
-
-      - name: Provision Python scraper deps (curl_cffi) on VM
-        run: |
-          ssh avscms-vm 'if sudo -u www-data python3 -c "import curl_cffi" 2>/dev/null; then
-              echo "curl_cffi already installed for www-data"
-            else
-              echo "Installing python3-pip..."
-              sudo apt-get update -qq && sudo apt-get install -y -qq python3-pip
-              echo "Installing curl_cffi system-wide (PEP 668 --break-system-packages)..."
-              sudo python3 -m pip install --break-system-packages -q curl_cffi
-            fi
-            sudo -u www-data python3 -c "import curl_cffi, platform; print(\"curl_cffi\", curl_cffi.__version__, \"on\", platform.python_version(), \"-> seen by www-data\")"'
-
-      - name: Upload code to VM
-        run: |
-          scp /tmp/avscms.tar avscms-vm:/tmp/avscms.tar
-          scp /tmp/config.local.php avscms-vm:/tmp/config.local.php
-          scp /tmp/avscms.env avscms-vm:/tmp/avscms.env
-          scp /tmp/gcs-service-account.json avscms-vm:/tmp/gcs-service-account.json
-          scp deploy/avscms-prod.conf avscms-vm:/tmp/avscms-prod.conf
-          ssh avscms-vm 'sudo mkdir -p /var/www/avscms /etc/avscms && \
-            sudo chown -R deploy:deploy /var/www/avscms && \
-            tar --overwrite -xf /tmp/avscms.tar -C /var/www/avscms && \
-            sudo cp /tmp/config.local.php /var/www/avscms/include/config.local.php && \
-            sudo cp /tmp/avscms.env /etc/avscms/.env && \
-            sudo chown www-data:www-data /etc/avscms/.env && \
-            sudo chmod 600 /etc/avscms/.env && \
-            sudo cp /tmp/gcs-service-account.json /etc/avscms/gcs-service-account.json && \
-            sudo chown www-data:www-data /etc/avscms/gcs-service-account.json && \
-            sudo chmod 600 /etc/avscms/gcs-service-account.json && \
-            # Chave + .env nunca no webroot
-            sudo rm -f /var/www/avscms/include/gcs-service-account.json && \
-            sudo rm -f /var/www/avscms/.env && \
-            sudo chown -R deploy:deploy /var/www/avscms'
-
-      - name: Run database migrations on VM
-        run: |
-          # Aplica migrations pendentes via include/function_migrations.php.
-          # O CLI embutido lê DB_PASS; aqui carregamos o dotenv (lê
-          # /etc/avscms/.env primeiro) e mapeamos DB_PASSWORD. Rodamos como
-          # www-data (dono do .env, 0600) sem expor segredos no log.
-          PHP_CODE='require "include/dotenv.php"; require "include/function_migrations.php"; $db = new mysqli(getenv("DB_HOST") ?: "localhost", getenv("DB_USER") ?: "root", getenv("DB_PASSWORD") ?: "", getenv("DB_NAME") ?: "avs"); if ($db->connect_error) { echo "DB connection failed: " . $db->connect_error . PHP_EOL; exit(1); } $db->set_charset("utf8"); $res = migrations_run($db); if ($res) { foreach ($res as $f => $s) { echo "  " . $s . "  " . $f . PHP_EOL; } } else { echo "No pending migrations." . PHP_EOL; } $db->close();'
-          B64=$(printf '%s' "$PHP_CODE" | base64 | tr -d '\n')
-          ssh avscms-vm "cd /var/www/avscms && echo $B64 | base64 -d > /tmp/avscms-migrate.php && sudo -u www-data php /tmp/avscms-migrate.php && rm -f /tmp/avscms-migrate.php"
-
-      - name: Install apache vhost on VM
-        run: |
-          ssh avscms-vm 'sudo cp /tmp/avscms-prod.conf /etc/apache2/sites-available/avscms.conf && \
-            sudo a2dissite 000-default >/dev/null 2>&1 || true && \
-            sudo a2ensite avscms >/dev/null 2>&1 || true && \
-            sudo a2enmod rewrite headers expires >/dev/null 2>&1 || true'
-
-      - name: Fix permissions (writable dirs & files) on VM
-        run: |
-          ssh avscms-vm 'cd /var/www/avscms && \
-            for d in tmp tmp/logs cache media media/users media/videos media/videos/vid media/videos/tmb media/videos/h264 media/videos/iphone media/videos/hd media/videos/flv images/logo images/notice_images images/notice_images/thumbs media/categories/album media/categories/video templates/emails; do \
-              mkdir -p "$d"; sudo chown -R www-data:www-data "$d" 2>/dev/null; sudo chmod -R 0777 "$d" 2>/dev/null; \
-            done; \
-            for f in aembed.sh templates/backend/default/analytics/analytics.tpl templates/emails/*.tpl templates/frontend/*/static/*.tpl; do \
-              [ -e "$f" ] && sudo chown www-data:www-data "$f" 2>/dev/null && sudo chmod 0777 "$f" 2>/dev/null; \
-            done; \
-            sudo chown -R www-data:www-data tmp cache media images templates 2>/dev/null || true'
-
-      - name: Validate & reload Apache
-        run: |
-          ssh avscms-vm 'sudo apache2ctl configtest && \
-            sudo systemctl reload apache2 || sudo systemctl restart apache2 && \
-            sudo systemctl is-active apache2'
-
-      - name: Smoke test (VM local + LB/domain)
-        run: |
-          echo "--- localhost on VM ---"
-          ssh avscms-vm 'curl -s -o /dev/null -w "VM / -> %{http_code}\n" http://localhost/ || echo "VM curl failed"'
-          echo "--- public domain ---"
-          for i in 1 2 3; do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://pornozinho.com/ || echo "000")
-            echo "https://pornozinho.com/ -> $CODE"
-            [ "$CODE" = "200" ] && break
-            sleep 8
-          done
