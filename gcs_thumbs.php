@@ -47,6 +47,12 @@ $object = 'thumbs/' . $vid . '/' . $file;
 // vídeo. gcs_stream_object espelha status e headers e faz Range passthrough.
 if (preg_match('/\.(mp4|webm)$/i', $file)) {
     if (!gcs_stream_object($server, $object)) {
+        // Fallback local quando bucket não tem o objeto
+        $local = get_thumb_dir($vid) . '/' . $file;
+        if (file_exists($local)) {
+            header('Location: ' . get_thumb_url_local($vid) . '/' . $file, true, 302);
+            exit;
+        }
         http_response_code(404);
     }
     exit;
@@ -55,6 +61,12 @@ if (preg_match('/\.(mp4|webm)$/i', $file)) {
 list($code, $body, $contentType) = gcs_fetch_object($server, $object);
 
 if ($code !== 200 || $body === false) {
+    // Fallback local quando bucket não tem o objeto
+    $local = get_thumb_dir($vid) . '/' . $file;
+    if (file_exists($local)) {
+        header('Location: ' . get_thumb_url_local($vid) . '/' . $file, true, 302);
+        exit;
+    }
     http_response_code(404);
     exit;
 }

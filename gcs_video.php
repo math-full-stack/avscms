@@ -57,11 +57,23 @@ if (!empty($parts)) {
 
 $server = gcs_get_server_by_vid($vid);
 if (!$server) {
+    // Fallback local quando vídeo está no servidor local/FTP
+    $localPath = get_local_video_path($vid, $object);
+    if ($localPath && file_exists($localPath)) {
+        header('Location: ' . get_local_video_url($vid, $object), true, 302);
+        exit;
+    }
     http_response_code(404);
     exit;
 }
 
 if (!gcs_stream_object($server, $object)) {
+    // Fallback local quando bucket não tem o objeto
+    $localPath = get_local_video_path($vid, $object);
+    if ($localPath && file_exists($localPath)) {
+        header('Location: ' . get_local_video_url($vid, $object), true, 302);
+        exit;
+    }
     http_response_code(404);
     exit;
 }

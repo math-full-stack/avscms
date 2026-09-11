@@ -1154,4 +1154,57 @@ function delete_video_thumbs_gcs( $video_id, $server )
 
     return $deleted;
 }
+
+/**
+ * Mapeia um objeto do bucket GCS para o caminho local do arquivo de vídeo.
+ *
+ * Formatos de objeto: h264/{vid}/{label}.{ext} | iphone/{vid}.{ext} | hd/{vid}.{ext}
+ * Caminho local correspondente: {h264|iphone|hd}/{vid}_{label}.{ext}
+ *
+ * @param int    $vid    ID do vídeo
+ * @param string $object Caminho do objeto no bucket (ex.: h264/115/1080p.mp4)
+ * @return string|false Caminho local absoluto ou false se não encontrado
+ */
+function get_local_video_path($vid, $object)
+{
+    global $config;
+
+    $parts = explode('/', $object);
+    $prefix = array_shift($parts);
+    $vidInt = intval($vid);
+
+    if ($prefix === 'h264' && count($parts) >= 2) {
+        // h264/{vid}/{label}.{ext} → media/videos/h264/{vid}_{label}.{ext}
+        $dirVid = array_shift($parts); // remove vid dir
+        $labelExt = implode('.', $parts);
+        return $config['BASE_DIR'] . '/media/videos/' . $prefix . '/' . $vidInt . '_' . $labelExt;
+    }
+
+    // iphone/{vid}.{ext} ou hd/{vid}.{ext}
+    if (($prefix === 'iphone' || $prefix === 'hd') && count($parts) === 1) {
+        return $config['BASE_DIR'] . '/media/videos/' . $prefix . '/' . $vidInt . '.' . $parts[0];
+    }
+
+    return false;
+}
+
+/**
+ * Retorna a URL local pública de um vídeo.
+ *
+ * @param int    $vid    ID do vídeo
+ * @param string $object Caminho do objeto no bucket
+ * @return string|false URL local ou false se não encontrada
+ */
+function get_local_video_url($vid, $object)
+{
+    global $config;
+
+    $path = get_local_video_path($vid, $object);
+    if ($path === false) {
+        return false;
+    }
+
+    $prefix = explode('/', $object)[0];
+    return $config['BASE_URL'] . '/media/videos/' . $prefix . '/' . basename($path);
+}
 ?>
