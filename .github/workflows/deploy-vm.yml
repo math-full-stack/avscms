@@ -34,7 +34,7 @@ jobs:
           for f in sql/*.sql; do
             if [ -f "$f" ]; then
               echo "Aplicando: $f"
-              mysql -u${DB_USER} -p${DB_PASSWORD} ${DB_NAME} < "$f"
+              mysql -h 127.0.0.1 -P 3306 -u${DB_USER} -p${DB_PASSWORD} --skip-ssl ${DB_NAME} < "$f"
             fi
           done
         env:
