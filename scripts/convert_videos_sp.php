@@ -75,8 +75,14 @@ foreach($encodings as $encoding) {
 	convert($encoding, $vid, $video_name, $video_info, $skip);	
 }
 
+// Cleanup do 1º passe: o FP já apagou a própria linha no sucesso
+// (insert_q_sp, function_conversion_fp.php); este DELETE é rede de segurança.
 executeQuery("DELETE FROM conversion_queue_fp WHERE VID = '".$vid."' LIMIT 1");
-executeQuery("DELETE FROM conversion_queue_sp WHERE VID = '".$vid."' LIMIT 1");
+// A linha SP NÃO pode ser apagada aqui: postThumbs/postConversion abaixo são
+// longos e toda interrupção entre este ponto e o postConversion orfana o vídeo
+// (active=3 sem fila = 'Processamento local pendente' para sempre). O
+// postConversion apaga a linha SP no sucesso (function_conversion_sp.php:432)
+// e, se morrermos no meio, remove_overdue() resetta o status para re-pump.
 
 // Thumbs + vthumbs MUST be generated HERE (second pass), not in the first
 // pass: this pass owns postConversion, which uploads to GCS and then removes

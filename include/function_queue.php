@@ -11,7 +11,12 @@ function remove_overdue($table) {
 	global $config, $conn;	
 	$timeout = $config['q_timeout'];
 	$overdue = time() - ($timeout * 3600);
-	$sql= "DELETE FROM ".$table." WHERE status = '1' AND start < '".$overdue."'";
+	// Reset em vez de DELETE: uma conversão morta (kill/doom/interrupção) deixa
+	// a linha em status='1' com start velho; apagar aqui órfã o vídeo
+	// (active=3 sem fila = nunca mais processado). Resettando para '0' a fila
+	// (check_q/pump) pega a linha de novo e reprocessa. Seguro: enquanto o
+	// processo roda, start é recente e a linha nunca é resetada.
+	$sql = "UPDATE ".$table." SET status = '0', start = '0' WHERE status = '1' AND start < '".$overdue."'";
 	$conn->execute($sql);	
 }
 
