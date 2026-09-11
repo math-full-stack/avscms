@@ -21,12 +21,12 @@ jobs:
 
       - name: Verify required secrets
         run: |
-          for s in VM_HOST VM_USER SSH_PRIVATE_KEY DB_USER DB_PASSWORD DB_NAME; do
-            if [[ -z "${{ secrets[$s] }}" ]]; then
-              echo "::error::Secret $s não configurado"
-              exit 1
-            fi
-          done
+          if [[ -z "${{ secrets.VM_HOST }}" ]]; then echo "::error::Secret VM_HOST não configurado"; exit 1; fi
+          if [[ -z "${{ secrets.VM_USER }}" ]]; then echo "::error::Secret VM_USER não configurado"; exit 1; fi
+          if [[ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]]; then echo "::error::Secret SSH_PRIVATE_KEY não configurado"; exit 1; fi
+          if [[ -z "${{ secrets.DB_USER }}" ]]; then echo "::error::Secret DB_USER não configurado"; exit 1; fi
+          if [[ -z "${{ secrets.DB_PASSWORD }}" ]]; then echo "::error::Secret DB_PASSWORD não configurado"; exit 1; fi
+          if [[ -z "${{ secrets.DB_NAME }}" ]]; then echo "::error::Secret DB_NAME não configurado"; exit 1; fi
           echo "✅ Todos os secrets presentes"
 
       - name: Setup SSH
