@@ -9,6 +9,9 @@ RewriteBase /
     Require all denied
 </FilesMatch>
 
+# Serve static media files directly, never route to loader.php
+RewriteRule ^media/(.*)$ - [L]
+
 # If requested resource exists as file or dir, serve it
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
