@@ -75,22 +75,21 @@ jobs:
             " \
             --quiet
 
-      - name: Deploy files via tar + gcloud compute scp (IAP)
+      - name: Deploy files via rsync over SSH (IAP)
         run: |
-          mkdir -p /tmp/deploy-src
-          rsync -a --exclude='.git' --exclude='.github' --exclude='*.log' --exclude='setup-deploy.sh' . /tmp/deploy-src/
-          tar -czf /tmp/deploy.tgz -C /tmp/deploy-src .
-          gcloud compute scp /tmp/deploy.tgz ${{ env.VM_NAME }}:/tmp/deploy.tgz \
-            --zone=${{ env.VM_ZONE }} \
-            --project=${{ env.PROJECT_ID }} \
-            --tunnel-through-iap \
-            --quiet
           gcloud compute ssh ${{ env.VM_NAME }} \
             --zone=${{ env.VM_ZONE }} \
             --project=${{ env.PROJECT_ID }} \
             --tunnel-through-iap \
-            --command="tar -xzf /tmp/deploy.tgz -C ${{ env.DEPLOY_PATH }} && rm /tmp/deploy.tgz" \
+            --command="mkdir -p ${{ env.DEPLOY_PATH }}" \
             --quiet
+          rsync -avz --delete \
+            -e "gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.VM_ZONE }} --project=${{ env.PROJECT_ID }} --tunnel-through-iap --ssh-flag='-o StrictHostKeyChecking=no' --ssh-flag='-o UserKnownHostsFile=/dev/null' --" \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='*.log' \
+            --exclude='setup-deploy.sh' \
+            . ${{ env.VM_USER }}@${{ env.VM_NAME }}:${{ env.DEPLOY_PATH }}/
 
       - name: Run SQL migrations
         run: |
