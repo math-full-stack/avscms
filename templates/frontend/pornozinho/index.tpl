@@ -58,45 +58,86 @@
 	<div class="xb-section">
 		<span class="xb-section-bar"></span>
 		<h2><i class="fas fa-star"></i>Destaques</h2>
+		<a class="xb-section-link" href="{$relative}/videos?o=f">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
 	</div>
-	<div class="xb-hero">
-		{section name=h loop=$hero_videos}
-			{if $smarty.section.h.index == 0}
-			<a class="xb-hero-main" href="{$relative}/video/{$hero_videos[h].VID}/{$hero_videos[h].title|clean}">
-				<div class="thumb-overlay{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'} xb-portrait{/if}" {if $hero_videos[h].vthumbs == '1'} id="playvthumb_{$hero_videos[h].VID}"{/if}>
-					{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'}<span class="xb-portrait-bg" style="background-image:url('{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg')"></span>{/if}
-					{if $hero_videos[h].hero_src}
-					<video id="xb-hero-video" class="xb-hero-video" src="{$hero_videos[h].hero_src}" poster="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>
+
+	{* Card principal grande com auto-play *}
+	{assign var=hero_main value=$hero_videos[0]}
+	<div class="row content-row mb-4">
+		<div class="col-12 col-lg-8">
+			<a href="{$relative}/video/{$hero_main.VID}/{$hero_main.title|clean}">
+				<div class="thumb-overlay xb-hero-main" {if $hero_main.vthumbs == '1'} id="playvthumb_{$hero_main.VID}"{/if}>
+					{if $hero_main.hero_src}
+					<video id="xb-hero-video" class="xb-hero-video" src="{$hero_main.hero_src}" poster="{insert name=thumb_path vid=$hero_main.VID}/{$hero_main.thumb}.jpg" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>
 					{else}
-					{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'}{insert name=video_trio vid=$hero_videos[h].VID thumb=$hero_videos[h].thumb thumbs=$hero_videos[h].thumbs opt=$hero_videos[h].thumbnails_opt title=$hero_videos[h].title type=$hero_videos[h].type}{else}<img src="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" title="{$hero_videos[h].title|escape:'html'}" alt="{$hero_videos[h].title|escape:'html'}" />{/if}
+					{if isset($hero_main.orientation) && $hero_main.orientation == 'portrait'}{insert name=video_trio vid=$hero_main.VID thumb=$hero_main.thumb thumbs=$hero_main.thumbs opt=$hero_main.thumbnails_opt title=$hero_main.title type=$hero_main.type}{else}<img src="{insert name=thumb_path vid=$hero_main.VID}/{$hero_main.thumb}.jpg" title="{$hero_main.title|escape:'html'}" alt="{$hero_main.title|escape:'html'}" {if $hero_main.vthumbs == '0'}id="rotate_{$hero_main.VID}_{$hero_main.thumbs}_{$hero_main.thumb}_viewed"{/if} class="img-responsive {if $hero_main.type == 'private'}img-private{/if}"/>{/if}
 					{/if}
+					{if $hero_main.type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
+					<div class="duration">
+						{if $hero_main.hd==1}<span class="hd-text-icon">HD</span>{/if}
+						{insert name=duration assign=duration duration=$hero_main.duration}
+						{$duration}
+					</div>
+					<div class="xb-hero-overlay">
+						<div class="xb-hero-meta">
+							<span><i class="fas fa-eye"></i> {insert name=views assign=s_views views=$hero_main.viewnumber}{$s_views}</span>
+							{if $hero_main.username != 'anonymous'}<span>@{$hero_main.username}</span>{/if}
+						</div>
+						<h3 class="xb-hero-title">{$hero_main.title|escape:'html'}</h3>
+					</div>
 				</div>
-				<span class="xb-hero-overlay">
-					<span class="xb-hero-title">{$hero_videos[h].title|escape:'html'}</span>
-					<span class="xb-hero-meta">
-						<span><i class="fas fa-eye"></i> {insert name=views assign=s_views views=$hero_videos[h].viewnumber}{$s_views}</span>
-						{if $hero_videos[h].username != 'anonymous'}<span>@{$hero_videos[h].username}</span>{/if}
-					</span>
-				</span>
 			</a>
-			{else}
-			<a class="xb-hero-item" href="{$relative}/video/{$hero_videos[h].VID}/{$hero_videos[h].title|clean}">
-				<div class="thumb-overlay{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'} xb-portrait{/if}" {if $hero_videos[h].vthumbs == '1'} id="playvthumb_{$hero_videos[h].VID}"{/if}>
-					{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'}<span class="xb-portrait-bg" style="background-image:url('{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg')"></span>{/if}
-					{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'}{insert name=video_trio vid=$hero_videos[h].VID thumb=$hero_videos[h].thumb thumbs=$hero_videos[h].thumbs opt=$hero_videos[h].thumbnails_opt title=$hero_videos[h].title type=$hero_videos[h].type}{else}<img src="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" title="{$hero_videos[h].title|escape:'html'}" alt="{$hero_videos[h].title|escape:'html'}" />{/if}
+		</div>
+
+		{* Cards menores para os demais *}
+		<div class="col-6 col-md-4 d-none d-md-block">
+			<div class="row content-row">
+				{section name=h loop=$hero_videos start=1}
+				<div class="col-12 mb-2">
+					<a href="{$relative}/video/{$hero_videos[h].VID}/{$hero_videos[h].title|clean}">
+						<div class="thumb-overlay{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'} xb-portrait{/if}" {if $hero_videos[h].vthumbs == '1'} id="playvthumb_{$hero_videos[h].VID}"{/if}>
+							{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'}{insert name=video_trio vid=$hero_videos[h].VID thumb=$hero_videos[h].thumb thumbs=$hero_videos[h].thumbs opt=$hero_videos[h].thumbnails_opt title=$hero_videos[h].title type=$hero_videos[h].type}{else}<img src="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" title="{$hero_videos[h].title|escape:'html'}" alt="{$hero_videos[h].title|escape:'html'}" {if $hero_videos[h].vthumbs == '0'}id="rotate_{$hero_videos[h].VID}_{$hero_videos[h].thumbs}_{$hero_videos[h].thumb}_viewed"{/if} class="img-responsive {if $hero_videos[h].type == 'private'}img-private{/if}"/>{/if}
+							{if $hero_videos[h].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
+							<span class="xb-thumb-meta">
+								{insert name=views assign=s_views views=$hero_videos[h].viewnumber text='0'}
+								{insert name=views assign=s_views_w views=$hero_videos[h].viewnumber text='w'}
+								<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
+								{if isset($hero_videos[h].username) && $hero_videos[h].username != 'anonymous'}
+								<span class="xb-thumb-user">@{$hero_videos[h].username}</span>
+								{/if}
+								<span class="xb-thumb-title">
+									<span class="xb-thumb-title-inner">
+										<span class="xb-tt">{$hero_videos[h].title|escape:'html'}</span><span class="xb-tt">{$hero_videos[h].title|escape:'html'}</span>
+									</span>
+								</span>
+							</span>
+							<div class="duration">
+								{if $hero_videos[h].hd==1}<span class="hd-text-icon">HD</span>{/if}
+								{insert name=duration assign=duration duration=$hero_videos[h].duration}
+								{$duration}
+							</div>
+						</div>
+					</a>
+					<div class="content-info">
+						<a href="{$relative}/video/{$hero_videos[h].VID}/{$hero_videos[h].title|clean}">
+							<span class="content-title">{$hero_videos[h].title|escape:'html'}</span>
+						</a>
+						{if $hero_videos[h].keywords}
+						<div class="xb-tags">
+							{section name=t loop=$hero_videos[h].keywords max=4}
+								<a href="{$relative}/search/tags/{$hero_videos[h].keywords[t]}">#{$hero_videos[h].keywords[t]}</a>
+							{/section}
+						</div>
+						{/if}
+					</div>
 				</div>
-				<span class="xb-hero-overlay">
-					<span class="xb-hero-title">{$hero_videos[h].title|escape:'html'}</span>
-					<span class="xb-hero-views"><i class="fas fa-eye"></i> {insert name=views assign=s_views views=$hero_videos[h].viewnumber}{$s_views}{if $hero_videos[h].username != 'anonymous'} · @{$hero_videos[h].username}{/if}</span>
-				</span>
-			</a>
-			{/if}
-		{/section}
+				{/section}
+			</div>
+		</div>
 	</div>
 	{/if}
 
 	<script>
-	{if $hero_videos && $hero_videos[0].hero_src}
 	{literal}
 	(function(){
 		var v = document.getElementById('xb-hero-video');
@@ -107,7 +148,6 @@
 		play();
 	})();
 	{/literal}
-	{/if}
 	</script>
 
 	<div class="xb-section">

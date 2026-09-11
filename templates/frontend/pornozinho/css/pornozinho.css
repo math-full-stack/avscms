@@ -5,16 +5,16 @@
    ========================================================================== */
 
 :root {
-	--xb-bg:        #080808;
-	--xb-bg-alt:    #0D0D0D;
-	--xb-card:      #151515;
-	--xb-card-2:    #1c1c1c;
-	--xb-border:    #262626;
-	--xb-text:      #cfcfcf;
-	--xb-muted:     #8d8d8d;
-	--xb-accent:    #ff1493;
-	--xb-accent-d:  #d30f7e;
-	--xb-radius:    10px;
+	--xb-bg: #080808;
+	--xb-bg-alt: #0D0D0D;
+	--xb-card: #151515;
+	--xb-card-2: #1c1c1c;
+	--xb-border: #262626;
+	--xb-text: #cfcfcf;
+	--xb-muted: #8d8d8d;
+	--xb-accent: #ff1493;
+	--xb-accent-d: #d30f7e;
+	--xb-radius: 10px;
 	--xb-radius-sm: 8px;
 }
 
@@ -44,16 +44,34 @@ body {
 	color: #fff;
 }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: #0a0a0a; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: var(--xb-accent-d); }
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+::-webkit-scrollbar-track {
+	background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+	background: #333;
+	border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--xb-accent-d);
+}
 
 .bg-dark {
 	background-color: var(--xb-bg-alt) !important;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
 	color: #fff;
 }
 
@@ -62,7 +80,9 @@ a {
 	transition: color .15s ease;
 }
 
-a:hover, a:focus, a:active {
+a:hover,
+a:focus,
+a:active {
 	color: var(--xb-accent);
 }
 
@@ -85,8 +105,11 @@ a:hover, a:focus, a:active {
 	box-shadow: 0 4px 14px rgba(255, 20, 147, 0.25);
 }
 
-.btn-primary:hover, .btn-primary:focus, .btn-primary:active, .btn-primary.active,
-.open > .dropdown-toggle.btn-primary {
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.open>.dropdown-toggle.btn-primary {
 	background: linear-gradient(135deg, #ff2ea2, var(--xb-accent-d));
 	border-color: #ff2ea2;
 	box-shadow: 0 6px 18px rgba(255, 20, 147, 0.35);
@@ -98,7 +121,10 @@ a:hover, a:focus, a:active {
 	color: #ddd;
 }
 
-.btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active, .btn-secondary.active {
+.btn-secondary:hover,
+.btn-secondary:focus,
+.btn-secondary:active,
+.btn-secondary.active {
 	background-color: #3a3a3a;
 	border-color: #3a3a3a;
 	color: #fff;
@@ -127,7 +153,9 @@ a:hover, a:focus, a:active {
 	color: #ccc;
 }
 
-.dropdown-menu .dropdown-item:hover, .dropdown-menu .dropdown-item:focus, .dropdown-menu .dropdown-item.active {
+.dropdown-menu .dropdown-item:hover,
+.dropdown-menu .dropdown-item:focus,
+.dropdown-menu .dropdown-item.active {
 	background-color: var(--xb-accent);
 	color: #fff;
 }
@@ -167,7 +195,7 @@ a:hover, a:focus, a:active {
 }
 
 .xb-logo img {
-	max-height: 36px;
+	max-height: 110px;
 	width: auto;
 }
 
@@ -539,6 +567,7 @@ a:hover, a:focus, a:active {
 		opacity: 0;
 		transform: translateY(-8px);
 	}
+
 	to {
 		opacity: 1;
 		transform: translateY(0);
@@ -1011,9 +1040,11 @@ a:hover .thumb-overlay img {
 	font-family: "Font Awesome 5 Free";
 	font-weight: 900;
 	position: absolute;
-	top: 50%; left: 50%;
+	top: 50%;
+	left: 50%;
 	transform: translate(-50%, -50%) scale(.85);
-	width: 44px; height: 44px;
+	width: 44px;
+	height: 44px;
 	border-radius: 50%;
 	background: rgba(255, 20, 147, .9);
 	color: #fff;
@@ -1040,7 +1071,8 @@ a:hover .thumb-overlay::before {
 /* Mini-clip (preview) injetado pelo jquery.rotator.js: cobre img/play ao tocar */
 .thumb-overlay video {
 	position: absolute;
-	top: 0; left: 0;
+	top: 0;
+	left: 0;
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
@@ -1118,7 +1150,7 @@ a:hover .thumb-overlay video {
 	white-space: nowrap;
 }
 
-.xb-thumb-meta > span {
+.xb-thumb-meta>span {
 	min-width: 0;
 }
 
@@ -1221,9 +1253,12 @@ a:hover .thumb-overlay video {
 a:hover .xb-thumb-meta .xb-thumb-views,
 a:hover .xb-thumb-meta .xb-thumb-user {
 	display: none;
-}a:hover .xb-thumb-meta .xb-thumb-title {
+}
+
+a:hover .xb-thumb-meta .xb-thumb-title {
 	display: block;
 }
+
 a:hover .xb-thumb-meta {
 	min-width: 0;
 	max-width: calc(100% - 110px);
@@ -1233,6 +1268,7 @@ a:hover .xb-thumb-meta {
 	0% {
 		transform: translateX(0);
 	}
+
 	100% {
 		transform: translateX(-50%);
 	}
@@ -1266,7 +1302,7 @@ a:hover .xb-thumb-meta {
 }
 
 /* Espaçamento vertical consistente entre as linhas de thumbs */
-.content-row > [class*="col-"] {
+.content-row>[class*="col-"] {
 	padding-bottom: 16px;
 }
 
@@ -1440,7 +1476,9 @@ a:hover .xb-thumb-meta {
 
 .xb-hero .xb-hero-main .xb-hero-overlay {
 	position: absolute;
-	left: 0; right: 0; bottom: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
 	padding: 60px 20px 18px;
 	background: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, .95) 100%);
 }
@@ -1482,7 +1520,9 @@ a:hover .xb-thumb-meta {
 
 .xb-hero .xb-hero-item .xb-hero-overlay {
 	position: absolute;
-	left: 0; right: 0; bottom: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
 	padding: 34px 14px 12px;
 	background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .92));
 }
@@ -1512,9 +1552,11 @@ a:hover .xb-thumb-meta {
 
 .xb-hero .xb-hero-play {
 	position: absolute;
-	top: 50%; left: 50%;
+	top: 50%;
+	left: 50%;
 	transform: translate(-50%, -50%);
-	width: 58px; height: 58px;
+	width: 58px;
+	height: 58px;
 	border-radius: 50%;
 	background: rgba(255, 20, 147, .88);
 	color: #fff;
@@ -1532,6 +1574,74 @@ a:hover .xb-thumb-meta {
 .xb-hero .xb-hero-item:hover .xb-hero-play {
 	opacity: 1;
 	transform: translate(-50%, -50%) scale(1.06);
+}
+
+/* --------------------------------------------------------------------------
+   Hero featured card (new layout: large main + stacked side cards)
+   -------------------------------------------------------------------------- */
+.thumb-overlay.xb-hero-main {
+	position: relative;
+	display: block;
+	border-radius: 16px;
+	overflow: hidden;
+	background: #101010;
+	height: 100%;
+	min-height: 120px;
+}
+
+.thumb-overlay.xb-hero-main .xb-hero-video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center;
+}
+
+.thumb-overlay.xb-hero-main .xb-hero-overlay {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	padding: 16px 10px 6px;
+	background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, .95) 100%);
+}
+
+.thumb-overlay.xb-hero-main .xb-hero-title {
+	color: #fff;
+	font-size: 14px;
+	font-weight: 800;
+	line-height: 1.1;
+	letter-spacing: .2px;
+	text-shadow: 0 2px 16px rgba(0, 0, 0, .7);
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.thumb-overlay.xb-hero-main .duration {
+	font-size: 11px;
+	padding: 2px 6px;
+}
+
+.thumb-overlay.xb-hero-main .xb-hero-meta {
+	margin-top: 4px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 11px;
+	color: #d8d8d8;
+	font-weight: 500;
+}
+
+.thumb-overlay.xb-hero-main .xb-hero-meta i {
+	color: var(--xb-accent);
+}
+
+/* Side cards stacked vertically */
+@media (min-width: 992px) {
+	.content-row.h-100 {
+		height: 100%;
+	}
 }
 
 /* --------------------------------------------------------------------------
@@ -1621,7 +1731,9 @@ a:hover .xb-thumb-meta {
 
 .xb-cat-card .xb-cat-overlay {
 	position: absolute;
-	left: 0; right: 0; bottom: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
 	padding: 22px 10px 8px;
 	background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .88));
 	display: flex;
@@ -1643,7 +1755,10 @@ a:hover .xb-thumb-meta {
 /* --------------------------------------------------------------------------
    Página do vídeo (watch)
    -------------------------------------------------------------------------- */
-.video-embedded, .avs-player-wrap, .vplayer-container, .video-container {
+.video-embedded,
+.avs-player-wrap,
+.vplayer-container,
+.video-container {
 	border-radius: 12px;
 	overflow: hidden;
 	background: #000;
@@ -1933,7 +2048,7 @@ a:hover .xb-thumb-meta {
 	color: var(--xb-accent) !important;
 }
 
-.autoplay-switch input:checked + .autoplay-slider {
+.autoplay-switch input:checked+.autoplay-slider {
 	background: var(--xb-accent) !important;
 }
 
@@ -1967,7 +2082,8 @@ a:hover .xb-thumb-meta {
 	font-weight: 600;
 }
 
-#comments_input, .form-control {
+#comments_input,
+.form-control {
 	border-radius: var(--xb-radius-sm);
 }
 
@@ -2063,7 +2179,9 @@ a:hover .xb-thumb-meta {
 	.xb-mobnav {
 		display: flex;
 		position: fixed;
-		left: 0; right: 0; bottom: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
 		z-index: 1040;
 		background: rgba(13, 13, 13, .97);
 		backdrop-filter: blur(8px);
@@ -2218,6 +2336,7 @@ a:hover .xb-thumb-meta {
 			opacity: 0;
 			transform: translateY(20px);
 		}
+
 		to {
 			opacity: 1;
 			transform: translateY(0);
