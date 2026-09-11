@@ -42,14 +42,6 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
 
-      - name: Set permissions
-        run: |
-          cd ${{ env.DEPLOY_PATH }}
-          sudo chown -R www-data:www-data .
-          find . -type d -exec chmod 755 {} \;
-          find . -type f -exec chmod 644 {} \;
-          chmod +x *.sh 2>/dev/null || true
-
       - name: Reload Apache
         run: sudo systemctl reload apache2
 
@@ -63,6 +55,14 @@ jobs:
             echo "::error::Health check falhou: HTTP $HTTP_CODE"
             exit 1
           fi
+
+      - name: Set permissions
+        run: |
+          cd ${{ env.DEPLOY_PATH }}
+          sudo chown -R www-data:www-data .
+          find . -type d -exec chmod 755 {} \;
+          find . -type f -exec chmod 644 {} \;
+          chmod +x *.sh 2>/dev/null || true
 
       - name: Cleanup old backups (keep last 5)
         if: always()
