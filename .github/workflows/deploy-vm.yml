@@ -20,7 +20,7 @@ jobs:
       - name: Deploy files to production
         run: |
           sudo mkdir -p ${{ env.DEPLOY_PATH }}
-          rsync -avz --delete \
+          sudo rsync -avz --delete \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='*.log' \
