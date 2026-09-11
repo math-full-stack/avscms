@@ -45,13 +45,12 @@ jobs:
       - name: Run SQL migrations
         run: |
           cd ${{ env.DEPLOY_PATH }}
-          for f in sql/*.sql; do
-            # uninstall_*.sql destrói as tabelas do Mass Grabber (DROP TABLE).
-            # Roda em ordem alfabética DEPOIS do install_mass_grabber.sql, o que
-            # "resetava" o grabber a cada deploy. Nunca rodar no deploy.
-            case "$(basename "$f")" in
-              uninstall_*) echo "Pulando (uninstall): $f"; continue;;
-            esac
+          # Só as migrations de sql/migrations/*.sql (schema-only, idempotentes).
+          # Os seeds sql/install_mass_grabber.sql e sql/categories_pornozinho.sql
+          # rodam manualmente 1x no fresh install — no deploy duplicariam Sources
+          # e Categorias a cada run (sem UNIQUE KEY, ON DUPLICATE não protege).
+          # uninstall_mass_grabber.sql nunca roda no deploy.
+          for f in sql/migrations/*.sql; do
             if [ -f "$f" ]; then
               echo "Aplicando: $f"
               mysql -h 127.0.0.1 -P 3306 -u${DB_USER} -p${DB_PASSWORD} --skip-ssl ${DB_NAME} < "$f" 2>&1 | grep -v "Duplicate column name" || true
