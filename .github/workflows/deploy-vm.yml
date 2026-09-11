@@ -8,6 +8,7 @@ on:
 env:
   DEPLOY_PATH: /var/www/avscms
   BACKUP_DIR: /var/www/avscms.backups
+  WORK_DIR: /home/matheussturiao_gmail_com/actions-runner/_work/avscms
 
 jobs:
   deploy:
@@ -16,10 +17,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: ${{ env.WORK_DIR }}
 
-      - name: Verify directory
+      - name: Deploy files to production
         run: |
-          ls -la ${{ env.DEPLOY_PATH }}
+          sudo mkdir -p ${{ env.DEPLOY_PATH }}
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='*.log' \
+            --exclude='setup-deploy.sh' \
+            ${{ env.WORK_DIR }}/ ${{ env.DEPLOY_PATH }}/
 
       - name: Pre-deploy backup (timestamped)
         run: |
