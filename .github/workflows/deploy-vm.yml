@@ -27,6 +27,14 @@ jobs:
             --exclude='setup-deploy.sh' \
             ${{ runner.workspace }}/avscms/ ${{ env.DEPLOY_PATH }}/
 
+      - name: Set permissions
+        run: |
+          cd ${{ env.DEPLOY_PATH }}
+          sudo chown -R www-data:www-data .
+          sudo find . -type d -exec chmod 755 {} \;
+          sudo find . -type f -exec chmod 644 {} \;
+          chmod +x *.sh 2>/dev/null || true
+
       - name: Pre-deploy backup (timestamped)
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
@@ -38,6 +46,12 @@ jobs:
         run: |
           cd ${{ env.DEPLOY_PATH }}
           for f in sql/*.sql; do
+            # uninstall_*.sql destrói as tabelas do Mass Grabber (DROP TABLE).
+            # Roda em ordem alfabética DEPOIS do install_mass_grabber.sql, o que
+            # "resetava" o grabber a cada deploy. Nunca rodar no deploy.
+            case "$(basename "$f")" in
+              uninstall_*) echo "Pulando (uninstall): $f"; continue;;
+            esac
             if [ -f "$f" ]; then
               echo "Aplicando: $f"
               mysql -h 127.0.0.1 -P 3306 -u${DB_USER} -p${DB_PASSWORD} --skip-ssl ${DB_NAME} < "$f" 2>&1 | grep -v "Duplicate column name" || true
@@ -61,14 +75,6 @@ jobs:
             echo "::error::Health check falhou: HTTP $HTTP_CODE"
             exit 1
           fi
-
-      - name: Set permissions
-        run: |
-          cd ${{ env.DEPLOY_PATH }}
-          sudo chown -R www-data:www-data .
-          sudo find . -type d -exec chmod 755 {} \;
-          sudo find . -type f -exec chmod 644 {} \;
-          chmod +x *.sh 2>/dev/null || true
 
       - name: Cleanup old backups (keep last 5)
         if: always()
