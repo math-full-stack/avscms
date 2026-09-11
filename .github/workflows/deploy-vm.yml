@@ -75,21 +75,13 @@ jobs:
             " \
             --quiet
 
-      - name: Deploy files via rsync over SSH (IAP)
+      - name: Deploy files via gcloud compute scp (IAP)
         run: |
-          gcloud compute ssh ${{ env.VM_NAME }} \
+          gcloud compute scp --recurse . ${{ env.VM_NAME }}:${{ env.DEPLOY_PATH }} \
             --zone=${{ env.VM_ZONE }} \
             --project=${{ env.PROJECT_ID }} \
             --tunnel-through-iap \
-            --command="mkdir -p ${{ env.DEPLOY_PATH }}" \
             --quiet
-          rsync -avz --delete \
-            -e "gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.VM_ZONE }} --project=${{ env.PROJECT_ID }} --tunnel-through-iap --ssh-flag='-o StrictHostKeyChecking=no' --ssh-flag='-o UserKnownHostsFile=/dev/null' --" \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='*.log' \
-            --exclude='setup-deploy.sh' \
-            . ${{ env.VM_USER }}@${{ env.VM_NAME }}:${{ env.DEPLOY_PATH }}/
 
       - name: Run SQL migrations
         run: |
