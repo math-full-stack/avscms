@@ -1,4 +1,4 @@
-name: Deploy to VM (Production)
+name: Deploy to VM (Production with IAP)
 
 on:
   push:
@@ -6,72 +6,94 @@ on:
   workflow_dispatch:
 
 env:
-  VM_HOST: ${{ secrets.VM_HOST }}
+  VM_NAME: ${{ secrets.VM_NAME }}
+  VM_ZONE: ${{ secrets.VM_ZONE }}
+  PROJECT_ID: ${{ secrets.PROJECT_ID }}
   VM_USER: ${{ secrets.VM_USER }}
-  VM_PATH: /var/www/avscms
+  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
   BACKUP_DIR: /var/www/avscms.backups
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Verify required secrets
         run: |
-          if [[ -z "${{ secrets.VM_HOST }}" ]]; then echo "::error::Secret VM_HOST não configurado"; exit 1; fi
-          if [[ -z "${{ secrets.VM_USER }}" ]]; then echo "::error::Secret VM_USER não configurado"; exit 1; fi
-          if [[ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]]; then echo "::error::Secret SSH_PRIVATE_KEY não configurado"; exit 1; fi
-          if [[ -z "${{ secrets.DB_USER }}" ]]; then echo "::error::Secret DB_USER não configurado"; exit 1; fi
-          if [[ -z "${{ secrets.DB_PASSWORD }}" ]]; then echo "::error::Secret DB_PASSWORD não configurado"; exit 1; fi
-          if [[ -z "${{ secrets.DB_NAME }}" ]]; then echo "::error::Secret DB_NAME não configurado"; exit 1; fi
+          for s in VM_NAME VM_ZONE PROJECT_ID VM_USER DEPLOY_PATH SSH_PRIVATE_KEY DB_USER DB_PASSWORD DB_NAME; do
+            if [[ -z "${{ secrets[s] }}" ]]; then
+              echo "::error::Secret $s não configurado"
+              exit 1
+            fi
+          done
           echo "✅ Todos os secrets presentes"
 
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Auth to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          token_format: access_token
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
-      - name: Test SSH connectivity
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: '>= 480.0.0'
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Test SSH connectivity via IAP
         run: |
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            -o ConnectTimeout=10 \
-            ${{ env.VM_USER }}@${{ env.VM_HOST }} "echo 'SSH OK'"
+          gcloud compute ssh ${{ env.VM_NAME }} \
+            --zone=${{ env.VM_ZONE }} \
+            --project=${{ env.PROJECT_ID }} \
+            --tunnel-through-iap \
+            --command="echo 'SSH OK via IAP'" \
+            --quiet
 
       - name: Pre-deploy backup (timestamped)
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            ${{ env.VM_USER }}@${{ env.VM_HOST }} "
+          gcloud compute ssh ${{ env.VM_NAME }} \
+            --zone=${{ env.VM_ZONE }} \
+            --project=${{ env.PROJECT_ID }} \
+            --tunnel-through-iap \
+            --command="
               sudo mkdir -p ${{ env.BACKUP_DIR }} &&
-              sudo cp -r ${{ env.VM_PATH }} ${{ env.BACKUP_DIR }}/avscms-\$TIMESTAMP &&
+              sudo cp -r ${{ env.DEPLOY_PATH }} ${{ env.BACKUP_DIR }}/avscms-\$TIMESTAMP &&
               echo 'Backup criado: ${{ env.BACKUP_DIR }}/avscms-'$TIMESTAMP
-            "
+            " \
+            --quiet
 
-      - name: Deploy files via rsync
+      - name: Deploy files via gcloud compute scp (IAP)
         run: |
-          rsync -avz --delete \
-            -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
-            --exclude '.git' \
-            --exclude '.github' \
-            --exclude '*.log' \
-            --exclude 'setup-deploy.sh' \
-            . ${{ env.VM_USER }}@${{ env.VM_HOST }}:${{ env.VM_PATH }}/
+          gcloud compute scp --recurse . ${{ env.VM_NAME }}:${{ env.DEPLOY_PATH }} \
+            --zone=${{ env.VM_ZONE }} \
+            --project=${{ env.PROJECT_ID }} \
+            --tunnel-through-iap \
+            --quiet
 
       - name: Run SQL migrations
         run: |
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            ${{ env.VM_USER }}@${{ env.VM_HOST }} "
-              cd ${{ env.VM_PATH }} &&
+          gcloud compute ssh ${{ env.VM_NAME }} \
+            --zone=${{ env.VM_ZONE }} \
+            --project=${{ env.PROJECT_ID }} \
+            --tunnel-through-iap \
+            --command="
+              cd ${{ env.DEPLOY_PATH }} &&
               for f in sql/*.sql; do
                 if [ -f \"\$f\" ]; then
                   echo 'Aplicando: '\$f
                   mysql -u\${DB_USER} -p\${DB_PASSWORD} \${DB_NAME} < \"\$f\"
                 fi
               done
-            "
+            " \
+            --quiet
         env:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -79,25 +101,36 @@ jobs:
 
       - name: Set permissions (storage, cache, uploads)
         run: |
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            ${{ env.VM_USER }}@${{ env.VM_HOST }} "
-              cd ${{ env.VM_PATH }} &&
+          gcloud compute ssh ${{ env.VM_NAME }} \
+            --zone=${{ env.VM_ZONE }} \
+            --project=${{ env.PROJECT_ID }} \
+            --tunnel-through-iap \
+            --command="
+              cd ${{ env.DEPLOY_PATH }} &&
               sudo chown -R www-data:www-data . &&
               find . -type d -exec chmod 755 {} \\; &&
               find . -type f -exec chmod 644 {} \\; &&
               chmod +x *.sh 2>/dev/null || true
-            "
+            " \
+            --quiet
 
       - name: Reload Apache
         run: |
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            ${{ env.VM_USER }}@${{ env.VM_HOST }} "sudo systemctl reload apache2"
+          gcloud compute ssh ${{ env.VM_NAME }} \
+            --zone=${{ env.VM_ZONE }} \
+            --project=${{ env.PROJECT_ID }} \
+            --tunnel-through-iap \
+            --command="sudo systemctl reload apache2" \
+            --quiet
 
       - name: Post-deploy health check
         run: |
           sleep 3
+          EXTERNAL_IP=$(gcloud compute instances describe ${{ env.VM_NAME }} \
+            --zone=${{ env.VM_ZONE }} --project=${{ env.PROJECT_ID }} \
+            --format='value(networkInterfaces[0].accessConfigs[0].natIP)')
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-            "http://${{ env.VM_HOST }}/" || echo "000")
+            "http://$EXTERNAL_IP/" || echo "000")
           if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 400 ]]; then
             echo "✅ Health check OK: HTTP $HTTP_CODE"
           else
@@ -108,35 +141,54 @@ jobs:
       - name: Cleanup old backups (keep last 5)
         if: always()
         run: |
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            ${{ env.VM_USER }}@${{ env.VM_HOST }} "
+          gcloud compute ssh ${{ env.VM_NAME }} \
+            --zone=${{ env.VM_ZONE }} \
+            --project=${{ env.PROJECT_ID }} \
+            --tunnel-through-iap \
+            --command="
               ls -dt ${{ env.BACKUP_DIR }}/avscms-* 2>/dev/null | tail -n +6 | xargs -r sudo rm -rf
-            "
+            " \
+            --quiet
 
   rollback:
     runs-on: ubuntu-latest
     if: failure()
     needs: deploy
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Auth to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          token_format: access_token
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: '>= 480.0.0'
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Rollback to latest backup
         run: |
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            ${{ env.VM_USER }}@${{ env.VM_HOST }} "
-              LATEST=$(ls -dt ${{ env.BACKUP_DIR }}/avscms-* 2>/dev/null | head -1)
+          gcloud compute ssh ${{ env.VM_NAME }} \
+            --zone=${{ env.VM_ZONE }} \
+            --project=${{ env.PROJECT_ID }} \
+            --tunnel-through-iap \
+            --command="
+              LATEST=\$(ls -dt ${{ env.BACKUP_DIR }}/avscms-* 2>/dev/null | head -1)
               if [[ -n \"\$LATEST\" ]]; then
                 echo 'Restaurando: '\$LATEST
-                sudo rm -rf ${{ env.VM_PATH }} &&
-                sudo cp -r \"\$LATEST\" ${{ env.VM_PATH }} &&
-                sudo chown -R www-data:www-data ${{ env.VM_PATH }} &&
+                sudo rm -rf ${{ env.DEPLOY_PATH }} &&
+                sudo cp -r \"\$LATEST\" ${{ env.DEPLOY_PATH }} &&
+                sudo chown -R www-data:www-data ${{ env.DEPLOY_PATH }} &&
                 sudo systemctl reload apache2 &&
                 echo '✅ Rollback concluído'
               else
                 echo '❌ Nenhum backup encontrado'
                 exit 1
               fi
-            "
+            " \
+            --quiet

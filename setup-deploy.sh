@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
-# Setup script for production deploy to pornozinho-vm
+# Setup script for production deploy to pornozinho-vm (with IAP tunneling)
 # Run this ONCE locally (where gcloud is authenticated)
 
 set -euo pipefail
 
 PROJECT="novinhasbr"
 VM_NAME="pornozinho-vm"
-ZONE="southamerica-east1-a"
-VM_USER="ubuntu"        # ajuste se for outro usuário
+ZONE="southamerica-east1-c"
+VM_USER="matheussturiao_gmail_com"  # OS Login username
 DEPLOY_PATH="/var/www/avscms"
 KEY_NAME="deploy_key"
 KEY_PATH="$HOME/.ssh/$KEY_NAME"
 
 step() { printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
+
+GCLOUD_SSH="gcloud compute ssh $VM_NAME --zone=$ZONE --project=$PROJECT --tunnel-through-iap --quiet"
 
 step "1. Gerando chave SSH dedicada para deploy (ed25519)"
 if [[ -f "$KEY_PATH" ]]; then
@@ -28,7 +30,7 @@ gcloud compute os-login ssh-keys add \
   --project="$PROJECT" \
   --quiet
 
-step "3. Verificando se OS Login está habilitado na VM"
+step "3. Verificando se OS Login está habilitado no projeto"
 OS_LOGIN=$(gcloud compute project-info describe --project="$PROJECT" \
   --format="value(commonInstanceMetadata.items[enable-oslogin].value)")
 if [[ "$OS_LOGIN" != "TRUE" ]]; then
@@ -38,32 +40,17 @@ if [[ "$OS_LOGIN" != "TRUE" ]]; then
     --project="$PROJECT"
 fi
 
-step "4. Testando conexão SSH via gcloud (valida OS Login + chave)"
-gcloud compute ssh "$VM_NAME" \
-  --zone="$ZONE" \
-  --project="$PROJECT" \
-  --command="echo 'SSH OK via gcloud'" \
-  --quiet
+step "4. Testando conexão SSH via IAP"
+$GCLOUD_SSH --command="echo 'SSH OK via IAP'"
 
 step "5. Preparando diretório de deploy na VM"
-gcloud compute ssh "$VM_NAME" \
-  --zone="$ZONE" \
-  --project="$PROJECT" \
-  --command="sudo mkdir -p $DEPLOY_PATH && sudo chown $VM_USER:$VM_USER $DEPLOY_PATH" \
-  --quiet
+$GCLOUD_SSH --command="sudo mkdir -p $DEPLOY_PATH && sudo chown $VM_USER:$VM_USER $DEPLOY_PATH"
 
-step "6. Testando rsync direto (simula o que o GitHub Actions fará)"
-rsync -avz --delete \
-  -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
-  --exclude '.git' --exclude '.github' --exclude '*.log' \
-  . "$VM_USER@$VM_NAME:$DEPLOY_PATH/"
+step "6. Testando execução remota (dry-run migrations)"
+$GCLOUD_SSH --command="cd $DEPLOY_PATH && ls sql/*.sql 2>/dev/null | head -5"
 
-step "7. Testando execução remota de migrations (dry-run)"
-gcloud compute ssh "$VM_NAME" \
-  --zone="$ZONE" \
-  --project="$PROJECT" \
-  --command="cd $DEPLOY_PATH && ls sql/*.sql 2>/dev/null | head -5" \
-  --quiet
+step "7. Testando sudo systemctl reload apache2"
+$GCLOUD_SSH --command="sudo systemctl reload apache2"
 
 step "✅ Setup completo!"
 echo
@@ -71,8 +58,11 @@ echo "----------------------------------------"
 echo "AGORA configure estes SECRETS no GitHub:"
 echo "  Settings → Secrets and variables → Actions → New repository secret"
 echo "----------------------------------------"
-echo "VM_HOST          = $(gcloud compute instances describe $VM_NAME --zone=$ZONE --project=$PROJECT --format='value(networkInterfaces[0].accessConfigs[0].natIP)')"
+echo "VM_NAME          = $VM_NAME"
+echo "VM_ZONE          = $ZONE"
+echo "PROJECT_ID       = $PROJECT"
 echo "VM_USER          = $VM_USER"
+echo "DEPLOY_PATH      = $DEPLOY_PATH"
 echo "SSH_PRIVATE_KEY  = (cole o conteúdo ABAIXO)"
 echo "DB_USER          = (seu usuário MySQL)"
 echo "DB_PASSWORD      = (sua senha MySQL)"
@@ -80,3 +70,5 @@ echo "DB_NAME          = (seu database MySQL)"
 echo "----------------------------------------"
 cat "$KEY_PATH"
 echo "----------------------------------------"
+echo
+echo "O workflow usará 'gcloud compute ssh --tunnel-through-iap' para deploy."
