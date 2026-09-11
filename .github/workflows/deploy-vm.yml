@@ -6,60 +6,46 @@ on:
   workflow_dispatch:
 
 env:
-  VM_NAME: pornozinho-vm
-  VM_ZONE: southamerica-east1-a
-  PROJECT_ID: novinhasbr
-  DEPLOY_PATH: /var/www/avscms
+  VM_HOST: ${{ secrets.VM_HOST }}
+  VM_USER: ${{ secrets.VM_USER }}
+  VM_PATH: /var/www/avscms
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Auth to Google Cloud
-        uses: google-github-actions/auth@v2
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          token_format: access_token
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Set up gcloud
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          version: '>= 480.0.0'
-          project_id: ${{ env.PROJECT_ID }}
-
-      - name: Rsync files to VM
+      - name: Deploy files via rsync
         run: |
-          gcloud compute ssh ${{ env.VM_NAME }} \
-            --zone=${{ env.VM_ZONE }} \
-            --project=${{ env.PROJECT_ID }} \
-            --command="mkdir -p ${{ env.DEPLOY_PATH }}"
-          gcloud compute scp --recurse . ${{ env.VM_NAME }}:${{ env.DEPLOY_PATH }} \
-            --zone=${{ env.VM_ZONE }} \
-            --project=${{ env.PROJECT_ID }}
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '*.log' \
+            . ${{ env.VM_USER }}@${{ env.VM_HOST }}:${{ env.VM_PATH }}/
 
       - name: Run SQL migrations
         run: |
-          gcloud compute ssh ${{ env.VM_NAME }} \
-            --zone=${{ env.VM_ZONE }} \
-            --project=${{ env.PROJECT_ID }} \
-            --command="
-              cd ${{ env.DEPLOY_PATH }} &&
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            ${{ env.VM_USER }}@${{ env.VM_HOST }} "
+              cd ${{ env.VM_PATH }} &&
               for f in sql/*.sql; do
                 [ -f \"\$f\" ] && mysql -u\${DB_USER} -p\${DB_PASSWORD} \${DB_NAME} < \"\$f\"
               done
             "
+        env:
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
 
       - name: Reload Apache
         run: |
-          gcloud compute ssh ${{ env.VM_NAME }} \
-            --zone=${{ env.VM_ZONE }} \
-            --project=${{ env.PROJECT_ID }} \
-            --command="sudo systemctl reload apache2"
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            ${{ env.VM_USER }}@${{ env.VM_HOST }} "sudo systemctl reload apache2"
