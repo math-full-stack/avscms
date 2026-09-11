@@ -75,12 +75,19 @@ jobs:
             " \
             --quiet
 
-      - name: Deploy files via gcloud compute scp (IAP)
+      - name: Deploy files via tar + gcloud compute scp (IAP)
         run: |
-          gcloud compute scp --recurse . ${{ env.VM_NAME }}:${{ env.DEPLOY_PATH }} \
+          tar -czf /tmp/deploy.tgz --exclude='.git' --exclude='.github' --exclude='*.log' --exclude='setup-deploy.sh' .
+          gcloud compute scp /tmp/deploy.tgz ${{ env.VM_NAME }}:/tmp/deploy.tgz \
             --zone=${{ env.VM_ZONE }} \
             --project=${{ env.PROJECT_ID }} \
             --tunnel-through-iap \
+            --quiet
+          gcloud compute ssh ${{ env.VM_NAME }} \
+            --zone=${{ env.VM_ZONE }} \
+            --project=${{ env.PROJECT_ID }} \
+            --tunnel-through-iap \
+            --command="tar -xzf /tmp/deploy.tgz -C ${{ env.DEPLOY_PATH }} && rm /tmp/deploy.tgz" \
             --quiet
 
       - name: Run SQL migrations
