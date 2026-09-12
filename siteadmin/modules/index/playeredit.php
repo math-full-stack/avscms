@@ -26,7 +26,7 @@ if ( isset($_POST['submit_settings']) && !$errors ) {
 	$quick_controls     = intval($_POST['quick_controls']);
 	$resolution 		= trim($_POST['resolution']);
 	$timeline_preview   = intval($_POST['timeline_preview']);
-	$engine             = ( isset($_POST['engine']) && $_POST['engine'] == 'mediabunny' ) ? 'mediabunny' : 'videojs';
+	$engine             = ( isset($_POST['engine']) && in_array($_POST['engine'], array('mediabunny', 'vidstack'), true) ) ? $_POST['engine'] : 'videojs';
 	
 	//Logo Settings
     $logo               = intval($_POST['logo']);
