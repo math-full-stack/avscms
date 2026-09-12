@@ -127,6 +127,16 @@ class PornoBrasilGrabber extends AbstractGrabber {
             $embedUrl = $iframeMatch[1];
         }
 
+        // 4b. Extract full MP4 from xvideos embed page (setVideoUrlHigh/setVideoUrlLow in JS)
+        if (empty($streamUrl) && !empty($embedUrl) && preg_match('/xvideos\.com\/embedframe\//i', $embedUrl)) {
+            $embedHtml = $this->fetchHtml($embedUrl);
+            if ($embedHtml && preg_match('/setVideoUrlHigh\s*\(\s*[\'"]?(https?:\/\/mp4-cdn77[^\'")\s]+)/i', $embedHtml, $mp4Match)) {
+                $streamUrl = $mp4Match[1];
+            } elseif ($embedHtml && preg_match('/setVideoUrlLow\s*\(\s*[\'"]?(https?:\/\/mp4-cdn77[^\'")\s]+)/i', $embedHtml, $mp4Match)) {
+                $streamUrl = $mp4Match[1];
+            }
+        }
+
         // 5. Tags
         if (preg_match_all('/<a[^>]+rel="tag"[^>]*>([^<]+)<\\/a>/i', $html, $tagMatches)) {
             $tags = array_map('trim', $tagMatches[1]);

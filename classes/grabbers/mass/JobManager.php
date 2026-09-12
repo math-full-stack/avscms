@@ -291,12 +291,74 @@ class JobManager {
     }
 
     /**
+     * Complete jobs whose target video is already processed.
+     *
+     * Reconciliation between grabber_jobs and the AVS video table: a worker may
+     * finish download + enqueue conversion but die before marking the job
+     * COMPLETED; postConversion later sets video.active='1', leaving the job
+     * stuck at PENDING/PROCESSING forever while the queue page shows
+     * "processing". The discovered source_url links each job to its video.
+     *
+     * @return int  Number of jobs reconciled to COMPLETED
+     */
+    public function completeProcessedJobs() {
+        $now = time();
+        $rs = $this->safeExec("SELECT j.id AS job_id, MAX(v.VID) AS video_id
+                                 FROM grabber_jobs j
+                                 JOIN grabber_discovered_videos d ON j.discovered_video_id = d.id
+                                 JOIN video v ON v.source_url = d.source_url AND d.source_url <> '' AND v.active = '1'
+                                 WHERE j.status IN ('PENDING', 'PROCESSING')
+                                 GROUP BY j.id");
+
+        $completed = 0;
+        if ($rs && !$rs->EOF) {
+            while (!$rs->EOF) {
+                $jobId = intval($rs->fields['job_id']);
+                $videoId = intval($rs->fields['video_id']);
+                if ($jobId <= 0) {
+                    $rs->MoveNext();
+                    continue;
+                }
+
+                $this->safeExec("UPDATE grabber_jobs SET
+                                    status = 'COMPLETED',
+                                    finished_at = " . $now . ",
+                                    video_id = " . $videoId . ",
+                                    error_code = '',
+                                    error_message = '',
+                                    updated_at = " . $now . "
+                                    WHERE id = " . $jobId . " AND status IN ('PENDING', 'PROCESSING') LIMIT 1");
+
+                if ($this->db->Affected_Rows() == 0) {
+                    $rs->MoveNext();
+                    continue;
+                }
+
+                $rsDisc = $this->safeExec("SELECT discovered_video_id FROM grabber_jobs WHERE id = " . $jobId . " LIMIT 1");
+                if ($rsDisc && $rsDisc->fields['discovered_video_id']) {
+                    $discMgr = new DiscoveryManager();
+                    $discMgr->updateStatus(intval($rsDisc->fields['discovered_video_id']), 'IMPORTED', $videoId);
+                }
+
+                $completed++;
+                $rs->MoveNext();
+            }
+        }
+
+        return $completed;
+    }
+
+    /**
      * Reset stale processing jobs (crash recovery).
      * @param int $timeoutSeconds  Default 1800 (30 min)
      * @return int  Number of jobs reset
      */
     public function resetStaleJobs($timeoutSeconds = 1800) {
         $cutoff = time() - $timeoutSeconds;
+        // Reconcile before re-queueing: jobs whose video is already processed
+        // become COMPLETED, so a stuck job is never sent back for a redundant
+        // re-download of an active=1 video.
+        $this->completeProcessedJobs();
         // Attempts are reset so a job whose PROCESSING run crashed on its last
         // attempt (attempts == max_attempts) can be claimed again - otherwise
         // it would sit PENDING forever and block the queue.
