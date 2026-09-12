@@ -24,4 +24,6 @@
 ## Memória viva (atualizar ao descobrir)
 - Goal atual: ativação automática do .opencode via opencode.json.
 - Decisão: `opencode.json: instructions` carrega AGENTS.md + projeto/ia/skills/sistema/coordenador; `permission.skill * : allow`.
+- MD3 no tema: header.tpl/enter.tpl carregam Roboto + Material Symbols Rounded (Google Fonts) e css/pornozinho-md3.css (tokens --md-sys-*); js/md3-ripple.js roda em todas as páginas (seletor RIPPLE_SELECTOR inclui .avs-settings-tab/.avs-settings-item). embed.tpl não carregava MD3 — fontes adicionadas em seu head.
+- Player mediabunny usa MD3 no menu de configurações (abas Qualidade/Velocidade, Material Symbols para ícones/check, tokens --md-sys-* com fallback). Se novos componentes do player usarem Material Symbols, manter `embed.tpl` com as fontes.
 - Aberto: mapear fluxos críticos (upload, auth, player) e arquivos de config reais em `include/`.
