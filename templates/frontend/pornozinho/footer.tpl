@@ -115,21 +115,114 @@
 			$("#search_query").easyAutocomplete(options);
 			$("#search_query_xs").easyAutocomplete(options);
 
-			// Mobile dropdown toggle
-			$('.xb-nav-dropdown-toggle').on('click', function(e) {
-				if ($(window).width() < 992) {
-					e.preventDefault();
-					e.stopPropagation();
-					var $dropdown = $(this).closest('.xb-nav-dropdown');
-					$dropdown.toggleClass('open');
-					$('.xb-nav-dropdown').not($dropdown).removeClass('open');
+			var $topbar = $('.xb-topbar');
+			var $header = $('.xb-header');
+			var $navScrim = $('#xbNavScrim');
+
+			function setNavAria($dropdown, on) {
+				$dropdown.find('.xb-nav-dropdown-toggle').attr('aria-expanded', on ? 'true' : 'false');
+			}
+
+			function closeNavDropdowns() {
+				$('.xb-nav-dropdown').each(function() {
+					clearTimeout($(this).data('openTimer'));
+					clearTimeout($(this).data('closeTimer'));
+					setNavAria($(this), false);
+					resetMmPanel($(this));
+				});
+				$('.xb-nav-dropdown').removeClass('show open');
+				$navScrim.removeClass('show');
+			}
+
+			function toggleNavDropdown($dropdown) {
+				clearTimeout($dropdown.data('openTimer'));
+				clearTimeout($dropdown.data('closeTimer'));
+				var desktop = $(window).width() >= 992;
+				var cls = desktop ? 'show' : 'open';
+				var isOpen = $dropdown.hasClass(cls);
+				$('.xb-nav-dropdown').removeClass('show open').each(function() {
+					setNavAria($(this), false);
+				});
+				$navScrim.removeClass('show');
+				if (!isOpen) {
+					$dropdown.addClass(cls);
+					setNavAria($dropdown, true);
+					if (!desktop) {
+						$navScrim.addClass('show');
+					}
 				}
+			}
+
+			function setMmPanel($dropdown, key) {
+				var $panel = $dropdown.find('.xb-mm-panel[data-mm-panel="' + key + '"]');
+				if (!$panel.length) return;
+				$dropdown.find('.xb-mm-panel').removeClass('xb-mm-active');
+				$panel.addClass('xb-mm-active');
+				$dropdown.find('.xb-mm-item').removeClass('xb-mm-current');
+				$dropdown.find('.xb-mm-item[data-mm="' + key + '"]').addClass('xb-mm-current');
+				$dropdown.find('.xb-mm-title').text($dropdown.find('.xb-mm-item[data-mm="' + key + '"]').data('mm-label'));
+			}
+
+			function resetMmPanel($dropdown) {
+				var $first = $dropdown.find('.xb-mm-panel').first();
+				if ($first.length) {
+					setMmPanel($dropdown, $first.data('mm-panel'));
+				}
+			}
+
+			// Desktop: hover intent (delay de abertura/fechamento)
+			$(document).on('mouseenter', '.xb-nav-dropdown', function() {
+				if ($(window).width() < 992) return;
+				var $dropdown = $(this);
+				clearTimeout($dropdown.data('closeTimer'));
+				$dropdown.data('openTimer', setTimeout(function() {
+					$('.xb-nav-dropdown').removeClass('show').each(function() {
+						setNavAria($(this), false);
+					});
+					$dropdown.addClass('show');
+					setNavAria($dropdown, true);
+				}, 120));
+			}).on('mouseleave', '.xb-nav-dropdown', function() {
+				if ($(window).width() < 992) return;
+				var $dropdown = $(this);
+				clearTimeout($dropdown.data('openTimer'));
+				$dropdown.data('closeTimer', setTimeout(function() {
+					$dropdown.removeClass('show open');
+					setNavAria($dropdown, false);
+					$navScrim.removeClass('show');
+					resetMmPanel($dropdown);
+				}, 180));
+			});
+
+			// Mega menu Vídeos: hover/focus no item troca os cards (desktop)
+			$(document).on('mouseenter focus', '.xb-mm-item', function() {
+				if ($(window).width() < 992) return;
+				setMmPanel($(this).closest('.xb-nav-dropdown'), $(this).data('mm'));
+			});
+
+			// Mobile dropdown toggle
+			$(document).on('click', '.xb-nav-dropdown-toggle', function(e) {
+				if ($(window).width() >= 992) return;
+				e.preventDefault();
+				e.stopPropagation();
+				toggleNavDropdown($(this).closest('.xb-nav-dropdown'));
 			});
 
 			// Close dropdown when clicking outside
 			$(document).on('click', function(e) {
 				if (!$(e.target).closest('.xb-nav-dropdown').length) {
+					closeNavDropdowns();
+				}
+			});
+
+			// Close dropdowns via scrim (mobile bottom sheet)
+			$navScrim.on('click', closeNavDropdowns);
+
+			// Ao voltar para desktop, descarta estado mobile
+			$(window).on('resize', function() {
+				if ($(window).width() >= 992) {
 					$('.xb-nav-dropdown').removeClass('open');
+					$navScrim.removeClass('show');
 				}
 			});
 
@@ -170,18 +263,15 @@
 				$btn.dropdown('toggle');
 			});
 
-			// Header scroll effect
-			var $topbar = $('.xb-topbar');
-			var lastScroll = 0;
+			// Header scroll effect (topbar some, nav fica colada no topo)
 			$(window).on('scroll', function() {
 				var currentScroll = $(this).scrollTop();
-				if (currentScroll > 50) {
-					$topbar.addClass('xb-topbar-scrolled');
-				} else {
-					$topbar.removeClass('xb-topbar-scrolled');
-				}
-				lastScroll = currentScroll;
+				$topbar.toggleClass('xb-topbar-scrolled', currentScroll > 50);
+				$header.toggleClass('xb-header-sticky', currentScroll > 80);
 			});
+
+			// Inicializa estado ao carregar com a página já rolada
+			$(window).trigger('scroll');
 
 			// Keyboard navigation for nav dropdowns
 			$('.xb-nav-dropdown-toggle').on('keydown', function(e) {
@@ -192,14 +282,10 @@
 					case 'Enter':
 					case ' ':
 						e.preventDefault();
-						if ($(window).width() >= 992) {
-							$dropdown.toggleClass('show');
-						} else {
-							$dropdown.toggleClass('open');
-						}
+						toggleNavDropdown($dropdown);
 						break;
 					case 'Escape':
-						$dropdown.removeClass('show open');
+						closeNavDropdowns();
 						$(this).focus();
 						break;
 					case 'ArrowDown':
@@ -232,7 +318,7 @@
 						break;
 					case 'Escape':
 						e.preventDefault();
-						$(this).closest('.xb-nav-dropdown').removeClass('show open');
+						closeNavDropdowns();
 						$(this).closest('.xb-nav-dropdown').find('.xb-nav-dropdown-toggle').focus();
 						break;
 					case 'Tab':
@@ -247,7 +333,7 @@
 			// Close dropdowns on escape key globally
 			$(document).on('keydown', function(e) {
 				if (e.key === 'Escape') {
-					$('.xb-nav-dropdown').removeClass('show open');
+					closeNavDropdowns();
 					$('.btn-group').removeClass('show');
 				}
 			});
@@ -369,8 +455,10 @@
 		  )
 		  document.querySelector('head').appendChild(msViewportStyle)
 		}
-	{/literal}
-	</script>	
-	{include file='../../../templates/backend/default/analytics/analytics.tpl'}	
+{/literal}
+	</script>
+	<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-mini.css?ver=1.1.0">
+	<script type="text/javascript" src="{$baseurl}/media/player/mediabunny/avs-mini.js?ver=1.1.0"></script>
+	{include file='../../../templates/backend/default/analytics/analytics.tpl'}
 </body>
 </html>

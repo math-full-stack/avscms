@@ -1,6 +1,15 @@
 <?php
 defined('_VALID') or die('Restricted Access!');
 
+// Guard de carregamento único: config.php dá require_once deste arquivo para
+// aplicar a rotação de capas antes dos entrypoints, que depois fazem um
+// `require` normal (não-once) do mesmo arquivo. Declarações de função no topo
+// sofrem early binding (o PHP as registra ao compilar, antes de qualquer
+// `return`), então o guard precisa envolver as declarações em um `if` — sem
+// isso o segundo carregamento fataliza com "Cannot redeclare".
+if ( !defined('AVS_FUNCTION_GLOBAL_LOADED') ) {
+	define('AVS_FUNCTION_GLOBAL_LOADED', true);
+
 function get_request()
 {
     $request = ( isset($_SERVER['REQUEST_URI']) ) ? $_SERVER['REQUEST_URI'] : NULL;
@@ -668,5 +677,7 @@ function encryptPhp($string, $key, $iv) {
         $output=base64_encode($output);
         return $output;
 }
+
+} // fim do guard de carregamento único (aberto no topo)
 
 ?>

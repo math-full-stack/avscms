@@ -470,11 +470,40 @@ if (defined('_ADMIN')) {
 	$smarty->assign('n_total', $n_total);	
 	
 } else {	
+	// Sistema de capas do site: frame sorteado entre os selecionados pelo admin
+	// (thumbnails_opt), mesmo comportamento da home. Primeiro load de
+	// function_global.php no request; o `require` (não-once) dos entrypoints
+	// depois disto vira no-op por causa do guard AVS_FUNCTION_GLOBAL_LOADED.
+	require_once __DIR__ . '/function_global.php';
+
 	$sql            = "SELECT VID, title, duration, addtime, thumb, thumbs, thumbnails_opt, vthumbs, viewnumber, rate, likes, dislikes, type, hd
 					   FROM video WHERE featured='yes' ORDER BY RAND() DESC LIMIT 8";
 	$rs             = $conn->execute($sql);
 	$featured       = $rs->getrows();
+	video_apply_cover_rotation($featured);
 	$smarty->assign('featured_videos_sm', $featured);
+
+	$mm_video_sql   = "SELECT VID, title, duration, addtime, thumb, thumbs, thumbnails_opt, vthumbs, viewnumber, rate, likes, dislikes, type, hd
+					   FROM video WHERE active = '1' ";
+	$rs             = $conn->execute($mm_video_sql . "ORDER BY addtime DESC LIMIT 8");
+	$mm_videos_recent = $rs->getrows();
+	video_apply_cover_rotation($mm_videos_recent);
+	$smarty->assign('mm_videos_recent', $mm_videos_recent);
+
+	$rs             = $conn->execute($mm_video_sql . "ORDER BY viewnumber DESC LIMIT 8");
+	$mm_videos_viewed = $rs->getrows();
+	video_apply_cover_rotation($mm_videos_viewed);
+	$smarty->assign('mm_videos_viewed', $mm_videos_viewed);
+
+	$rs             = $conn->execute($mm_video_sql . "ORDER BY rate DESC LIMIT 8");
+	$mm_videos_rated = $rs->getrows();
+	video_apply_cover_rotation($mm_videos_rated);
+	$smarty->assign('mm_videos_rated', $mm_videos_rated);
+
+	$rs             = $conn->execute($mm_video_sql . "ORDER BY fav_num DESC LIMIT 8");
+	$mm_videos_favs = $rs->getrows();
+	video_apply_cover_rotation($mm_videos_favs);
+	$smarty->assign('mm_videos_favs', $mm_videos_favs);
 
 	$sql            = "SELECT * FROM channel ORDER BY total_videos DESC LIMIT 8";
 	$rs             = $conn->execute($sql);

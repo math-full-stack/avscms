@@ -96,7 +96,7 @@
 	<link rel="stylesheet" href="{$relative_tpl}/css/easy-autocomplete.themes.min.css">	
 	
 	<link href="{$relative_tpl}/css/style.css" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.2" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.6" rel="stylesheet">
 	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
 	<!-- Material Design 3 -->
@@ -104,7 +104,7 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.0" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.3" rel="stylesheet">
 	
 	<!-- Video Player -->
 	{if $view && !$video.embed_code}
@@ -270,6 +270,7 @@
 </div>
 
 
+<div class="xb-header">
 <div class="xb-topbar">
 	<div class="container xb-topbar-inner">
 		<a class="xb-logo" href="{$relative}/"><img src="{$relative}/images/logo/logo.png" alt="{$site_name}"></a>
@@ -357,32 +358,55 @@
 			{if $video_module == '1'}
 			<li class="xb-nav-item xb-nav-dropdown {if $menu == 'videos'}active{/if}">
 				<a href="{$relative}/videos" class="xb-nav-link xb-nav-dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
-					{translate c='menu.videos'} <i class="fas fa-chevron-down xb-nav-caret"></i>
+					{translate c='menu.videos'} <span class="material-symbols-rounded xb-nav-caret" aria-hidden="true">expand_more</span>
 				</a>
 				<div class="xb-dropdown-menu">
-					<div class="xb-dropdown-grid">
+					<div class="xb-dropdown-grid xb-grid-2">
 						<div class="xb-dropdown-col">
 							<h6 class="xb-dropdown-title">{t c='menu.discover_videos'}</h6>
 							<ul class="xb-dropdown-list">
-								<li><a href="{$relative}/videos?type=featured"><i class="far fa-star"></i> {t c='global.featured'}</a></li>
-								<li><a href="{$relative}/videos?o=mr"><i class="far fa-clock"></i> {t c='global.most_recent'}</a></li>
-								<li><a href="{$relative}/videos?o=mv"><i class="far fa-eye"></i> {t c='global.most_viewed'}</a></li>
-								<li><a href="{$relative}/videos?o=tr"><i class="far fa-thumbs-up"></i> {t c='global.top_rated'}</a></li>
-								<li><a href="{$relative}/videos?o=tf"><i class="far fa-heart"></i> {t c='global.top_favorites'}</a></li>
+								<li><a href="{$relative}/videos?type=featured" class="xb-mm-item" data-mm="featured" data-mm-label="{t c='global.featured'}"><span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">star</span> {t c='global.featured'}</a></li>
+								<li><a href="{$relative}/videos?o=mr" class="xb-mm-item" data-mm="recent" data-mm-label="{t c='global.most_recent'}"><span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">schedule</span> {t c='global.most_recent'}</a></li>
+								<li><a href="{$relative}/videos?o=mv" class="xb-mm-item" data-mm="viewed" data-mm-label="{t c='global.most_viewed'}"><span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">visibility</span> {t c='global.most_viewed'}</a></li>
+								<li><a href="{$relative}/videos?o=tr" class="xb-mm-item" data-mm="rated" data-mm-label="{t c='global.top_rated'}"><span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">thumb_up</span> {t c='global.top_rated'}</a></li>
+								<li><a href="{$relative}/videos?o=tf" class="xb-mm-item" data-mm="favs" data-mm-label="{t c='global.top_favorites'}"><span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">favorite</span> {t c='global.top_favorites'}</a></li>
 							</ul>
 							{if $suggestion_arr}
 							<h6 class="xb-dropdown-title mt-3">{t c='menu.trending_searches'}</h6>
 							<div class="xb-dropdown-tags">
 								{section name=i loop=$suggestion_arr max=10}
-								<a href="{$relative}/search/videos/{$suggestion_arr[i].expression}" class="xb-dropdown-tag"><i class="fas fa-search"></i> {$suggestion_arr[i].expression}</a>
+								<a href="{$relative}/search/videos/{$suggestion_arr[i].expression}" class="xb-dropdown-tag"><span class="material-symbols-rounded xb-ms-icon xb-ms-fill" aria-hidden="true">search</span> {$suggestion_arr[i].expression}</a>
 								{/section}
 							</div>
 							{/if}
 						</div>
-						{if $featured_videos_sm}
-						<div class="xb-dropdown-col xb-dropdown-featured">
-							<h6 class="xb-dropdown-title">{t c='menu.featured_videos'}</h6>
-							<div class="xb-dropdown-videos">
+<div class="xb-dropdown-col xb-dropdown-featured">
+						<h6 class="xb-dropdown-title xb-mm-title">{t c='global.most_recent'}</h6>
+						<div class="xb-dropdown-videos">
+							{if $mm_videos_recent}
+							<div class="xb-mm-panel xb-mm-active" data-mm-panel="recent">
+								{section name=i loop=$mm_videos_recent}
+								<a href="{$relative}/video/{$mm_videos_recent[i].VID}/{$mm_videos_recent[i].title|clean}" class="xb-dropdown-video">
+									<div class="xb-dropdown-video-thumb">
+										<img src="{insert name=thumb_path vid=$mm_videos_recent[i].VID}/{$mm_videos_recent[i].thumb}.jpg" alt="{$mm_videos_recent[i].title|escape:'html'}" loading="lazy">
+										{if $mm_videos_recent[i].hd==1}<span class="xb-hd-badge">HD</span>{/if}
+										<div class="xb-dropdown-video-duration">
+											{insert name=duration assign=duration duration=$mm_videos_recent[i].duration}{$duration}
+										</div>
+									</div>
+									<div class="xb-dropdown-video-info">
+										<span class="xb-dropdown-video-title">{$mm_videos_recent[i].title|escape:'html'|truncate:40:"..."}</span>
+										<span class="xb-dropdown-video-meta">
+											{insert name=views assign=s_views views=$mm_videos_recent[i].viewnumber}
+											<span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">visibility</span> {$s_views}
+										</span>
+									</div>
+								</a>
+								{/section}
+							</div>
+							{/if}
+							{if $featured_videos_sm}
+							<div class="xb-mm-panel" data-mm-panel="featured">
 								{section name=i loop=$featured_videos_sm}
 								<a href="{$relative}/video/{$featured_videos_sm[i].VID}/{$featured_videos_sm[i].title|clean}" class="xb-dropdown-video">
 									<div class="xb-dropdown-video-thumb">
@@ -396,34 +420,101 @@
 										<span class="xb-dropdown-video-title">{$featured_videos_sm[i].title|escape:'html'|truncate:40:"..."}</span>
 										<span class="xb-dropdown-video-meta">
 											{insert name=views assign=s_views views=$featured_videos_sm[i].viewnumber}
-											<i class="far fa-eye"></i> {$s_views}
+											<span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">visibility</span> {$s_views}
 										</span>
 									</div>
 								</a>
 								{/section}
 							</div>
-							<a href="{$relative}/videos" class="xb-dropdown-view-all">{translate c='categories.view_all'} <i class="fas fa-arrow-right"></i></a>
+							{/if}
+							{if $mm_videos_viewed}
+							<div class="xb-mm-panel" data-mm-panel="viewed">
+								{section name=i loop=$mm_videos_viewed}
+								<a href="{$relative}/video/{$mm_videos_viewed[i].VID}/{$mm_videos_viewed[i].title|clean}" class="xb-dropdown-video">
+									<div class="xb-dropdown-video-thumb">
+										<img src="{insert name=thumb_path vid=$mm_videos_viewed[i].VID}/{$mm_videos_viewed[i].thumb}.jpg" alt="{$mm_videos_viewed[i].title|escape:'html'}" loading="lazy">
+										{if $mm_videos_viewed[i].hd==1}<span class="xb-hd-badge">HD</span>{/if}
+										<div class="xb-dropdown-video-duration">
+											{insert name=duration assign=duration duration=$mm_videos_viewed[i].duration}{$duration}
+										</div>
+									</div>
+									<div class="xb-dropdown-video-info">
+										<span class="xb-dropdown-video-title">{$mm_videos_viewed[i].title|escape:'html'|truncate:40:"..."}</span>
+										<span class="xb-dropdown-video-meta">
+											{insert name=views assign=s_views views=$mm_videos_viewed[i].viewnumber}
+											<span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">visibility</span> {$s_views}
+										</span>
+									</div>
+								</a>
+								{/section}
+							</div>
+							{/if}
+							{if $mm_videos_rated}
+							<div class="xb-mm-panel" data-mm-panel="rated">
+								{section name=i loop=$mm_videos_rated}
+								<a href="{$relative}/video/{$mm_videos_rated[i].VID}/{$mm_videos_rated[i].title|clean}" class="xb-dropdown-video">
+									<div class="xb-dropdown-video-thumb">
+										<img src="{insert name=thumb_path vid=$mm_videos_rated[i].VID}/{$mm_videos_rated[i].thumb}.jpg" alt="{$mm_videos_rated[i].title|escape:'html'}" loading="lazy">
+										{if $mm_videos_rated[i].hd==1}<span class="xb-hd-badge">HD</span>{/if}
+										<div class="xb-dropdown-video-duration">
+											{insert name=duration assign=duration duration=$mm_videos_rated[i].duration}{$duration}
+										</div>
+									</div>
+									<div class="xb-dropdown-video-info">
+										<span class="xb-dropdown-video-title">{$mm_videos_rated[i].title|escape:'html'|truncate:40:"..."}</span>
+										<span class="xb-dropdown-video-meta">
+											{insert name=views assign=s_views views=$mm_videos_rated[i].viewnumber}
+											<span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">visibility</span> {$s_views}
+										</span>
+									</div>
+								</a>
+								{/section}
+							</div>
+							{/if}
+							{if $mm_videos_favs}
+							<div class="xb-mm-panel" data-mm-panel="favs">
+								{section name=i loop=$mm_videos_favs}
+								<a href="{$relative}/video/{$mm_videos_favs[i].VID}/{$mm_videos_favs[i].title|clean}" class="xb-dropdown-video">
+									<div class="xb-dropdown-video-thumb">
+										<img src="{insert name=thumb_path vid=$mm_videos_favs[i].VID}/{$mm_videos_favs[i].thumb}.jpg" alt="{$mm_videos_favs[i].title|escape:'html'}" loading="lazy">
+										{if $mm_videos_favs[i].hd==1}<span class="xb-hd-badge">HD</span>{/if}
+										<div class="xb-dropdown-video-duration">
+											{insert name=duration assign=duration duration=$mm_videos_favs[i].duration}{$duration}
+										</div>
+									</div>
+									<div class="xb-dropdown-video-info">
+										<span class="xb-dropdown-video-title">{$mm_videos_favs[i].title|escape:'html'|truncate:40:"..."}</span>
+										<span class="xb-dropdown-video-meta">
+											{insert name=views assign=s_views views=$mm_videos_favs[i].viewnumber}
+											<span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">visibility</span> {$s_views}
+										</span>
+									</div>
+								</a>
+								{/section}
+							</div>
+							{/if}
 						</div>
-						{/if}
+						<a href="{$relative}/videos" class="xb-dropdown-view-all">{translate c='categories.view_all'} <span class="material-symbols-rounded xb-ms-icon xb-ms-fill" aria-hidden="true">arrow_forward</span></a>
+					</div>
 					</div>
 				</div>
 			</li>
 			{/if}
 			<li class="xb-nav-item xb-nav-dropdown {if $menu == 'categories'}active{/if}">
 				<a href="{$relative}/categories" class="xb-nav-link xb-nav-dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
-					{translate c='menu.categories'} <i class="fas fa-chevron-down xb-nav-caret"></i>
+					{translate c='menu.categories'} <span class="material-symbols-rounded xb-nav-caret" aria-hidden="true">expand_more</span>
 				</a>
 				<div class="xb-dropdown-menu">
-					<div class="xb-dropdown-grid">
+					<div class="xb-dropdown-grid xb-grid-2">
 						<div class="xb-dropdown-col">
 							<h6 class="xb-dropdown-title">{t c='menu.popular_categories'}</h6>
 							<ul class="xb-dropdown-list">
 								{if $categories_sm}
 								{section name=i loop=$categories_sm max=15}
-								<li><a href="{$relative}/videos/{$categories_sm[i].slug}"><i class="fas fa-folder"></i> {$categories_sm[i].name|escape:'html'} <span class="xb-badge-sm">{$categories_sm[i].total_videos}</span></a></li>
+								<li><a href="{$relative}/videos/{$categories_sm[i].slug}"><span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">folder</span> {$categories_sm[i].name|escape:'html'} <span class="xb-badge-sm">{$categories_sm[i].total_videos}</span></a></li>
 								{/section}
 								{/if}
-								<li><a href="{$relative}/categories"><i class="fas fa-th"></i> {translate c='categories.view_all'}</a></li>
+								<li><a href="{$relative}/categories"><span class="material-symbols-rounded xb-ms-icon" aria-hidden="true">grid_view</span> {translate c='categories.view_all'}</a></li>
 							</ul>
 						</div>
 						{if $categories_sm}
@@ -439,7 +530,7 @@
 								</a>
 								{/section}
 							</div>
-							<a href="{$relative}/categories" class="xb-dropdown-view-all">{translate c='categories.view_all'} <i class="fas fa-arrow-right"></i></a>
+							<a href="{$relative}/categories" class="xb-dropdown-view-all">{translate c='categories.view_all'} <span class="material-symbols-rounded xb-ms-icon xb-ms-fill" aria-hidden="true">arrow_forward</span></a>
 						</div>
 						{/if}
 					</div>
@@ -448,7 +539,7 @@
 			<li class="xb-nav-item"><a href="{$relative}/users" class="xb-nav-link">Creators</a></li>
 			<li class="xb-nav-item xb-nav-dropdown {if $menu == 'tags'}active{/if}">
 				<a href="{$relative}/tags" class="xb-nav-link xb-nav-dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
-					{translate c='menu.tags'} <i class="fas fa-chevron-down xb-nav-caret"></i>
+					{translate c='menu.tags'} <span class="material-symbols-rounded xb-nav-caret" aria-hidden="true">expand_more</span>
 				</a>
 				<div class="xb-dropdown-menu">
 					<div class="xb-dropdown-grid">
@@ -461,7 +552,7 @@
 								{/section}
 								{/if}
 							</div>
-							<a href="{$relative}/tags" class="xb-dropdown-view-all">{translate c='global.view_more'} <i class="fas fa-arrow-right"></i></a>
+							<a href="{$relative}/tags" class="xb-dropdown-view-all">{translate c='global.view_more'} <span class="material-symbols-rounded xb-ms-icon xb-ms-fill" aria-hidden="true">arrow_forward</span></a>
 						</div>
 					</div>
 				</div>
@@ -478,4 +569,6 @@
 		</ul>
 	</div>
 </nav>
+<div class="xb-nav-scrim" id="xbNavScrim"></div>
+</div>
 <div id="wrapper">

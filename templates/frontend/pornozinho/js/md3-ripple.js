@@ -20,6 +20,7 @@
 		'.xb-dropdown-list li a',
 		'.xb-dropdown-video',
 		'.xb-dropdown-cat',
+		'.xb-dropdown-tag',
 		'.xb-dropdown-view-all',
 		'.xb-creator-card',
 		'.tag',
