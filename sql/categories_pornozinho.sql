@@ -1,21 +1,50 @@
 -- Categorias para Pornozinho - Conteúdo Adulto Brasileiro (+18)
 -- Tabela: channel (categorias de vídeo)
 -- Execute: mysql -u root -p avs < sql/categories_pornozinho.sql
+--
+-- ATENÇÃO: recriação completa. Descomente o TRUNCATE abaixo para apagar as
+-- categorias atuais antes de inserir. Isso renumera os CHID (auto-increment) e
+-- deixa vídeos já cadastrados órfãos (channel apontando para IDs antigos).
+-- Use apenas se ainda não há vídeos atribuídos ou se aceita o impacto.
 
-SET NAMES utf8mb4;
+SET NAMES utf8;
 SET FOREIGN_KEY_CHECKS = 0;
 
--- Limpar categorias existentes (opcional - comente se quiser manter)
+-- Limpar categorias existentes (destrutivo - descomente se quiser recriar de zero)
 -- TRUNCATE TABLE `channel`;
 
 INSERT INTO `channel` (`name`, `slug`) VALUES
--- Categorias Principais
+-- Principais / Momento
 ('Amador', 'amador'),
 ('Brasileiras', 'brasileiras'),
-('Novinhas +18', 'novinhas-18'),
 ('Caiu na Net', 'caiu-na-net'),
 ('Flagras', 'flagras'),
 ('Vazou', 'vazou'),
+
+-- Perfil / Aparência
+('Loiras', 'loiras'),
+('Morenas', 'morenas'),
+('Ruivas', 'ruivas'),
+('Negras', 'negras'),
+('Mulatas', 'mulatas'),
+('Asiáticas', 'asiaticas'),
+('Magrinhas', 'magrinhas'),
+('Gordinhas', 'gordinhas'),
+('Gordas / BBW', 'gordas-bbw'),
+('Peitudas', 'peitudas'),
+('Bundudas', 'bundudas'),
+('Fitness / Saradas', 'fitness-saradas'),
+('Loira de Silicone', 'loira-de-silicone'),
+('Baixinhas', 'baixinhas'),
+('Altas / Amazona', 'altas-amazona'),
+('Novinhas +18', 'novinhas-18'),
+('MILF / Coroas', 'milf-coroas'),
+('Emo / Gótica', 'emo-gotica'),
+('Tatuadas', 'tatuadas'),
+('De Óculos', 'de-oculos'),
+('Platinadas', 'platinadas'),
+('Cabelo Colorido', 'cabelo-colorido'),
+('Pés / Sapatinho', 'pes-sapatinho'),
 
 -- Por Tipo de Conteúdo
 ('Anal', 'anal'),
@@ -26,7 +55,7 @@ INSERT INTO `channel` (`name`, `slug`) VALUES
 ('DP / Dupla Penetração', 'dp-dupla-penetracao'),
 ('Gangbang', 'gangbang'),
 ('Orgias', 'orgias'),
-('Lesbicas', 'lesbicas'),
+('Lésbicas', 'lesbicas'),
 ('Trans / Travestis', 'trans-travestis'),
 
 -- Por Estilo / Nicho
@@ -43,21 +72,7 @@ INSERT INTO `channel` (`name`, `slug`) VALUES
 ('Menage', 'menage'),
 ('Swing', 'swing'),
 
--- Por Perfil / Atriz
-('Morenas', 'morenas'),
-('Loiras', 'loiras'),
-('Ruivas', 'ruivas'),
-('Negras', 'negras'),
-('Mulatas', 'mulatas'),
-('Gordas / BBW', 'gordas-bbw'),
-('Magras', 'magras'),
-('Peitudas', 'peitudas'),
-('Bundudas', 'bundudas'),
-('Fitness / Saradas', 'fitness-saradas'),
-('MILF / Coroas', 'milf-coroas'),
-('Gordinhas', 'gordinhas'),
-
--- Por Local / Cenário
+-- Por Cenário / Local
 ('Praia', 'praia'),
 ('Carro', 'carro'),
 ('Motel / Hotel', 'motel-hotel'),
@@ -71,12 +86,12 @@ INSERT INTO `channel` (`name`, `slug`) VALUES
 ('Trabalho', 'trabalho'),
 ('Ao Ar Livre', 'ao-ar-livre'),
 
--- Categorias Brasileiras Específicas
+-- Brasileiras Específicas
 ('Funk / Baile Funk', 'funk-baile-funk'),
 ('Carnaval', 'carnaval'),
 ('Junina / São João', 'junina-sao-joao'),
 ('Praia Brasileira', 'praia-brasileira'),
-('Favela / Comunidade', 'favelas-comunidade'),
+('Favela / Comunidade', 'favela-comunidade'),
 ('Interior / Roça', 'interior-roca'),
 ('Universitárias', 'universitarias'),
 ('Funcionárias', 'funcionarias'),
@@ -86,6 +101,7 @@ INSERT INTO `channel` (`name`, `slug`) VALUES
 ('Cunhadas', 'cunhadas'),
 ('Madrastas', 'madrastas'),
 ('Enteadas', 'enteadas'),
+('Sogra', 'sogra'),
 
 -- Por Duração / Formato
 ('Curto / Quickie', 'curto-quickie'),
