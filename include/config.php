@@ -90,7 +90,7 @@ if (file_exists(__DIR__ . '/config.local.php')) {
     $config['video_view']      = 'all';
     $config['video_comments']  = '1';
     $config['private_msgs']    = 'all';
-    $config['video_module']    = '0';
+    $config['video_module']    = '1';
     $config['friends_module']  = '1';
     $config['groups_module']   = '1';
     $config['upload_module']   = '1';
