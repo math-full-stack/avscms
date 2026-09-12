@@ -1,0 +1,30 @@
+@import url("https://cdn.jsdelivr.net/combine/npm/@vidstack/cdn@1.15.6/styles/player/base.css,npm/@vidstack/cdn@1.15.6/styles/player/default/theme.css,npm/@vidstack/cdn@1.15.6/styles/player/default/layouts/video.css,npm/@vidstack/cdn@1.15.6/styles/player/default/controls.css,npm/@vidstack/cdn@1.15.6/styles/player/default/buttons.css,npm/@vidstack/cdn@1.15.6/styles/player/default/sliders.css,npm/@vidstack/cdn@1.15.6/styles/player/default/icons.css,npm/@vidstack/cdn@1.15.6/styles/player/default/menus.css,npm/@vidstack/cdn@1.15.6/styles/player/default/buffering.css,npm/@vidstack/cdn@1.15.6/styles/player/default/poster.css,npm/@vidstack/cdn@1.15.6/styles/player/default/captions.css,npm/@vidstack/cdn@1.15.6/styles/player/default/gestures.css,npm/@vidstack/cdn@1.15.6/styles/player/default/time.css,npm/@vidstack/cdn@1.15.6/styles/player/default/tooltips.css,npm/@vidstack/cdn@1.15.6/styles/player/default/keyboard.css,npm/@vidstack/cdn@1.15.6/styles/player/default/thumbnail.css,npm/@vidstack/cdn@1.15.6/styles/player/default/chapter-title.css");
+
+.vidstack-wrap {
+	position: relative;
+	width: 100%;
+	background: #000;
+	line-height: 0;
+}
+
+.vidstack-wrap media-player {
+	display: block;
+	width: 100%;
+}
+
+.vidstack-wrap .vs-error {
+	position: absolute;
+	inset: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	text-align: center;
+	font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-size: 14px;
+	line-height: 1.42857143;
+	color: #fff;
+	background: #000;
+	box-sizing: border-box;
+}
