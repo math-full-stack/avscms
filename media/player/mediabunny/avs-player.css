@@ -40,6 +40,83 @@
     pointer-events: none;
 }
 
+/* Mosaico placeholder (mesmo estilo das capas dos cards): 3 imagens escolhidas
+   pelo admin lado a lado, com divisória preta de 2px (gap sobre fundo preto).
+   Exibido enquanto o miniclip/vídeo ainda não apareceu; some junto com o
+   poster assim que a mídia toca. */
+.avs-player .avs-poster.avs-cover {
+    background: #000;
+}
+
+.avs-player .avs-poster.avs-cover .xb-trio {
+    display: flex;
+    gap: 2px;
+    background: #000;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.avs-player .avs-poster.avs-cover .xb-trio img {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    height: 100%;
+    aspect-ratio: auto;
+    object-fit: cover;
+    object-position: center;
+    background: #000;
+}
+
+/* Preview clip (video.mp4/webm das thumbs): toca mudo atrás do play central */
+.avs-player .avs-preview-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Play central: inicia o vídeo completo (com som) e encerra a prévia */
+.avs-player .avs-big-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    padding: 0 0 0 4px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.avs-player .avs-big-play:hover {
+    background: rgba(229, 9, 20, 0.85);
+    transform: translate(-50%, -50%) scale(1.06);
+}
+
+@media (max-width: 575px) {
+    .avs-player .avs-big-play {
+        width: 56px;
+        height: 56px;
+        font-size: 24px;
+    }
+}
+
 .avs-player .avs-controls {
     position: absolute;
     left: 0;

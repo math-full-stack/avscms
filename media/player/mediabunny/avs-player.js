@@ -108,13 +108,52 @@ import {
         posterImg.style.display = '';
     }
 
+    // Prévia (miniclip das thumbs) + play central: o <video> vem renderizado no
+    // template com autoplay mudo (o browser já baixa a mídia durante o parse),
+    // então aqui só escondemos o poster quando ela tocar. O primeiro play
+    // encerra a prévia e inicia o vídeo completo com som.
+    let previewVideo = player.querySelector('.avs-preview-video');
+    let bigPlayBtn = player.querySelector('.avs-big-play');
+
+    const stopAndHidePreview = () => {
+        if (previewVideo) {
+            previewVideo.pause();
+            previewVideo.remove();
+            previewVideo = null;
+        }
+        if (bigPlayBtn) {
+            bigPlayBtn.remove();
+            bigPlayBtn = null;
+        }
+    };
+
+    const setupPreview = () => {
+        // Autoplay já inicia o vídeo completo: prévia e botão não fazem sentido.
+        if (autoplay || !previewVideo) {
+            stopAndHidePreview();
+            return;
+        }
+        previewVideo.addEventListener('playing', () => {
+            posterImg.style.display = 'none';
+            markUiReady();
+        });
+        void previewVideo.play().catch(() => {});
+    };
+
     const supportsWebCodecs = typeof window.VideoDecoder !== 'undefined';
 
     // Resolves once the Media Bunny pipeline (or the native fallback) is ready
     // to accept a play() call — guards manual clicks that arrive mid-init.
     let resolveReady = null;
     const readyPromise = new Promise((r) => { resolveReady = r; });
-    const markReady = () => { window.__avsReady = true; if (resolveReady) { resolveReady(); resolveReady = null; } };
+    // UI-ready: só liga o guard da página (esconde a mensagem de erro do tpl),
+    // SEM liberar o readyPromise — a prévia tocando não significa que o
+    // pipeline do mediabunny terminou o init (senão um play no clique vira
+    // no-op e o vídeo não inicia).
+    const markUiReady = () => { window.__avsReady = true; };
+    // Playback-ready: o mediabunny (initMediaPlayer) ou o fallback nativo estão
+    // prontos para aceitar play() — libera os cliques que chegaram no meio.
+    const markPlaybackReady = () => { window.__avsReady = true; if (resolveReady) { resolveReady(); resolveReady = null; } };
 
     // Native <video> fallback — used when WebCodecs is missing OR when Media
     // Bunny cannot decode/fetch the file in this browser (e.g. Firefox has no
@@ -139,7 +178,7 @@ import {
         player.classList.add('avs-fallback');
         muteBtn.textContent = startMuted ? '🔇' : '🔊';
         setupFallbackControls();
-        markReady();
+        markPlaybackReady();
         return fallbackVideo;
     };
 
@@ -210,9 +249,11 @@ import {
         fb.addEventListener('play', () => {
             player.classList.add('avs-playing');
             hidePauseAd();
+            updatePlayIcon(true);
         });
         fb.addEventListener('pause', () => {
             player.classList.remove('avs-playing');
+            updatePlayIcon(false);
             // Pause ad parity: only on a real user pause past 1s, never while
             // seeking or at the very end of the video.
             if (!seeking && fb.currentTime > 1 && fb.currentTime < (fb.duration || Infinity) - 0.5) {
@@ -220,6 +261,7 @@ import {
             }
         });
         fb.addEventListener('ended', () => {
+            updatePlayIcon(false);
             renderTime(fb.duration || 0);
             onEnded();
         });
@@ -248,6 +290,9 @@ import {
     let asyncId = 0;
     let volume = 0.8;
     let volumeMuted = false;
+    // True depois que o usuário altera o mute manualmente: aí uma tentativa de
+    // play/seek NÃO deve desmutar (respeita quem mutou de propósito).
+    let muteTouched = false;
     let playbackRate = 1;
 
     // Start muted (configurable in admin playeredit)
@@ -404,7 +449,7 @@ import {
         await startVideoIterator();
         renderTime(playbackTimeAtStart);
         durationEl.textContent = formatSeconds(endTimestamp);
-        markReady();
+        markPlaybackReady();
 
         // Autoplay is handled by beginPlayback() (section 9.4) so a VAST
         // pre-roll can run before the content when enabled.
@@ -610,6 +655,7 @@ import {
         }
         posterImg.style.display = 'none';
         player.classList.add('avs-playing');
+        updatePlayIcon(true);
     };
 
     const pause = () => {
@@ -620,6 +666,7 @@ import {
         for (const node of queuedAudioNodes) { node.stop(); }
         queuedAudioNodes.clear();
         player.classList.remove('avs-playing');
+        updatePlayIcon(false);
         // Pause ad (parity with video-js-events.js): only on a real user pause
         // past 1s, never while seeking or at the very end of the video.
         if (!seeking && getPlaybackTime() > 1 && getPlaybackTime() < endTimestamp - 0.5) {
@@ -628,22 +675,31 @@ import {
     };
 
     const togglePlay = () => {
+        if (previewVideo) {
+            stopAndHidePreview();
+        }
         if (fallbackVideo) {
             if (fallbackVideo.paused) {
+                ensureAudible();
+                fallbackVideo.muted = volumeMuted;
                 void fallbackVideo.play().catch(() => {});
             } else {
                 fallbackVideo.pause();
             }
             return;
         }
-        if (playing) { pause(); } else { beginPlayback(); }
+        if (playing) { pause(); } else { ensureAudible(); beginPlayback(); }
     };
 
-    const seekToTime = async (seconds) => {
+    const seekToTime = async (seconds, forcePlay = false) => {
         if (fallbackVideo) {
             const d = fallbackVideo.duration || 0;
             fallbackVideo.currentTime = Math.max(0, Math.min(seconds, d));
             renderTime(fallbackVideo.currentTime);
+            if (forcePlay) {
+                fallbackVideo.muted = volumeMuted;
+                void fallbackVideo.play().catch(() => {});
+            }
             return;
         }
         seeking = true;
@@ -652,7 +708,7 @@ import {
         playbackTimeAtStart = Math.max(firstTimestamp, Math.min(seconds, endTimestamp));
         await startVideoIterator();
         renderTime(playbackTimeAtStart);
-        if (wasPlaying && playbackTimeAtStart < endTimestamp) void play();
+        if ((wasPlaying || forcePlay) && playbackTimeAtStart < endTimestamp) void play();
         seeking = false;
     };
 
@@ -669,6 +725,20 @@ import {
         muteBtn.textContent = actual === 0 ? '🔇' : (actual < 0.5 ? '🔉' : '🔊');
     };
 
+    // Play/seek disparados por gesto do usuário tocam COM SOM: desmuda quando o
+    // estado mudo ainda é o inicial (start_muted da config), não quando o
+    // usuário mutou manualmente.
+    const ensureAudible = () => {
+        if (volumeMuted && !muteTouched) {
+            volumeMuted = false;
+            updateVolume();
+        }
+    };
+
+    const updatePlayIcon = (isPlaying) => {
+        playBtn.textContent = isPlaying ? '⏸' : '▶';
+    };
+
     const renderTime = (seconds) => {
         currentEl.textContent = formatSeconds(seconds);
         const range = (endTimestamp - firstTimestamp) || 1;
@@ -681,21 +751,11 @@ import {
         seekBuffer.style.width = `${Math.max(0, Math.min(100, ((bufferedEnd - firstTimestamp) / range) * 100))}%`;
     };
 
-    // Adapts the player box to the video's real aspect ratio (vertical videos
-    // included). The CSS default is 16:9; this overrides it once the true
-    // dimensions are known, with sane clamps so a 0/faulty size never blows up
-    // the layout.
-    const applyAspectRatio = (w, h) => {
-        if (w > 0 && h > 0) {
-            const ratio = Math.max(0.4, Math.min(3.5, w / h));
-            player.style.aspectRatio = String(ratio);
-            player.style.setProperty('--avs-ratio', String(ratio));
-            player.classList.toggle('avs-vertical', ratio < 1);
-        } else {
-            player.style.aspectRatio = '16 / 9';
-            player.style.removeProperty('--avs-ratio');
-            player.classList.remove('avs-vertical');
-        }
+    // Player box SEMPRE 16:9 (padrão de layout do site), independente da
+    // proporção real do vídeo (vertical ou 4:3 letterboxa dentro do box).
+    const applyAspectRatio = () => {
+        player.style.aspectRatio = '16 / 9';
+        player.classList.remove('avs-vertical');
     };
 
     const disposePlayback = () => {
@@ -726,6 +786,8 @@ import {
     const showError = (msg) => {
         errorBox.textContent = msg || '';
         errorBox.style.display = msg ? '' : 'none';
+        // Erro real: esconde o play central para não ficar por cima da mensagem.
+        if (bigPlayBtn) bigPlayBtn.style.display = msg ? 'none' : '';
     };
 
     const formatSeconds = (seconds) => {
@@ -741,7 +803,14 @@ import {
     // 8. Event listeners
     // ------------------------------------------------------------------
     playBtn.addEventListener('click', togglePlay);
-    muteBtn.addEventListener('click', () => { volumeMuted = !volumeMuted; updateVolume(); });
+    if (bigPlayBtn) {
+        bigPlayBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            togglePlay();
+        });
+    }
+    muteBtn.addEventListener('click', () => { muteTouched = true; volumeMuted = !volumeMuted; updateVolume(); });
     fullBtn.addEventListener('click', () => {
         if (document.fullscreenElement) {
             void document.exitFullscreen();
@@ -751,10 +820,10 @@ import {
     });
     player.addEventListener('click', (e) => {
         // Clicks on the control bar or on any overlay (VAST ad, pause ad,
-        // autoplay-next, logo) must NOT toggle the content — their own
+        // autoplay-next, logo, big play) must NOT toggle the content — their own
         // handlers deal with them (avoids a double-toggle that would pause
         // playback right after resume/skip).
-        if (e.target.closest('.avs-controls, .avs-ad, .avs-pause-ad, .avs-logo, #autoplay-overlay, .avs-error, .avs-quick-controls')) return;
+        if (e.target.closest('.avs-controls, .avs-ad, .avs-pause-ad, .avs-logo, #autoplay-overlay, .avs-error, .avs-quick-controls, .avs-big-play')) return;
         togglePlay();
     });
 
@@ -768,7 +837,9 @@ import {
             player.classList.remove('avs-dragging');
             const r = seekBar.getBoundingClientRect();
             const ratio2 = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
-            void seekToTime(firstTimestamp + ratio2 * (endTimestamp - firstTimestamp));
+            // Click/largar na linha = ir para o tempo E tocar (com som).
+            ensureAudible();
+            void seekToTime(firstTimestamp + ratio2 * (endTimestamp - firstTimestamp), true);
             window.removeEventListener('pointerup', onUp);
         };
         window.addEventListener('pointerup', onUp, { once: true });
@@ -786,17 +857,28 @@ import {
         qualitySel.addEventListener('change', () => {
             const src = sources[parseInt(qualitySel.value, 10)];
             if (!src) return;
+            // Troca de resolução preserva a posição de reprodução e o estado
+            // (tocando/pausado): captura ANTES de reinicializar o pipeline.
+            const resumeAt = Math.max(0, Math.min(getPlaybackTime(), endTimestamp || getPlaybackTime()));
+            const wasPlaying = playing;
             activeSource = src;
             if (fallbackVideo) {
+                const t = fallbackVideo.currentTime || 0;
+                fallbackVideo.addEventListener('loadedmetadata', () => {
+                    fallbackVideo.currentTime = Math.max(0, Math.min(t, fallbackVideo.duration || t));
+                    void fallbackVideo.play().catch(() => {});
+                }, { once: true });
                 fallbackVideo.src = src.src;
-                void fallbackVideo.play().catch(() => {});
+                fallbackVideo.load();
                 return;
             }
             void initMediaPlayer(src).then(() => {
                 if (!videoSink) {
                     disposePlayback();
                     showError('Esta qualidade falhou. Escolha outra qualidade.');
+                    return;
                 }
+                void seekToTime(resumeAt, wasPlaying);
             }).catch((err) => {
                 console.error('[AVS Mediabunny]', err);
                 disposePlayback();
@@ -920,6 +1002,8 @@ import {
         logoOpacity: parseFloat(window.player_logo_opacity || '40') / 100 || 0.4,
         timelinePreview: window.player_timeline_preview === '1',
         sprite:      window.player_sprite || '',
+        sourceW:     parseInt(player.dataset.sourceW || '0', 10) || 0,
+        sourceH:     parseInt(player.dataset.sourceH || '0', 10) || 0,
         duration:    parseFloat(window.video_duration || 0) || 0,
         related:     (typeof window.related_videos_data !== 'undefined' && Array.isArray(window.related_videos_data)) ? window.related_videos_data : [],
         baseUrl:     (typeof window.base_url !== 'undefined') ? window.base_url : '',
@@ -1029,10 +1113,14 @@ import {
     };
 
     // --- 9.3 Timeline: hover time tooltip + sprite preview ---------------
-    // The sprite (sprite.class.php) is a single row of 320x180 tiles, one per
-    // available frame — missing frames are skipped, so the real frame count is
-    // measured from the image at runtime instead of assuming the old video-js
-    // constants (20 frames, thumb 256x144 at 0.6).
+    // The sprite (sprite.class.php) is a single row of 320px-wide tiles, one
+    // per available frame — missing frames are skipped, so the real frame count
+    // is measured from the image at runtime. Tiles são sempre 320x180 (16:9):
+    // para vídeos verticais o frame vem esticado no tile, então a largura do
+    // slot é derivada do ASPECTO REAL da fonte (canvas/vídeo/clip), não do
+    // tile — e a tira é exibida com width explícito, revertendo o esmagamento.
+    // Preview exibido a 180px de altura (1:1 com o tile de 320x180 do sprite)
+    // — landscape 320x180, vertical ~104x180.
     let previewEl = null;
     let previewImg = null;
     let seekTipEl = null;
@@ -1050,6 +1138,7 @@ import {
         let thumbW = 0;
         let thumbH = 0;
         let frameCount = 0;
+        let spriteTileH = 0;
 
         const buildPreview = () => {
             previewEl = document.createElement('div');
@@ -1069,26 +1158,67 @@ import {
             previewImg.style.position = 'absolute';
             previewImg.style.top = '0';
             previewImg.style.maxWidth = 'none';
+            previewImg.style.width = (frameCount * thumbW) + 'px';
             previewImg.style.height = thumbH + 'px';
             previewEl.appendChild(previewImg);
             player.appendChild(previewEl);
         };
 
+        // Largura do slot: altura fixa 180 × ASPECTO REAL DA FONTE (nunca o tile
+        // do sprite — tiles são 320x180 fixos, então frames verticais chegam
+        // esmagados). A tira é exibida com width = frameCount × thumbW e height
+        // = thumbH: quando os dois não batem com o tile, a re-escala não-uniforme
+        // desesmaga o conteúdo e restaura a proporção correta.
+        // Ordem de confiança: vídeo fallback > clip de preview (aspecto real do
+        // arquivo) > canvas (só se já dimensionado, >300px). O canvas é 16:9
+        // fixo — não serve para vídeos verticais.
+        const sourceAspectKnown = () => {
+            // Dimensões reais da fonte (DB: width_sd/height_sd) são a verdade —
+            // o canvas é 16:9 fixo e o transcod de preview chega letterboxed
+            // (960x540) mesmo para vídeo vertical.
+            if (cfg.sourceW > 0 && cfg.sourceH > 0) return cfg.sourceW / cfg.sourceH;
+            if (fallbackVideo && fallbackVideo.videoWidth > 0) return fallbackVideo.videoWidth / fallbackVideo.videoHeight;
+            if (previewVideo && previewVideo.videoWidth > 0) return previewVideo.videoWidth / previewVideo.videoHeight;
+            if (canvas.width > 300 && canvas.height > 0) return canvas.width / canvas.height;
+            return 0;
+        };
+
+        const recomputeThumb = () => {
+            if (!frameCount) return;
+            let aspect = sourceAspectKnown();
+            if (!(aspect > 0)) aspect = spriteTileH > 0 ? (320 / spriteTileH) : (16 / 9);
+            aspect = Math.max(0.2, Math.min(5, aspect));
+            const w = Math.max(1, Math.round(thumbH * aspect));
+            if (w === thumbW) return; // já dimensionado — evita rewrites a cada pointermove
+            thumbW = w;
+            if (previewEl) {
+                previewEl.style.width = thumbW + 'px';
+                previewEl.style.height = thumbH + 'px';
+            }
+            if (previewImg) {
+                previewImg.style.width = (frameCount * thumbW) + 'px';
+                previewImg.style.height = thumbH + 'px';
+            }
+        };
+
         if (hasSprite) {
             // Measure the sprite's real geometry: tiles are 320px wide and the
-            // strip is one tile tall, so frameCount = width / 320. Displayed at
-            // the same ~86px height as before, the thumb width scales with the
-            // sprite's actual aspect ratio.
+            // strip is one tile tall, so frameCount = width / 320. O <link
+            // rel=preload> do template já dispara o download na parse; aqui a
+            // prioridade alta garante slot antes das dezenas de thumbs.
             const probe = new Image();
+            probe.fetchPriority = 'high';
             probe.onload = () => {
                 const tileW = 320; // sprite.class.php SPRITE_TILE_W
                 const nw = probe.naturalWidth;
                 const nh = probe.naturalHeight;
                 if (nw > 0 && nh > 0) {
                     frameCount = Math.max(1, Math.round(nw / tileW));
-                    thumbH = 86;
-                    thumbW = Math.round(thumbH * (tileW / nh));
+                    spriteTileH = nh;
+                    thumbH = 180;
+                    recomputeThumb();
                     buildPreview();
+                    recomputeThumb();
                 }
             };
             probe.src = cfg.sprite;
@@ -1131,6 +1261,7 @@ import {
 
             // Sprite frame preview (frame count measured from the sprite).
             if (hasSprite && previewEl && previewImg && frameCount > 0) {
+                recomputeThumb(); // corrige tamanho assim que o aspecto da fonte é conhecido
                 const step = dur / frameCount;
                 const frame = Math.min(frameCount - 1, Math.max(0, Math.round(t / step)));
                 previewImg.style.left = (-(frame * thumbW)) + 'px';
@@ -1474,6 +1605,9 @@ import {
     // ------------------------------------------------------------------
     markWatched();
     populateAutoplayCard();
+
+    // Prévia muda + play central antes do vídeo completo.
+    setupPreview();
 
     if (supportsWebCodecs) {
         void startPlayer().then(() => {
