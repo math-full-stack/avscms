@@ -8,6 +8,9 @@ require_once dirname(__FILE__) . '/SonovinhasbrGrabber.php';
 require_once dirname(__FILE__) . '/PornolandiaGrabber.php';
 require_once dirname(__FILE__) . '/MixvazadasGrabber.php';
 require_once dirname(__FILE__) . '/BuceteiroGrabber.php';
+require_once dirname(__FILE__) . '/PornoMineiroGrabber.php';
+require_once dirname(__FILE__) . '/NaocontoGrabber.php';
+require_once dirname(__FILE__) . '/PornoBrasilGrabber.php';
 
 class GrabberManager {
 
@@ -22,6 +25,9 @@ class GrabberManager {
                 new PornolandiaGrabber(),
                 new MixvazadasGrabber(),
                 new BuceteiroGrabber(),
+                new PornoMineiroGrabber(),
+                new NaocontoGrabber(),
+                new PornoBrasilGrabber(),
             );
         }
     }

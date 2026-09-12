@@ -674,6 +674,17 @@ function mgWmRowHtml(pos, dur) {
 function mgWmAddRow(pos, dur) {
     document.getElementById('mg_wm_rows').insertAdjacentHTML('beforeend', mgWmRowHtml(pos || 'top-right', dur || 0));
 }
+var mgProviderDefaults = {
+    'Youtube':      { name: 'YouTube',        url: '' },
+    'XFree':        { name: 'XFree',          url: '' },
+    'Sonovinhasbr': { name: 'SonovinhasBR',   url: '' },
+    'Pornolandia':  { name: 'Pornolandia',     url: 'https://www.pornolandia.xxx' },
+    'Mixvazadas':   { name: 'Mixvazadas',      url: '' },
+    'Buceteiro':    { name: 'Buceteiro',       url: '' },
+    'PornoMineiro': { name: 'PornoMineiro',    url: 'https://www.pornomineiro.com' },
+    'NaoConto':     { name: 'NaoConto',        url: 'https://www.naoconto.com' },
+    'PornoBrasil':  { name: 'PornoBrasil',     url: 'https://pornobrasil.com' },
+};
 function mgShowSourceForm(id) {
     id = id || 0; document.getElementById('mg_src_id').value = id;
     document.getElementById('mg_source_modal_title').textContent = id > 0 ? 'Edit Source' : 'Add Source';
@@ -1200,6 +1211,22 @@ document.addEventListener('DOMContentLoaded', function() {
     if(st) st.addEventListener('change', function(){ var h=document.getElementById('mg_schedule_help'); if(!h)return; switch(this.value){case'hourly':h.textContent='Minutes between runs';break;case'daily':h.textContent='HH:MM for daily';break;case'weekly':h.textContent='Day name (e.g. monday)';break;case'interval':h.textContent='Seconds between runs (min 300)';break;} });
     if(mgCurrentView==='queue') mgLoadJobs('');
     if(mgCurrentView==='queue') mgGetRealtimeStatus();
+
+    // Auto-fill Name + URL when provider dropdown changes (Add Source only)
+    var provSelect = document.getElementById('mg_src_provider');
+    if (provSelect) {
+        provSelect.addEventListener('change', function() {
+            var srcId = document.getElementById('mg_src_id').value;
+            if (srcId && parseInt(srcId) > 0) return; // editing existing source — don't overwrite
+            var val = this.value;
+            var def = mgProviderDefaults[val];
+            if (!def) return;
+            var nameEl = document.getElementById('mg_src_name');
+            var urlEl = document.getElementById('mg_src_url');
+            if (nameEl) nameEl.value = def.name || '';
+            if (urlEl) urlEl.value = def.url || '';
+        });
+    }
 
     // Stop video when preview modal closes
     if (typeof jQuery !== 'undefined') {

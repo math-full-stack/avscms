@@ -296,15 +296,16 @@ abstract class AbstractGrabber implements GrabberInterface {
     }
 
     /**
-     * Converte duração ISO 8601 (PT00H02M00S) para segundos.
+     * Converte duração ISO 8601 (PT00H02M00S ou P0DT0H33M35S) para segundos.
      */
     protected function parseIsoDuration($iso) {
         if (empty($iso)) return 0;
-        if (preg_match('/PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/', $iso, $m)) {
-            $hours = (int)($m[1] ?? 0);
-            $mins  = (int)($m[2] ?? 0);
-            $secs  = (int)($m[3] ?? 0);
-            return $hours * 3600 + $mins * 60 + $secs;
+        if (preg_match('/P(?:(\\d+)D)?T?(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/', $iso, $m)) {
+            $days  = (int)($m[1] ?? 0);
+            $hours = (int)($m[2] ?? 0);
+            $mins  = (int)($m[3] ?? 0);
+            $secs  = (int)($m[4] ?? 0);
+            return $days * 86400 + $hours * 3600 + $mins * 60 + $secs;
         }
         return 0;
     }
