@@ -1,1 +1,0 @@
-<h2>{t c='footer.ADVERTISE'}</h2>

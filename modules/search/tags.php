@@ -69,9 +69,10 @@ switch ( $timeframe ) {
 }
 
 if ( $search_query ) {	
-
-    $sql_add        .= " AND (keyword REGEXP \"(^|, )".$search_query_f."(,|$)\")";
-    $sql_add_count  .= " AND (keyword REGEXP \"(^|, )".$search_query_f."(,|$)\")";  
+	$tag_pattern    = "(^|, )" .preg_quote($search_query_f, "'"). "(,|$)";
+	$tag_match      = " AND (keyword REGEXP " .$conn->qStr($tag_pattern). ")";
+    $sql_add        .= $tag_match;
+    $sql_add_count  .= $tag_match;  
 
     
 }

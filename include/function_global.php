@@ -518,13 +518,13 @@ function add_tags($string) {
 	$tags = explode (',', $string);
 	foreach ($tags as $tag) {
 		$tag = trim($tag);
-		$sql = "SELECT id FROM tags WHERE tag = '".$tag."' LIMIT 1";
+		$sql = "SELECT id FROM tags WHERE tag = " .$conn->qStr($tag). " LIMIT 1";
 		$rs  = $conn->execute($sql);
 		if ( $conn->Affected_Rows() != 1 ) {
-			$sql = "INSERT INTO tags(tag, counter) VALUES ('".$tag."','1')";
+			$sql = "INSERT INTO tags(tag, counter) VALUES (" .$conn->qStr($tag). ",'1')";
 			$conn->execute($sql);
 		} else {
-			$sql = "UPDATE tags SET counter = counter + 1 WHERE tag = '".$tag."'";
+			$sql = "UPDATE tags SET counter = counter + 1 WHERE tag = " .$conn->qStr($tag);
 			$conn->execute($sql);
 		}			
 	}
@@ -535,16 +535,16 @@ function remove_tags($string) {
 	$tags = explode (',', $string);
 	foreach ($tags as $tag) {
 		$tag = trim($tag);
-		$sql = "SELECT id, counter FROM tags WHERE tag = '".$tag."' LIMIT 1";
+		$sql = "SELECT id, counter FROM tags WHERE tag = " .$conn->qStr($tag). " LIMIT 1";
 		$rs  = $conn->execute($sql);
 		if ( $conn->Affected_Rows() == 1 ) {
 			$id  = intval($rs->fields['id']);
 			$counter = intval($rs->fields['counter']);
 			if ($counter > 1) {
-				$sql = "UPDATE tags SET counter = counter - 1 WHERE tag = '".$tag."'";
+				$sql = "UPDATE tags SET counter = counter - 1 WHERE tag = " .$conn->qStr($tag);
 				$conn->execute($sql);
 			} else {
-				$sql = "DELETE FROM tags WHERE tag = '".$tag."'";
+				$sql = "DELETE FROM tags WHERE tag = " .$conn->qStr($tag);
 				$conn->execute($sql);				
 			}
 		}			
@@ -562,7 +562,8 @@ function cleanup_tags() {
 
 function update_tags($vid, $string) {
 	global $conn;
-	$sql = "SELECT keyword FROM video WHERE VID = '".$vid."' LIMIT 1";
+	$vid = intval($vid);
+	$sql = "SELECT keyword FROM video WHERE VID = " .$vid. " LIMIT 1";
 	$rs  = $conn->execute($sql);
 	if ( $conn->Affected_Rows() == 1 ) {	
 		$keyword = $rs->fields['keyword'];
