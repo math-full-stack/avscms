@@ -1,24 +1,24 @@
 /* ============================================================
-   AVS Media Bunny player — YouTube-style skin
+   AVS Media Bunny player — Material Design 3 skin
    Loaded only when player.engine == 'mediabunny'
+   Uses MD3 tokens from pornozinho-md3.css (--md-sys-*)
    ============================================================ */
 .avs-player {
-    --avs-accent: #e50914;
-    --avs-accent-dark: #b0070f;
     --avs-timeline-h: 3px;
     --avs-timeline-h-hover: 6px;
     --avs-icon: 24px;
     --avs-ease: cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     width: 100%;
-    background: #000;
-    border-radius: 4px;
+    background: var(--md-sys-color-surface, #171318);
+    border-radius: var(--md-sys-shape-corner-medium, 12px);
     overflow: hidden;
     line-height: 0;
     aspect-ratio: 16 / 9;
     -webkit-user-select: none;
     user-select: none;
-    font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: var(--md-sys-font, "Roboto", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif);
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.12));
 }
 
 .avs-player canvas,
@@ -29,7 +29,7 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
-    background: #000;
+    background: var(--md-sys-color-surface, #171318);
 }
 
 .avs-player .avs-fallback-video {
@@ -52,13 +52,13 @@
    Exibido enquanto o miniclip/vídeo ainda não apareceu; some junto com o
    poster assim que a mídia toca. */
 .avs-player .avs-poster.avs-cover {
-    background: #000;
+    background: var(--md-sys-color-surface, #171318);
 }
 
 .avs-player .avs-poster.avs-cover .xb-trio {
     display: flex;
     gap: 2px;
-    background: #000;
+    background: var(--md-sys-color-surface, #171318);
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -72,7 +72,7 @@
     aspect-ratio: auto;
     object-fit: cover;
     object-position: center;
-    background: #000;
+    background: var(--md-sys-color-surface, #171318);
 }
 
 .avs-player .avs-sprite {
@@ -90,7 +90,7 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
-    background: #000;
+    background: var(--md-sys-color-surface, #171318);
     z-index: 2;
     pointer-events: none;
 }
@@ -123,13 +123,14 @@
     border: 0;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.55);
-    color: #fff;
+    color: var(--md-sys-color-on-surface, #fff);
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition: background-color 0.2s var(--avs-ease), transform 0.2s var(--avs-ease);
 }
 
 .avs-player .avs-big-play:hover {
-    background: rgba(229, 9, 20, 0.85);
+    background: var(--md-sys-color-primary-container, #7B0758);
+    color: var(--md-sys-color-on-primary-container, #FFD9E3);
     transform: translate(-50%, -50%) scale(1.06);
 }
 
@@ -147,7 +148,7 @@
     flex-direction: column;
     gap: 2px;
     padding: 8px 10px 6px;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0));
+    background: linear-gradient(to top, var(--md-sys-color-surface-container-highest, rgba(0, 0, 0, 0.85)), transparent);
     transition: opacity 0.25s var(--avs-ease);
     z-index: 3;
     line-height: 1.2;
@@ -171,7 +172,7 @@
 .avs-player .avs-btn {
     background: none;
     border: 0;
-    color: #fff;
+    color: var(--md-sys-color-on-surface, #fff);
     width: 40px;
     height: 40px;
     padding: 0;
@@ -181,21 +182,21 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: var(--md-sys-shape-corner-extra-small, 4px);
     transition: opacity 0.15s var(--avs-ease), background-color 0.15s var(--avs-ease);
 }
 
 .avs-player .avs-btn:hover {
     opacity: 1;
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: var(--md-sys-state-hover, rgba(255, 255, 255, 0.12));
 }
 
 .avs-player .avs-btn.avs-btn-active {
-    color: var(--md-sys-color-primary, var(--avs-accent));
+    color: var(--md-sys-color-primary, #FFB1C9);
 }
 
 .avs-player .avs-time {
-    color: #fff;
+    color: var(--md-sys-color-on-surface, #fff);
     font-size: 12px;
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
@@ -205,6 +206,7 @@
 .avs-player .avs-time.avs-sep {
     margin: 0 2px;
     opacity: 0.55;
+    color: var(--md-sys-color-on-surface-variant, #D4C2C7);
 }
 
 /* --- Download (no player) --------------------------------------- */
@@ -220,9 +222,10 @@
     bottom: calc(100% + 8px);
     min-width: 180px;
     padding: 6px;
-    background: rgba(24, 24, 24, 0.96);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    background: var(--md-sys-color-surface-container-high, rgba(24, 24, 24, 0.96));
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.12));
+    border-radius: var(--md-sys-shape-corner-medium, 12px);
+    box-shadow: var(--md-sys-elevation-level3, 0 4px 20px rgba(0, 0, 0, 0.5));
     z-index: 20;
 }
 
@@ -233,17 +236,17 @@
 .avs-player .avs-dl-menu a {
     display: block;
     padding: 8px 12px;
-    color: #e4e4e4;
+    color: var(--md-sys-color-on-surface-variant, #e4e4e4);
     font-size: 13px;
     text-decoration: none;
-    border-radius: 8px;
+    border-radius: var(--md-sys-shape-corner-small, 8px);
     white-space: nowrap;
-    transition: background-color 0.15s var(--avs-ease);
+    transition: background-color 0.15s var(--avs-ease), color 0.15s var(--avs-ease);
 }
 
 .avs-player .avs-dl-menu a:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background-color: var(--md-sys-state-hover, rgba(255, 255, 255, 0.1));
+    color: var(--md-sys-color-on-surface, #fff);
 }
 
 /* --- Mini player no site (janela fixa ao rolar) ------------------- */
@@ -256,9 +259,9 @@
     width: min(400px, calc(100vw - 32px));
     aspect-ratio: 16 / 9;
     z-index: 12000;
-    border-radius: 12px;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--md-sys-shape-corner-medium, 12px);
+    box-shadow: var(--md-sys-elevation-level3, 0 8px 28px rgba(0, 0, 0, 0.45));
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.08));
 }
 
 /* Spacer do mini player: reserva o lugar do player no fluxo enquanto ele está
@@ -295,13 +298,13 @@
     background: rgba(0, 0, 0, 0.55);
     border: 0;
     border-radius: 50%;
-    color: #fff;
+    color: var(--md-sys-color-on-surface, #fff);
     cursor: pointer;
     transition: background-color 0.15s var(--avs-ease);
 }
 
 .avs-player .avs-mini-actions button:hover {
-    background: rgba(0, 0, 0, 0.8);
+    background: var(--md-sys-state-hover, rgba(0, 0, 0, 0.8));
 }
 
 .avs-player .avs-mini-actions .avs-icon {
@@ -329,7 +332,7 @@
     height: var(--avs-timeline-h);
     transform: translateY(-50%);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.3));
     transition: height 0.15s var(--avs-ease), background 0.15s var(--avs-ease);
 }
 
@@ -341,7 +344,7 @@
     transform: translateY(-50%);
     width: 0%;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--md-sys-color-on-surface-variant, rgba(255, 255, 255, 0.5));
     pointer-events: none;
     transition: height 0.15s var(--avs-ease);
 }
@@ -354,7 +357,7 @@
     transform: translateY(-50%);
     width: 0%;
     border-radius: 999px;
-    background: linear-gradient(90deg, var(--avs-accent-dark), var(--avs-accent));
+    background: linear-gradient(90deg, var(--md-sys-color-primary-container, #7B0758), var(--md-sys-color-primary, #FFB1C9));
     pointer-events: none;
     transition: height 0.15s var(--avs-ease);
 }
@@ -367,7 +370,7 @@
     height: 14px;
     transform: translateY(-50%) scale(0.4);
     border-radius: 50%;
-    background: #fff;
+    background: var(--md-sys-color-on-surface, #fff);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
     opacity: 0;
     pointer-events: none;
@@ -403,7 +406,7 @@
     height: 4px;
     margin: 0;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.35);
+    background: var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.35));
     cursor: pointer;
     opacity: 0;
     outline: none;
@@ -422,7 +425,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #fff;
+    background: var(--md-sys-color-on-surface, #fff);
     border: 0;
     cursor: pointer;
 }
@@ -431,7 +434,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #fff;
+    background: var(--md-sys-color-on-surface, #fff);
     border: 0;
     cursor: pointer;
 }
@@ -476,8 +479,16 @@
     transform: none;
 }
 
+/* No mini a janela tem só ~225px de altura: o painel (338px) era cortado pelo
+   `overflow: hidden` do player. Aqui ele rola dentro da própria janela. */
+.avs-player.avs-mini-mode .avs-settings {
+    max-height: calc(100% - 82px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
 .avs-player.avs-settings-open .avs-settings-btn {
-    color: var(--md-sys-color-primary, var(--avs-accent));
+    color: var(--md-sys-color-primary, #FFB1C9);
     opacity: 1;
 }
 
@@ -664,7 +675,7 @@
     border: 0;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.55);
-    color: #fff;
+    color: var(--md-sys-color-on-surface, #fff);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -675,7 +686,8 @@
 
 .avs-player .avs-center-btn:hover {
     opacity: 1;
-    background: rgba(229, 9, 20, 0.85);
+    background: var(--md-sys-color-primary-container, #7B0758);
+    color: var(--md-sys-color-on-primary-container, #FFD9E3);
     transform: scale(1.08);
 }
 
@@ -703,7 +715,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ff5a5f;
+    color: var(--md-sys-color-error, #ff5a5f);
     background: rgba(0, 0, 0, 0.85);
     font-size: 14px;
     text-align: center;
@@ -846,14 +858,14 @@
 }
 .avs-player .avs-pause-ad .ad-controls .ad-resume,
 .avs-player .avs-pause-ad .ad-controls .ad-close {
-    color: #fff;
+    color: var(--md-sys-color-on-surface, #fff);
     width: 90px;
     height: 26px;
-    background-color: #222 !important;
-    -webkit-border-radius: 4px;
-    border-radius: 4px;
+    background-color: var(--md-sys-color-surface-container-high, #222) !important;
+    -webkit-border-radius: var(--md-sys-shape-corner-extra-small, 4px);
+    border-radius: var(--md-sys-shape-corner-extra-small, 4px);
     cursor: pointer !important;
-    border: 1px solid #444;
+    border: 1px solid var(--md-sys-color-outline, #444);
     font-size: 12px;
 }
 .avs-player .avs-pause-ad .ad-controls .ad-resume:focus,
@@ -867,14 +879,14 @@
     z-index: 6;
     pointer-events: none;
     display: none;
-    background: rgba(0, 0, 0, 0.85);
-    color: #fff;
+    background: var(--md-sys-color-surface-container-highest, rgba(0, 0, 0, 0.85));
+    color: var(--md-sys-color-on-surface, #fff);
     font-size: 12px;
     font-variant-numeric: tabular-nums;
     line-height: 1.4;
     padding: 2px 6px;
-    border-radius: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: var(--md-sys-shape-corner-extra-small, 3px);
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.35));
     white-space: nowrap;
 }
 .avs-player .avs-preview {
@@ -883,8 +895,8 @@
     pointer-events: none;
     display: none;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    background: #000;
+    border: 1px solid var(--md-sys-color-outline, rgba(255, 255, 255, 0.6));
+    background: var(--md-sys-color-surface, #000);
 }
 .avs-player .avs-preview img {
     position: absolute;
@@ -898,7 +910,7 @@
     position: absolute;
     inset: 0;
     z-index: 7;
-    background: #000;
+    background: var(--md-sys-color-surface, #000);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -910,7 +922,7 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
-    background: #000;
+    background: var(--md-sys-color-surface, #000);
 }
 .avs-player .avs-ad-skip {
     position: absolute;
@@ -918,15 +930,15 @@
     bottom: 48px;
     z-index: 8;
     background: rgba(0, 0, 0, 0.75);
-    color: #fff;
-    border: 1px solid #fff;
-    border-radius: 4px;
+    color: var(--md-sys-color-on-surface, #fff);
+    border: 1px solid var(--md-sys-color-on-surface, #fff);
+    border-radius: var(--md-sys-shape-corner-extra-small, 4px);
     padding: 6px 14px;
     font-size: 12px;
     cursor: pointer;
 }
 .avs-player .avs-ad-skip:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--md-sys-state-hover, rgba(255, 255, 255, 0.2));
 }
 .avs-player .avs-ad-click {
     position: absolute;

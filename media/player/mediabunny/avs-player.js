@@ -338,6 +338,31 @@ import {
     let endedFired = false;
     const queuedAudioNodes = new Set();
 
+    // VAST ad state — used by beginPlayback() which is called during init
+    let adPlayed = false;
+
+    // Player profile config — used by miniResumeState IIFE and beginPlayback()
+    const cfg = {
+        pauseAdv:    player.dataset.pauseAdv === '1' || window.player_pause_adv === '1',
+        aid:         (typeof window.aid !== 'undefined' && window.aid && window.aid !== 'false') ? window.aid : '',
+        vastEnabled: player.dataset.vastEnabled === '1',
+        vastUrl:     player.dataset.vastUrl || '',
+        vastCancel:  parseInt(player.dataset.vastCancel || '5000', 10) || 5000,
+        logo:        window.player_logo === '1',
+        logoImage:   window.player_logo_image || (base_url + '/media/player/logo/logo.png'),
+        logoLink:    (window.player_logo_link && window.player_logo_link !== '') ? window.player_logo_link : (base_url + '/video/' + video_id + '/' + (window.location.pathname.split('/').pop() || '')),
+        logoPosition: window.player_logo_position || 'top-right',
+        logoOpacity: parseFloat(window.player_logo_opacity || '40') / 100 || 0.4,
+        timelinePreview: window.player_timeline_preview === '1',
+        sprite:      window.player_sprite || '',
+        sourceW:     parseInt(player.dataset.sourceW || '0', 10) || 0,
+        sourceH:     parseInt(player.dataset.sourceH || '0', 10) || 0,
+        duration:    parseFloat(window.video_duration || 0) || 0,
+        related:     (typeof window.related_videos_data !== 'undefined' && Array.isArray(window.related_videos_data)) ? window.related_videos_data : [],
+        baseUrl:     (typeof window.base_url !== 'undefined') ? window.base_url : '',
+        videoId:     (typeof window.video_id !== 'undefined') ? window.video_id : '',
+    };
+
     // Buffered indicator: `bufferedEnd` is the furthest loaded position (in
     // seconds). Fallback mode uses the native `buffered` ranges; Media Bunny
     // mode approximates it from the source's byte download progress.
@@ -1338,6 +1363,21 @@ import {
         }
     })();
 
+    // O footer.tpl só renderiza a janelinha do mini quando este cookie existe. O
+    // servidor não enxerga o sessionStorage (que é por aba), então o cookie é o
+    // único sinal no HTML de que há vídeo para ressuscitar: por isso a janelinha
+    // vem pronta no template em vez de ser montada por JS a cada página. Gravar
+    // aqui significa "pode haver mini na próxima página"; quem decide de fato é o
+    // avs-mini.js, que remove a janelinha se o estado não servir mais.
+    const MINI_COOKIE = 'avs_mini';
+    const miniCookieOn = () => {
+        if (!miniPref) return; // preferência desligada: não renderiza na próxima página
+        try { document.cookie = MINI_COOKIE + '=1; path=/; max-age=180; SameSite=Lax'; } catch (e) { /* noop */ }
+    };
+    const miniCookieOff = () => {
+        try { document.cookie = MINI_COOKIE + '=; path=/; max-age=0; SameSite=Lax'; } catch (e) { /* noop */ }
+    };
+
     const miniReadState = () => {
         try {
             const raw = sessionStorage.getItem(MINI_STATE_KEY);
@@ -1359,13 +1399,22 @@ import {
                 source: source,
                 time: Math.round((fallbackVideo ? fallbackVideo.currentTime : getPlaybackTime()) * 10) / 10,
                 href: location.href.split('#')[0],
+                // Levados junto para o mini das outras páginas reproduzir o MESMO
+                // player (menu de qualidades + capa) — quem consome é avs-mini.js.
+                // As URLs são o proxy local (gcs_video.php), então não expiram.
+                poster: poster || '',
+                sources: sources.map((s) => ({ src: s.src, label: s.label, res: s.res })),
                 ts: Date.now()
             }));
+            // Só marca o cookie depois que o estado foi gravado: sem estado, o
+            // template não tem o que ressuscitar na próxima página.
+            miniCookieOn();
         } catch (e) { /* storage indisponível */ }
     };
 
     const miniClear = () => {
         try { sessionStorage.removeItem(MINI_STATE_KEY); } catch (e) { /* noop */ }
+        miniCookieOff();
     };
 
     // Enquanto toca, mantém o estado fresco (throttle 5s) para "atravessar"
@@ -1507,26 +1556,7 @@ import {
     // Reads the same globals the site already emits via player_settings.tpl
     // (player_pause_adv, aid, player_logo*, player_sprite, player_timeline_preview,
     // video_duration, base_url, related_videos_data) plus the VAST data-* attrs.
-    const cfg = {
-        pauseAdv:    player.dataset.pauseAdv === '1' || window.player_pause_adv === '1',
-        aid:         (typeof window.aid !== 'undefined' && window.aid && window.aid !== 'false') ? window.aid : '',
-        vastEnabled: player.dataset.vastEnabled === '1',
-        vastUrl:     player.dataset.vastUrl || '',
-        vastCancel:  parseInt(player.dataset.vastCancel || '5000', 10) || 5000,
-        logo:        window.player_logo === '1',
-        logoImage:   window.player_logo_image || (base_url + '/media/player/logo/logo.png'),
-        logoLink:    (window.player_logo_link && window.player_logo_link !== '') ? window.player_logo_link : (base_url + '/video/' + video_id + '/' + (window.location.pathname.split('/').pop() || '')),
-        logoPosition: window.player_logo_position || 'top-right',
-        logoOpacity: parseFloat(window.player_logo_opacity || '40') / 100 || 0.4,
-        timelinePreview: window.player_timeline_preview === '1',
-        sprite:      window.player_sprite || '',
-        sourceW:     parseInt(player.dataset.sourceW || '0', 10) || 0,
-        sourceH:     parseInt(player.dataset.sourceH || '0', 10) || 0,
-        duration:    parseFloat(window.video_duration || 0) || 0,
-        related:     (typeof window.related_videos_data !== 'undefined' && Array.isArray(window.related_videos_data)) ? window.related_videos_data : [],
-        baseUrl:     (typeof window.base_url !== 'undefined') ? window.base_url : '',
-        videoId:     (typeof window.video_id !== 'undefined') ? window.video_id : '',
-    };
+    // cfg is declared earlier (before miniResumeState IIFE) to avoid TDZ.
 
     // --- 9.1 Logo overlay ------------------------------------------------
     const setupLogo = () => {
@@ -1806,7 +1836,7 @@ import {
     // Lightweight VAST 2/3/4 client: fetch adTagUrl, parse XML, play the first
     // playable MP4/WebM MediaFile in a <video> overlay with a skip button,
     // click-through and impression/error beacons. Any failure -> skip ad.
-    let adPlayed = false;
+    // adPlayed declared earlier (before beginPlayback) to avoid TDZ.
     let adOverlay = null;
 
     const parseVast = (xmlText) => {
