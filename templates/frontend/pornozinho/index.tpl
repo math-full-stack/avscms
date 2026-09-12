@@ -215,7 +215,7 @@
 	<div class="xb-cats">
 		{section name=c loop=$categories_sm}
 		<a class="xb-cat-card" href="{$relative}/videos/{$categories_sm[c].slug}">
-			<img src="{$relative}/media/categories/video/{$categories_sm[c].CHID}.jpg" title="{$categories_sm[c].name|escape:'html'}" alt="{$categories_sm[c].name|escape:'html'}">
+			<img src="{$categories_sm[c].cover_url}" title="{$categories_sm[c].name|escape:'html'}" alt="{$categories_sm[c].name|escape:'html'}">
 			<span class="xb-cat-overlay">
 				<span class="xb-cat-name">{$categories_sm[c].name|escape:'html'}</span>
 				<span class="xb-cat-count">{$categories_sm[c].total_videos}</span>

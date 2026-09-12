@@ -24,7 +24,7 @@
 				<div class="{if $min_col == '2'}col-6{/if} col-sm-6 col-md-4 col-lg-4 col-xl-4 m-b-20">
 					<a href="{$relative}/albums/{$categories[i].slug}">
 						<div class="thumb-overlay">
-							<img src="{$relative}/media/categories/album/{$categories[i].CID}.jpg" title="{$categories[i].name|escape:'html'}" alt="{$categories[i].name|escape:'html'}" class="img-responsive"/>
+							<img src="{$categories[i].cover_url}" title="{$categories[i].name|escape:'html'}" alt="{$categories[i].name|escape:'html'}" class="img-responsive"/>
 							<div class="category-title">
 								<div class="float-left title-truncate">
 									{$categories[i].name|escape:'html'}
@@ -48,7 +48,7 @@
 				<div class="{if $min_col == '2'}col-6{/if} col-sm-6 col-md-4 col-lg-4 col-xl-4 m-b-20">
 					<a href="{$relative}/videos/{$categories[i].slug}">
 						<div class="thumb-overlay">
-							<img src="{$relative}/media/categories/video/{$categories[i].CHID}.jpg" title="{$categories[i].name|escape:'html'}" alt="{$categories[i].name|escape:'html'}" class="img-responsive"/>
+							<img src="{$categories[i].cover_url}" title="{$categories[i].name|escape:'html'}" alt="{$categories[i].name|escape:'html'}" class="img-responsive"/>
 							<div class="category-title">
 								<div class="float-left title-truncate">
 									{$categories[i].name|escape:'html'}

@@ -478,7 +478,15 @@ if (defined('_ADMIN')) {
 
 	$sql            = "SELECT * FROM channel ORDER BY total_videos DESC LIMIT 8";
 	$rs             = $conn->execute($sql);
-	$categories_sm  = $rs->getrows();	
+	$categories_sm  = $rs->getrows();
+	foreach ($categories_sm as $k => $v) {
+		$imgPath = $config['BASE_DIR'] . '/media/categories/video/' . intval($v['CHID']) . '.jpg';
+		if (file_exists($imgPath) && is_file($imgPath)) {
+			$categories_sm[$k]['cover_url'] = $config['BASE_URL'] . '/media/categories/video/' . intval($v['CHID']) . '.jpg';
+		} else {
+			$categories_sm[$k]['cover_url'] = $config['BASE_URL'] . '/media/categories/default.jpg';
+		}
+	}
 	$smarty->assign('categories_sm', $categories_sm);
 	
 	$sql = "SELECT * FROM tags WHERE LENGTH(tag) > 2 AND counter >= 1 ORDER BY counter DESC LIMIT 48";

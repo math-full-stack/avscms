@@ -432,7 +432,7 @@
 								{section name=i loop=$categories_sm max=12}
 								<a href="{$relative}/videos/{$categories_sm[i].slug}" class="xb-dropdown-cat">
 									<div class="xb-dropdown-cat-thumb">
-										<img src="{$relative}/media/categories/video/{$categories_sm[i].CHID}.jpg" alt="{$categories_sm[i].name|escape:'html'}" loading="lazy">
+										<img src="{$categories_sm[i].cover_url}" alt="{$categories_sm[i].name|escape:'html'}" loading="lazy">
 									</div>
 									<span class="xb-dropdown-cat-name">{$categories_sm[i].name|escape:'html'|truncate:20:"..."}</span>
 									<span class="xb-dropdown-cat-count">{$categories_sm[i].total_videos}</span>

@@ -108,6 +108,9 @@ $query      = constructQuery();
 $sql        = $query['select'];
 $rs         = $conn->execute($sql);
 $channels   = $rs->getrows();
+foreach ($channels as $k => $v) {
+	$channels[$k]['cover_url'] = getCategoryCoverUrl('album', $v['CID']);
+}
 
 function constructQuery()
 {

@@ -200,6 +200,40 @@ function get_albums_categories()
     return $categories;
 }
 
+function getCategoryCoverUrl($type, $id)
+{
+    global $config, $conn;
+
+    if ($type === 'video') {
+        $imgPath = $config['BASE_DIR'] . '/media/categories/video/' . intval($id) . '.jpg';
+        if (file_exists($imgPath) && is_file($imgPath)) {
+            return $config['BASE_URL'] . '/media/categories/video/' . intval($id) . '.jpg';
+        }
+        $sql = "SELECT VID FROM video WHERE channel = " . intval($id) . " AND active = '1' ORDER BY RAND() DESC LIMIT 1";
+        $rs = $conn->execute($sql);
+        if ($rs && $conn->Affected_Rows() > 0) {
+            $vid = intval($rs->fields['VID']);
+            $index = intval(($vid - 1) / $config['max_thumb_folders']);
+            $tmb_folder = 'tmb';
+            if ($index !== 0) {
+                $tmb_folder = 'tmb' . $index;
+            }
+            return $config['BASE_URL'] . '/media/videos/' . $tmb_folder . '/' . $vid . '/default.jpg';
+        }
+        return $config['BASE_URL'] . '/media/categories/default.jpg';
+    }
+
+    if ($type === 'album') {
+        $imgPath = $config['BASE_DIR'] . '/media/categories/album/' . intval($id) . '.jpg';
+        if (file_exists($imgPath) && is_file($imgPath)) {
+            return $config['BASE_URL'] . '/media/categories/album/' . intval($id) . '.jpg';
+        }
+        return $config['BASE_URL'] . '/media/categories/default.jpg';
+    }
+
+    return $config['BASE_URL'] . '/media/categories/default.jpg';
+}
+
 function get_popular_tags()
 {
     global $conn;

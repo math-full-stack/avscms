@@ -88,7 +88,7 @@
 														<div class="item-thumb">
 															<div class="thumb-overlay">	
 																<a href="videos.php?m=all&CID={$channels[i].CHID}">
-																	<img id="thumb-{$channels[i].CHID}" src="{$baseurl}/media/categories/video/{$channels[i].CHID}.jpg" class="img-responsive">
+																	<img id="thumb-{$channels[i].CHID}" src="{$channels[i].cover_url}" class="img-responsive">
 																</a>
 																<div class="item-id">
 																	<b>ID</b> {$channels[i].CHID}

@@ -1,6 +1,7 @@
 <?php
 define('_VALID', true);
 require 'include/config.php';
+require 'include/function_global.php';
 require 'include/function_smarty.php';
 
 $s      = ( isset($_GET['s']) && ($_GET['s'] == 'a' or $_GET['s'] == 'g') ) ? $_GET['s'] : '';
@@ -26,6 +27,7 @@ if ($s == "a") {
 				$categories[$k]['total'] = $cat_val;
 			}
 		}
+		$categories[$k]['cover_url'] = getCategoryCoverUrl('album', $v['CID']);
 		$sql            = "UPDATE `album_categories` SET `total_albums`=".$categories[$k]['total']." WHERE CID = ".$categories[$k]['CID']."";
 		$rs             = $conn->execute($sql);		
 	}
@@ -51,6 +53,7 @@ if ($s == "a") {
 				$categories[$k]['total'] = $cat_val;
 			}
 		}
+		$categories[$k]['cover_url'] = getCategoryCoverUrl('video', $v['CHID']);
 		$sql            = "UPDATE `channel` SET `total_videos`=".$categories[$k]['total']." WHERE CHID = ".$categories[$k]['CHID']."";
 		$rs             = $conn->execute($sql);		
 	}

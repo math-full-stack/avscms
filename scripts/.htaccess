@@ -1,0 +1,4 @@
+# AVSCMS scripts/ — bloquear acesso HTTP direto.
+# Scripts CLI (grabber_worker, convert_videos, etc.) não devem ser acessíveis via web.
+# Acesso via shell/cron continua funcionando (é filesystem, não HTTP).
+Require all denied
