@@ -62,6 +62,9 @@ if (isset($_POST['suspend_selected_videos']) || isset($_POST['approve_selected_v
 }
 
 if (isset($_POST['reprocess_selected_videos'])) {
+    if (!isset($config['conversion_q']) || $config['conversion_q'] != '1') {
+        $errors[] = 'Conversion queue is disabled. Reprocessamento bloqueado.';
+    } else {
     $index   = 0;
     $skipped = 0;
     foreach ( $_POST as $key => $value ) {
@@ -129,6 +132,7 @@ if (isset($_POST['reprocess_selected_videos'])) {
             $msg .= ' ' .$skipped. ' video(s) skipped (no source URL or already in conversion queue).';
         }
         $messages[] = $msg;
+    }
     }
 }
 

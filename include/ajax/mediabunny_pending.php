@@ -26,6 +26,13 @@ if (!$isAdmin) {
 	die();
 }
 
+if (!isset($config['conversion_q']) || $config['conversion_q'] != '1') {
+	$response['error'] = 'Conversion queue is disabled.';
+	$response['pending'] = 0;
+	echo json_encode($response);
+	die();
+}
+
 // Check processor mode.
 $processor = isset($config['processor']) ? $config['processor'] : 'ffmpeg';
 if ($processor === 'ffmpeg') {

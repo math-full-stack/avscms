@@ -9,6 +9,12 @@ Auth::checkAdmin();
 
 $response = array('status' => 0);
 
+if (!isset($config['conversion_q']) || $config['conversion_q'] != '1') {
+    $response['error'] = 'Conversion queue is disabled. Reprocessamento bloqueado.';
+    echo json_encode($response);
+    die();
+}
+
 $filter = new VFilter();
 $vid    = $filter->get('video_id', 'INTEGER');
 

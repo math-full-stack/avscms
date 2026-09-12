@@ -33,6 +33,12 @@ require_once $basedir . '/include/function_global.php';
 @ini_set('max_execution_time', 0);
 @ini_set('memory_limit', '512M');
 
+// Fila desligada: não baixar nem converter
+if (!isset($config['conversion_q']) || $config['conversion_q'] != '1') {
+    echo "conversion_q desligado - worker abortado.\n";
+    exit(0);
+}
+
 // Host role gate (fail-closed): the worker (download + ffmpeg remux +
 // conversion handoff) runs ONLY on the converter host (the PC). Covers
 // reprocess/grab/admin actions triggered from the VM panel.
