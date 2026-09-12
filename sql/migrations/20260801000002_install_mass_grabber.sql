@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS `grabber_sources` (
   `enabled` tinyint(1) NOT NULL DEFAULT 1,
   `automatic_enabled` tinyint(1) NOT NULL DEFAULT 0,
   `discovery_enabled` tinyint(1) NOT NULL DEFAULT 1,
-  `discovery_url` text NOT NULL,
+  `discovery_url` text NOT NULL DEFAULT (''),
   `category_id` int(11) unsigned NOT NULL DEFAULT 0,
   `quality` varchar(20) NOT NULL DEFAULT 'best',
   `max_per_run` int(11) unsigned NOT NULL DEFAULT 5,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS `grabber_sources` (
   `next_run_at` int(11) unsigned NOT NULL DEFAULT 0,
   `last_run_at` int(11) unsigned NOT NULL DEFAULT 0,
   `last_success_at` int(11) unsigned NOT NULL DEFAULT 0,
-  `last_error` text NOT NULL,
+  `last_error` text NOT NULL DEFAULT (''),
   `error_count` int(11) unsigned NOT NULL DEFAULT 0,
   `requests_per_minute` int(11) unsigned NOT NULL DEFAULT 30,
   `concurrency` int(11) unsigned NOT NULL DEFAULT 2,
@@ -38,20 +38,20 @@ CREATE TABLE IF NOT EXISTS `grabber_sources` (
   KEY `idx_sources_next_run` (`next_run_at`),
   KEY `idx_sources_provider` (`provider`),
   KEY `idx_sources_slug` (`slug`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 CREATE TABLE IF NOT EXISTS `grabber_discovered_videos` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `source_id` int(11) unsigned NOT NULL DEFAULT 0,
   `external_id` varchar(255) NOT NULL DEFAULT '',
-  `source_url` text NOT NULL,
-  `canonical_url` text NOT NULL,
+  `source_url` text NOT NULL DEFAULT (''),
+  `canonical_url` text NOT NULL DEFAULT (''),
   `title` varchar(500) NOT NULL DEFAULT '',
-  `description` text NOT NULL DEFAULT '',
-  `tags` text NOT NULL DEFAULT '',
+  `description` text NOT NULL DEFAULT (''),
+  `tags` text NOT NULL DEFAULT (''),
   `duration` int(11) unsigned NOT NULL DEFAULT 0,
-  `thumbnail_url` text NOT NULL DEFAULT '',
-  `metadata_json` text NOT NULL DEFAULT '',
+  `thumbnail_url` text NOT NULL DEFAULT (''),
+  `metadata_json` text NOT NULL DEFAULT (''),
   `status` varchar(20) NOT NULL DEFAULT 'NEW',
   `first_seen_at` int(11) unsigned NOT NULL DEFAULT 0,
   `last_seen_at` int(11) unsigned NOT NULL DEFAULT 0,
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS `grabber_discovered_videos` (
   KEY `idx_discovered_video` (`video_id`),
   KEY `idx_discovered_canonical` (`canonical_url`(191)),
   KEY `idx_discovered_run` (`run_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 CREATE TABLE IF NOT EXISTS `grabber_jobs` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS `grabber_jobs` (
   `finished_at` int(11) unsigned NOT NULL DEFAULT 0,
   `video_id` int(11) unsigned NOT NULL DEFAULT 0,
   `error_code` varchar(50) NOT NULL DEFAULT '',
-  `error_message` text NOT NULL DEFAULT '',
+  `error_message` text NOT NULL DEFAULT (''),
   `worker_pid` int(11) unsigned NOT NULL DEFAULT 0,
   `run_id` int(11) unsigned NOT NULL DEFAULT 0,
   `created_at` int(11) unsigned NOT NULL DEFAULT 0,
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS `grabber_jobs` (
   KEY `idx_jobs_discovered` (`discovered_video_id`),
   KEY `idx_jobs_run` (`run_id`),
   KEY `idx_jobs_pending` (`status`, `priority`, `scheduled_at`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 CREATE TABLE IF NOT EXISTS `grabber_runs` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -109,13 +109,13 @@ CREATE TABLE IF NOT EXISTS `grabber_runs` (
   `queued_count` int(11) unsigned NOT NULL DEFAULT 0,
   `imported_count` int(11) unsigned NOT NULL DEFAULT 0,
   `failed_count` int(11) unsigned NOT NULL DEFAULT 0,
-  `error_message` text NOT NULL DEFAULT '',
+  `error_message` text NOT NULL DEFAULT (''),
   `created_at` int(11) unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_runs_source` (`source_id`),
   KEY `idx_runs_started` (`started_at`),
   KEY `idx_runs_status` (`status`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 CREATE TABLE IF NOT EXISTS `grabber_logs` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -124,8 +124,8 @@ CREATE TABLE IF NOT EXISTS `grabber_logs` (
   `source_id` int(11) unsigned NOT NULL DEFAULT 0,
   `level` varchar(10) NOT NULL DEFAULT 'INFO',
   `event` varchar(100) NOT NULL DEFAULT '',
-  `message` text NOT NULL DEFAULT '',
-  `context` text NOT NULL DEFAULT '',
+  `message` text NOT NULL DEFAULT (''),
+  `context` text NOT NULL DEFAULT (''),
   `created_at` int(11) unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_logs_run` (`run_id`),
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS `grabber_logs` (
   KEY `idx_logs_source` (`source_id`),
   KEY `idx_logs_level` (`level`),
   KEY `idx_logs_created` (`created_at`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 CREATE TABLE IF NOT EXISTS `grabber_tag_mappings` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -143,11 +143,11 @@ CREATE TABLE IF NOT EXISTS `grabber_tag_mappings` (
   `enabled` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   KEY `idx_tagmap_source` (`source_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 CREATE TABLE IF NOT EXISTS `grabber_settings` (
   `setting_key` varchar(100) NOT NULL DEFAULT '',
-  `setting_value` text NOT NULL DEFAULT '',
+  `setting_value` text NOT NULL DEFAULT (''),
   `updated_at` int(11) unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY (`setting_key`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;

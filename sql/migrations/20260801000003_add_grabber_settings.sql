@@ -8,7 +8,7 @@
 
 CREATE TABLE IF NOT EXISTS `grabber_settings` (
   `setting_key` varchar(100) NOT NULL DEFAULT '',
-  `setting_value` text NOT NULL,
+  `setting_value` text NOT NULL DEFAULT (''),
   `updated_at` int(11) unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY (`setting_key`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
