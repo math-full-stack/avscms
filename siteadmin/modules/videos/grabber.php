@@ -120,6 +120,9 @@ $video = array(
 
 // Tratar submissão do formulário de importação
 if (isset($_POST['grab_video'])) {
+    if (!isset($config['conversion_q']) || $config['conversion_q'] != '1') {
+        $errors[] = 'Conversion queue is disabled. Importação bloqueada.';
+    } else {
     $filter      = new VFilter();
     // URL não deve passar por xss_filter (HTMLPurifier converte & para &amp; e quebra yt-dlp)
     $url         = isset($_POST['url']) ? trim($_POST['url']) : '';
@@ -255,6 +258,7 @@ if (isset($_POST['grab_video'])) {
         } else {
             $errors[] = 'Erro ao registrar o vídeo no banco de dados.';
         }
+    }
     }
 }
 

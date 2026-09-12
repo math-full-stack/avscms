@@ -15,6 +15,12 @@ if (!isset($_SESSION['admin_id']) || intval($_SESSION['admin_id']) <= 0) {
 Auth::checkAdmin();
 }
 
+if (!isset($config['conversion_q']) || $config['conversion_q'] != '1') {
+$response['error'] = 'Conversion queue is disabled.';
+echo json_encode($response);
+die();
+}
+
 // Accept POST only.
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $response['error'] = 'POST required';

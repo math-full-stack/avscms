@@ -46,6 +46,20 @@ else
 	$rate = 0;
 
 update_tags($vid, $keyword);
+
+// Bloquear ativar vídeo que está baixando ou na fila de conversão
+if ($active == '1') {
+    $check = $conn->execute("SELECT active FROM video WHERE VID = " . intval($vid) . " LIMIT 1");
+    if ($check && $conn->Affected_Rows() == 1) {
+        $curActive = $check->fields['active'];
+        if ($curActive == '2' || $curActive == '3') {
+            $response['error'] = 'Vídeo está na fila de conversão. Aguarde concluir antes de ativar.';
+            echo json_encode($response);
+            die();
+        }
+    }
+}
+
 $sql = "UPDATE video SET title = " .$conn->qStr($title). ", description = " .nl2br2($conn->qStr($description)). ",
 						 keyword = " .$conn->qStr($keyword). ", channel = " .$channel. ", type = " .$conn->qStr($type). ",
 						 featured = " .$conn->qStr($featured). ", be_comment = " .$conn->qStr($be_comment). ",

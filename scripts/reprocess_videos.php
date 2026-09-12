@@ -16,6 +16,11 @@ require_once $basedir . '/include/config.php';
 require_once $basedir . '/include/function_video.php';
 require_once $basedir . '/include/function_queue.php';
 
+if (!isset($config['conversion_q']) || $config['conversion_q'] != '1') {
+    echo "Conversion queue is disabled. Reprocessamento bloqueado.\n";
+    exit(0);
+}
+
 $vids = array();
 for ($i = 1; $i < $argc; $i++) {
     $vid = intval($argv[$i]);
