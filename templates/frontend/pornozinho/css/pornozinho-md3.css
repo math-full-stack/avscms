@@ -1,0 +1,1163 @@
+/* ==========================================================================
+   PORNOZINHO — Material Design 3
+   Camada de design tokens M3 (dark scheme, seed #FF1493) aplicada sobre o
+   DOM atual (Bootstrap 4 + style.css + pornozinho.css).
+   Carrega por último para republicar todos os componentes em linguagem M3:
+   superfícies, elevation, shape cor­ner, state layers, ripple, tipografia.
+   ========================================================================== */
+
+:root {
+	/* ---- Material 3 color scheme (dark, seed #FF1493) ---- */
+	--md-sys-color-primary: #FFB1C9;
+	--md-sys-color-on-primary: #560036;
+	--md-sys-color-primary-container: #7B0758;
+	--md-sys-color-on-primary-container: #FFD9E3;
+	--md-sys-color-inverse-primary: #B60D66;
+	--md-sys-color-secondary: #E2B9C3;
+	--md-sys-color-on-secondary: #432531;
+	--md-sys-color-secondary-container: #5C3B46;
+	--md-sys-color-on-secondary-container: #FFD9E2;
+	--md-sys-color-tertiary: #EFBF87;
+	--md-sys-color-on-tertiary: #4A2A00;
+	--md-sys-color-tertiary-container: #673F00;
+	--md-sys-color-on-tertiary-container: #FFDDB3;
+	--md-sys-color-error: #FFB4AB;
+	--md-sys-color-on-error: #690005;
+	--md-sys-color-error-container: #93000A;
+	--md-sys-color-on-error-container: #FFDAD6;
+	--md-sys-color-surface: #171318;
+	--md-sys-color-on-surface: #ECE0E4;
+	--md-sys-color-surface-variant: #4E4448;
+	--md-sys-color-on-surface-variant: #D4C2C7;
+	--md-sys-color-outline: #9C8E93;
+	--md-sys-color-outline-variant: #4E4448;
+	--md-sys-color-surface-container-lowest: #120F13;
+	--md-sys-color-surface-container-low: #1D191D;
+	--md-sys-color-surface-container: #211B20;
+	--md-sys-color-surface-container-high: #2B2529;
+	--md-sys-color-surface-container-highest: #362F34;
+	--md-sys-color-inverse-surface: #ECE0E4;
+	--md-sys-color-inverse-on-surface: #322D31;
+	--md-sys-color-scrim: #000000;
+	--md-sys-color-success-container: #0E5231;
+	--md-sys-color-on-success-container: #A7F8C4;
+
+	/* ---- M3 shape system ---- */
+	--md-sys-shape-corner-none: 0px;
+	--md-sys-shape-corner-extra-small: 4px;
+	--md-sys-shape-corner-small: 8px;
+	--md-sys-shape-corner-medium: 12px;
+	--md-sys-shape-corner-large: 16px;
+	--md-sys-shape-corner-extra-large: 28px;
+	--md-sys-shape-corner-full: 9999px;
+
+	/* ---- M3 elevation system ---- */
+	--md-sys-elevation-level0: none;
+	--md-sys-elevation-level1: 0 1px 2px rgba(0, 0, 0, .3), 0 1px 3px 1px rgba(0, 0, 0, .15);
+	--md-sys-elevation-level2: 0 1px 2px rgba(0, 0, 0, .3), 0 2px 6px 2px rgba(0, 0, 0, .15);
+	--md-sys-elevation-level3: 0 1px 3px rgba(0, 0, 0, .3), 0 4px 8px 3px rgba(0, 0, 0, .15);
+
+	/* ---- M3 state layers ---- */
+	--md-sys-state-hover: rgba(236, 224, 228, .08);
+	--md-sys-state-pressed: rgba(236, 224, 228, .12);
+	--md-sys-state-dragged: rgba(236, 224, 228, .16);
+
+	/* ---- M3 typography (Roboto) ---- */
+	--md-sys-font: 'Roboto', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+	--md-sys-typescale-display-small: 36px/44px 400;
+	--md-sys-typescale-headline-small: 24px/32px 400;
+	--md-sys-typescale-title-large: 22px/28px 400;
+	--md-sys-typescale-title-medium: 16px/24px 500;
+	--md-sys-typescale-title-small: 14px/20px 500;
+	--md-sys-typescale-body-large: 16px/24px 400;
+	--md-sys-typescale-body-medium: 14px/20px 400;
+	--md-sys-typescale-label-large: 14px/20px 500;
+	--md-sys-typescale-label-medium: 12px/16px 500;
+	--md-sys-typescale-label-small: 11px/16px 500;
+
+	/* ---- Remap da identidade atual para superfícies M3 ---- */
+	--xb-bg: #171318;
+	--xb-bg-alt: #120F13;
+	--xb-card: #211B20;
+	--xb-card-2: #2B2529;
+	--xb-border: #4E4448;
+	--xb-text: #ECE0E4;
+	--xb-muted: #D4C2C7;
+	--xb-accent: #FF1493;
+	--xb-accent-d: #D30F7E;
+	--xb-radius: 12px;
+	--xb-radius-sm: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   Base — tipografia e foco
+   -------------------------------------------------------------------------- */
+html,
+body {
+	font-family: var(--md-sys-font);
+}
+
+body {
+	background-color: var(--md-sys-color-surface);
+	color: var(--md-sys-color-on-surface);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: var(--md-sys-font);
+	letter-spacing: .1px;
+}
+
+h1 {
+	font-size: 24px;
+	font-weight: 600;
+	line-height: 32px;
+}
+
+h2 {
+	font-size: 22px;
+	font-weight: 500;
+	line-height: 28px;
+	padding: 12px 0;
+}
+
+h3 {
+	font-size: 16px;
+	font-weight: 500;
+	line-height: 24px;
+}
+
+a {
+	transition: color .15s ease, background-color .15s ease;
+}
+
+::selection {
+	background: var(--md-sys-color-primary-container);
+	color: var(--md-sys-color-on-primary-container);
+}
+
+:focus-visible {
+	outline: 2px solid var(--md-sys-color-primary);
+	outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Top app bar (M3)
+   -------------------------------------------------------------------------- */
+.xb-topbar {
+	background-color: var(--md-sys-color-surface);
+	border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.xb-topbar.xb-topbar-scrolled {
+	background-color: var(--md-sys-color-surface-container);
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	border-bottom-color: var(--md-sys-color-outline-variant);
+	box-shadow: var(--md-sys-elevation-level1);
+}
+
+.xb-topbar-inner {
+	min-height: 64px;
+}
+
+/* Search bar — M3 search bar (filled, full radius) */
+.xb-search form,
+.xb-mobilesearch {
+	background-color: var(--md-sys-color-surface-container-high);
+	border-color: transparent;
+	box-shadow: none;
+	transition: box-shadow .18s ease, background-color .18s ease;
+}
+
+.xb-search form:focus-within {
+	border-color: transparent;
+	box-shadow: 0 0 0 2px var(--md-sys-color-primary);
+}
+
+.xb-mobilesearch {
+	background-color: var(--md-sys-color-surface-container-high);
+	border-color: transparent;
+}
+
+.xb-search-type-btn {
+	border-right: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.xb-search .xb-search-btn {
+	color: var(--md-sys-color-primary);
+}
+
+.xb-search-type-option i {
+	color: var(--md-sys-color-primary);
+}
+
+/* Action icons — M3 text buttons */
+.xb-actions .xb-action {
+	color: var(--md-sys-color-on-surface-variant);
+	border-radius: var(--md-sys-shape-corner-full);
+	padding: 8px 16px;
+}
+
+.xb-actions .xb-action:hover {
+	background-color: var(--md-sys-state-hover);
+	color: var(--md-sys-color-on-surface);
+}
+
+.xb-action-upload {
+	background: linear-gradient(135deg, var(--xb-accent), var(--xb-accent-d)) !important;
+	color: #fff !important;
+	font-weight: 600;
+	border-radius: var(--md-sys-shape-corner-full) !important;
+}
+
+.xb-hamburger {
+	border-color: var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-small);
+}
+
+/* Nav — M3 navigation bar */
+.xb-nav {
+	background-color: var(--md-sys-color-surface-container-low);
+	border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.xb-nav-link {
+	color: var(--md-sys-color-on-surface-variant);
+	font-weight: 500;
+	transition: color .15s ease, background-color .15s ease;
+}
+
+.xb-nav-link:hover {
+	background-color: var(--md-sys-state-hover);
+	color: var(--md-sys-color-on-surface);
+}
+
+.xb-nav li a {
+	color: var(--md-sys-color-on-surface-variant);
+	font-weight: 500;
+}
+
+.xb-nav li a:hover {
+	background-color: var(--md-sys-state-hover);
+	color: var(--md-sys-color-on-surface);
+}
+
+.xb-nav-item.active .xb-nav-link,
+.xb-nav li.active a {
+	color: var(--md-sys-color-on-surface);
+}
+
+.xb-nav-item.active .xb-nav-link::after,
+.xb-nav li.active a::after {
+	height: 3px;
+	background: var(--md-sys-color-primary);
+	border-radius: 3px 3px 0 0;
+	box-shadow: none;
+}
+
+/* Mega dropdown — M3 menu */
+.xb-dropdown-menu {
+	background-color: var(--md-sys-color-surface-container);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-medium);
+	box-shadow: var(--md-sys-elevation-level3);
+	animation: xb-dropdown-in .18s ease;
+}
+
+.xb-dropdown-title {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 1px;
+	text-transform: uppercase;
+	color: var(--md-sys-color-on-surface-variant);
+	border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.xb-dropdown-list li a:hover,
+.xb-dropdown-video:hover {
+	background-color: var(--md-sys-state-hover);
+}
+
+.xb-badge-sm,
+.xb-tag-count {
+	background: var(--md-sys-color-primary-container);
+	color: var(--md-sys-color-on-primary-container);
+	border-radius: var(--md-sys-shape-corner-full);
+}
+
+.xb-dropdown-tag {
+	background: var(--md-sys-color-surface-container-low);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-full);
+	color: var(--md-sys-color-on-surface-variant);
+}
+
+.xb-dropdown-tag:hover {
+	background: var(--md-sys-color-primary-container);
+	border-color: var(--md-sys-color-primary-container);
+	color: var(--md-sys-color-on-primary-container);
+}
+
+/* --------------------------------------------------------------------------
+   Botões — M3 filled / tonal / outlined
+   -------------------------------------------------------------------------- */
+.btn {
+	font-family: var(--md-sys-font);
+	font-size: 14px;
+	font-weight: 500;
+	letter-spacing: .1px;
+	height: 40px;
+	line-height: 38px;
+	padding: 0 24px;
+	border: none;
+	border-radius: var(--md-sys-shape-corner-full);
+	box-shadow: none;
+	text-transform: none;
+}
+
+.btn:hover {
+	transform: none;
+}
+
+.btn:disabled,
+.btn.disabled {
+	opacity: .38;
+	box-shadow: none;
+}
+
+.btn-sm {
+	height: 32px;
+	line-height: 30px;
+	padding: 0 16px;
+	font-size: 13px;
+}
+
+.btn-xs,
+.btn-xxs {
+	height: 32px;
+	line-height: 30px;
+	padding: 0 14px;
+	font-size: 12px;
+}
+
+.btn-bold {
+	height: 48px;
+	line-height: 46px;
+	padding: 0 28px;
+	font-size: 14px;
+	font-weight: 500;
+}
+
+/* Filled — primário (container) */
+.btn-primary {
+	background-color: var(--md-sys-color-primary-container) !important;
+	border-color: var(--md-sys-color-primary-container) !important;
+	color: var(--md-sys-color-on-primary-container) !important;
+	box-shadow: none !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active {
+	background-color: var(--md-sys-color-primary-container) !important;
+	border-color: var(--md-sys-color-primary-container) !important;
+	color: var(--md-sys-color-on-primary-container) !important;
+	background-image: linear-gradient(0deg, rgba(255, 217, 227, .08), rgba(255, 217, 227, .08)) !important;
+	box-shadow: none !important;
+}
+
+.btn-primary.active,
+.btn-primary:active {
+	background-image: linear-gradient(0deg, rgba(255, 217, 227, .16), rgba(255, 217, 227, .16)) !important;
+}
+
+/* Filled tonal — secundário */
+.btn-secondary {
+	background-color: var(--md-sys-color-secondary-container) !important;
+	border-color: var(--md-sys-color-secondary-container) !important;
+	color: var(--md-sys-color-on-secondary-container) !important;
+	box-shadow: none !important;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus,
+.btn-secondary:active,
+.btn-secondary.active {
+	background-color: var(--md-sys-color-secondary-container) !important;
+	border-color: var(--md-sys-color-secondary-container) !important;
+	color: var(--md-sys-color-on-secondary-container) !important;
+	background-image: linear-gradient(0deg, rgba(255, 217, 226, .08), rgba(255, 217, 226, .08)) !important;
+	box-shadow: none !important;
+}
+
+.btn-secondary.active,
+.btn-secondary:active {
+	background-image: linear-gradient(0deg, rgba(255, 217, 226, .16), rgba(255, 217, 226, .16)) !important;
+}
+
+/* Outlined / neutro */
+.btn-default,
+.btn-outline-secondary {
+	background-color: transparent !important;
+	border: 1px solid var(--md-sys-color-outline);
+	color: var(--md-sys-color-primary) !important;
+}
+
+.btn-default:hover,
+.btn-outline-secondary:hover {
+	background-color: var(--md-sys-state-hover) !important;
+	color: var(--md-sys-color-primary) !important;
+}
+
+/* Social — mantém marca, geometria M3 */
+.btn-facebook,
+.btn-google {
+	background-clip: padding-box;
+	box-shadow: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Formulários — M3 outlined text fields
+   -------------------------------------------------------------------------- */
+input.form-control,
+textarea.form-control,
+select.form-control {
+	height: 44px;
+	min-height: 44px;
+	background-color: var(--md-sys-color-surface) !important;
+	border: 1px solid var(--md-sys-color-outline) !important;
+	border-radius: var(--md-sys-shape-corner-extra-small);
+	padding: 10px 16px;
+	font-family: var(--md-sys-font);
+	font-size: 14px;
+	line-height: 22px;
+	color: var(--md-sys-color-on-surface) !important;
+	transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+textarea.form-control {
+	min-height: 88px;
+}
+
+input.form-control::placeholder,
+textarea.form-control::placeholder,
+.form-control::placeholder {
+	color: var(--md-sys-color-on-surface-variant);
+	opacity: 1;
+}
+
+input.form-control:focus,
+textarea.form-control:focus,
+.form-horizontal input.form-control:focus,
+.form-horizontal textarea.form-control:focus,
+.form-control:focus {
+	background-color: var(--md-sys-color-surface) !important;
+	border-color: var(--md-sys-color-primary) !important;
+	box-shadow: 0 0 0 1px var(--md-sys-color-primary);
+	outline: none;
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+	background-color: var(--md-sys-color-surface-container-low) !important;
+	color: var(--md-sys-color-on-surface-variant);
+	border-color: var(--md-sys-color-outline-variant) !important;
+}
+
+select.form-control option {
+	background-color: var(--md-sys-color-surface-container);
+	color: var(--md-sys-color-on-surface);
+}
+
+.form-check-input,
+.form-check .form-check-input {
+	accent-color: var(--md-sys-color-primary);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+	accent-color: var(--md-sys-color-primary);
+}
+
+.has-error input.form-control,
+.has-error textarea.form-control,
+.form-horizontal .has-error .form-control,
+.has-error .custom-file-label {
+	border-color: var(--md-sys-color-error) !important;
+}
+
+label,
+.form-horizontal label {
+	color: var(--md-sys-color-on-surface);
+}
+
+.custom-file-label {
+	background-color: var(--md-sys-color-surface);
+	border: 1px solid var(--md-sys-color-outline);
+	border-radius: var(--md-sys-shape-corner-extra-small);
+	color: var(--md-sys-color-on-surface);
+}
+
+.custom-file-label::after {
+	background-color: var(--md-sys-color-surface-container-high);
+	color: var(--md-sys-color-on-surface);
+	border-left: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* Comentários / reply */
+#comments_input,
+.comment-reply-container textarea {
+	background-color: var(--md-sys-color-surface) !important;
+	border: 1px solid var(--md-sys-color-outline) !important;
+	border-radius: var(--md-sys-shape-corner-extra-small) !important;
+	color: var(--md-sys-color-on-surface) !important;
+	font-family: var(--md-sys-font);
+	min-height: 44px;
+}
+
+#comments_input:focus,
+.comment-reply-container textarea:focus {
+	border-color: var(--md-sys-color-primary) !important;
+	box-shadow: 0 0 0 1px var(--md-sys-color-primary);
+}
+
+/* --------------------------------------------------------------------------
+   Cards — M3-filled / elevado
+   -------------------------------------------------------------------------- */
+.card {
+	background-color: var(--md-sys-color-surface-container-low);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-medium);
+	margin-bottom: 12px;
+	color: var(--md-sys-color-on-surface-variant);
+}
+
+.card-sub {
+	background-color: var(--md-sys-color-surface-container);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-medium);
+	padding: 16px;
+}
+
+.card-sub .medium-avatar {
+	border-color: var(--md-sys-color-outline-variant);
+}
+
+.well,
+.well-sm {
+	background-color: var(--md-sys-color-surface-container-low);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.list-group-item {
+	background-color: var(--md-sys-color-surface-container-low);
+	border-color: var(--md-sys-color-outline-variant);
+	color: var(--md-sys-color-on-surface-variant);
+}
+
+a.list-group-item:hover,
+a.list-group-item:focus {
+	background-color: var(--md-sys-color-surface-container-high);
+	color: var(--md-sys-color-on-surface);
+}
+
+.list-group-item.active,
+.list-group-item.active:hover,
+.list-group-item.active:focus {
+	background-color: var(--md-sys-color-primary-container);
+	border-color: var(--md-sys-color-primary-container);
+	color: var(--md-sys-color-on-primary-container);
+}
+
+.feed-blog {
+	background-color: var(--md-sys-color-surface-container-low);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-medium);
+}
+
+/* Media cards (video/categoria/creators) */
+.thumb-overlay {
+	border-radius: var(--md-sys-shape-corner-medium);
+	background-color: var(--md-sys-color-surface-container-lowest);
+}
+
+a:hover .thumb-overlay {
+	box-shadow: var(--md-sys-elevation-level2);
+}
+
+.thumb-overlay.xb-hero-main,
+.xb-hero .xb-hero-main,
+.xb-hero .xb-hero-item {
+	border-radius: var(--md-sys-shape-corner-medium);
+	border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.xb-creator-card {
+	background-color: var(--md-sys-color-surface-container-low);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.xb-creator-card:hover {
+	border-color: var(--md-sys-color-primary);
+	transform: translateY(-2px);
+	box-shadow: var(--md-sys-elevation-level1);
+}
+
+.xb-cat-card {
+	border-radius: var(--md-sys-shape-corner-medium);
+	border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.xb-creator-card .xb-avatar-lg {
+	border-color: var(--md-sys-color-primary-container);
+}
+
+/* Comentários — M3 list item */
+.comments-section .comment-item {
+	background-color: var(--md-sys-color-surface-container);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.autoplay-card {
+	background-color: var(--md-sys-color-surface-container) !important;
+	border: 1px solid var(--md-sys-color-outline-variant) !important;
+	border-radius: var(--md-sys-shape-corner-medium) !important;
+}
+
+.autoplay-card-header {
+	background-color: var(--md-sys-color-surface-container-high) !important;
+	border-bottom: 1px solid var(--md-sys-color-outline-variant) !important;
+}
+
+.autoplay-btn-skip {
+	background-color: var(--md-sys-color-primary) !important;
+	color: var(--md-sys-color-on-primary) !important;
+	border-radius: var(--md-sys-shape-corner-full) !important;
+}
+
+/* Player placeholders */
+.video-embedded,
+.avs-player-wrap,
+.vplayer-container,
+.video-container {
+	border-radius: var(--md-sys-shape-corner-medium);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	box-shadow: var(--md-sys-elevation-level1);
+}
+
+/* --------------------------------------------------------------------------
+   Chips (tags) — M3 suggestion chip
+   -------------------------------------------------------------------------- */
+.tag,
+.xb-tags a,
+.xb-dropdown-tag,
+.popular-tag a {
+	height: 32px;
+	padding: 6px 14px;
+	background-color: var(--md-sys-color-surface-container-low);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-full);
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 13px;
+	line-height: 18px;
+}
+
+.tag:hover,
+.xb-tags a:hover,
+.xb-dropdown-tag:hover,
+.popular-tag a:hover {
+	background-color: var(--md-sys-color-primary-container);
+	border-color: var(--md-sys-color-primary-container);
+	color: var(--md-sys-color-on-primary-container);
+}
+
+.xb-thumb-meta {
+	background-color: rgba(18, 15, 19, .72);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-full);
+}
+
+/* --------------------------------------------------------------------------
+   Menus — M3 dropdown menu
+   -------------------------------------------------------------------------- */
+.dropdown-menu,
+.well-filters .dropdown-menu,
+.xb-search-type-dropdown,
+.user-actions .dropdown-menu,
+.video-actions .dropdown-menu,
+.comments-section .dropdown-menu,
+.top-menu .dropdown-menu-right {
+	background-color: var(--md-sys-color-surface-container);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-extra-small);
+	box-shadow: var(--md-sys-elevation-level2);
+	padding: 8px 0;
+}
+
+.dropdown-item,
+.well-filters .dropdown-menu a {
+	padding: 10px 16px;
+	font-size: 14px;
+	font-weight: 400;
+	line-height: 20px;
+	color: var(--md-sys-color-on-surface-variant);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus,
+.dropdown-item.active,
+.well-filters .dropdown-menu a:hover {
+	background-color: var(--md-sys-state-hover);
+	color: var(--md-sys-color-on-surface);
+}
+
+.well-filters .dropdown-menu a {
+	padding: 10px 16px;
+}
+
+.dropdown-divider {
+	border-top-color: var(--md-sys-color-outline-variant);
+}
+
+/* Filtros (videos) — M3 filter chip */
+.well-filters .well-action {
+	display: inline-block;
+	margin: 4px 8px 4px 0;
+	padding: 6px 16px;
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-full);
+	background: transparent;
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 22px;
+	box-shadow: none;
+	transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.well-filters .well-action:hover {
+	background-color: var(--md-sys-color-surface-container-high);
+	color: var(--md-sys-color-on-surface);
+}
+
+.well-filters .well-action.active {
+	background-color: var(--md-sys-color-primary-container);
+	border-color: var(--md-sys-color-primary-container);
+	color: var(--md-sys-color-on-primary-container);
+}
+
+.well-filters .well-action .sw-left,
+.well-filters .well-action .sw-right {
+	border: none;
+	background: transparent;
+	border-radius: 0;
+	padding: 0;
+	margin: 0;
+	box-shadow: none;
+}
+
+.well-filters .well-action.active .sw-left,
+.well-filters .well-action.active .sw-right {
+	border: none;
+}
+
+/* --------------------------------------------------------------------------
+   Página: filters/well
+   -------------------------------------------------------------------------- */
+.well-filters h1 {
+	font-size: 24px;
+	font-weight: 600;
+	line-height: 32px;
+	padding: 10px 0;
+	color: var(--md-sys-color-on-surface);
+}
+
+.well-info {
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 14px;
+	margin: 6px 0 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Dialogs — M3 (shape extra-large, surface-container-high)
+   -------------------------------------------------------------------------- */
+.modal-content {
+	background-color: var(--md-sys-color-surface-container-high);
+	border: none;
+	border-radius: var(--md-sys-shape-corner-extra-large);
+	box-shadow: var(--md-sys-elevation-level3);
+}
+
+.modal-header {
+	border-bottom: none;
+	padding: 24px 24px 4px;
+}
+
+.modal-title {
+	color: var(--md-sys-color-on-surface);
+	font-size: 22px;
+	font-weight: 400;
+	line-height: 28px;
+}
+
+.modal-body {
+	padding: 16px 24px;
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 14px;
+}
+
+.modal-footer {
+	border-top: none;
+	padding: 8px 24px 24px;
+	justify-content: flex-end;
+}
+
+.modal-footer .btn + .btn {
+	margin-left: 8px;
+}
+
+.modal .close {
+	opacity: 1;
+	width: 32px;
+	height: 32px;
+	line-height: 32px;
+	text-align: center;
+	border-radius: 50%;
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 20px;
+	text-shadow: none;
+}
+
+.modal .close:hover,
+.modal .close:focus {
+	background-color: var(--md-sys-state-hover);
+	color: var(--md-sys-color-on-surface);
+}
+
+/* --------------------------------------------------------------------------
+   Snackbar / alertas
+   -------------------------------------------------------------------------- */
+#alerts_bottom .alert {
+	border-radius: var(--md-sys-shape-corner-extra-small);
+	box-shadow: var(--md-sys-elevation-level3);
+	font-size: 14px;
+}
+
+#alerts_bottom .alert-success {
+	background-color: var(--md-sys-color-success-container);
+	color: var(--md-sys-color-on-success-container);
+}
+
+#alerts_bottom .alert-danger {
+	background-color: var(--md-sys-color-error-container);
+	color: var(--md-sys-color-on-error-container);
+}
+
+.alert a {
+	color: var(--md-sys-color-on-primary-container);
+}
+
+/* --------------------------------------------------------------------------
+   Paginação — M3 (pills circulares)
+   -------------------------------------------------------------------------- */
+.pagination {
+	margin-top: 20px;
+}
+
+.page-item .page-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	min-width: 40px;
+	margin: 0 2px;
+	border: none;
+	border-radius: var(--md-sys-shape-corner-full);
+	background-color: transparent;
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 14px;
+	font-weight: 500;
+	box-shadow: none;
+}
+
+.page-link:hover {
+	background-color: var(--md-sys-color-surface-container-high);
+	color: var(--md-sys-color-on-surface);
+}
+
+.page-item.active .page-link,
+.page-item.active .page-link:hover {
+	background-color: var(--md-sys-color-primary-container);
+	border-color: var(--md-sys-color-primary-container);
+	color: var(--md-sys-color-on-primary-container);
+}
+
+.page-item.disabled .page-link {
+	background-color: transparent;
+	color: var(--md-sys-color-outline);
+}
+
+/* --------------------------------------------------------------------------
+   Tabs — M3 primary tabs
+   -------------------------------------------------------------------------- */
+.nav-tabs {
+	border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.nav-tabs .nav-link {
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 14px;
+	font-weight: 500;
+	padding: 12px 16px;
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+	background-color: var(--md-sys-color-surface-container-high);
+	border: none;
+	color: var(--md-sys-color-on-surface);
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+	background-color: transparent;
+	border: none;
+	border-bottom: 3px solid var(--md-sys-color-primary);
+	color: var(--md-sys-color-primary);
+}
+
+#commentsMediaModal .nav-tabs .nav-link.active,
+#commentsMediaModal .nav-tabs .nav-item.show .nav-link {
+	background-color: transparent;
+	border: none;
+	border-bottom: 3px solid var(--md-sys-color-primary);
+	color: var(--md-sys-color-primary);
+}
+
+.profile-menu .nav-tabs {
+	border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.profile-menu .nav-tabs .nav-link.active,
+.profile-menu .nav-tabs .nav-item.show .nav-link {
+	background-color: transparent;
+	border: none;
+	border-bottom: 3px solid var(--md-sys-color-primary);
+	color: var(--md-sys-color-primary);
+}
+
+.profile-menu .nav-tabs .nav-link:hover,
+.profile-menu .nav-tabs .nav-link:focus {
+	background-color: var(--md-sys-color-surface-container-high);
+	border: none;
+	color: var(--md-sys-color-on-surface);
+}
+
+/* --------------------------------------------------------------------------
+   Progress — M3 linear indicator
+   -------------------------------------------------------------------------- */
+.progress {
+	height: 4px;
+	background-color: var(--md-sys-color-surface-container-highest);
+	border-radius: var(--md-sys-shape-corner-full);
+}
+
+.progress-bar {
+	background-color: var(--md-sys-color-primary);
+}
+
+/* --------------------------------------------------------------------------
+   Tabelas
+   -------------------------------------------------------------------------- */
+.table-dark {
+	background-color: var(--md-sys-color-surface-container-low) !important;
+	color: var(--md-sys-color-on-surface);
+	border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.table-dark td,
+.table-dark th,
+.table-dark thead th {
+	border-color: var(--md-sys-color-outline-variant) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Avatares — M3 round + raio de imagem
+   -------------------------------------------------------------------------- */
+.small-avatar,
+.medium-avatar,
+.comments-section .comment-user img,
+.comments-list .comment-user a img {
+	border-radius: 50% !important;
+	object-fit: cover;
+}
+
+.user-avatar {
+	border-radius: var(--md-sys-shape-corner-medium);
+}
+
+/* --------------------------------------------------------------------------
+   Seções (home) — headline M3
+   -------------------------------------------------------------------------- */
+.xb-section {
+	margin: 28px 0 14px;
+}
+
+.xb-section h2 {
+	font-size: 20px;
+	font-weight: 600;
+	letter-spacing: .1px;
+	text-transform: none;
+	background: none;
+	-webkit-text-fill-color: var(--md-sys-color-on-surface);
+	background-clip: border-box;
+}
+
+.xb-section h2 i {
+	color: var(--xb-accent);
+	-webkit-text-fill-color: var(--xb-accent);
+}
+
+.xb-section .xb-section-bar {
+	width: 4px;
+	height: 22px;
+	border-radius: var(--md-sys-shape-corner-extra-small);
+	background: linear-gradient(180deg, var(--xb-accent), var(--xb-accent-d));
+	box-shadow: 0 0 10px rgba(255, 20, 147, .4);
+}
+
+.xb-section .xb-section-link,
+.content-row a,
+.content-row a:focus {
+	color: var(--md-sys-color-primary);
+}
+
+.xb-creator .xb-badge {
+	background: var(--md-sys-color-primary-container);
+	color: var(--md-sys-color-on-primary-container);
+}
+
+/* --------------------------------------------------------------------------
+   Footer
+   -------------------------------------------------------------------------- */
+.footer-container {
+	background-color: var(--md-sys-color-surface-container-low);
+	border-top: 1px solid var(--md-sys-color-outline-variant);
+	margin-top: 32px;
+}
+
+.footer-links {
+	padding: 32px 0 20px;
+}
+
+.footer-links h4 {
+	color: var(--md-sys-color-on-surface);
+	font-family: var(--md-sys-font);
+	font-size: 14px;
+	font-weight: 500;
+	letter-spacing: .25px;
+	text-transform: none;
+	margin-bottom: 14px;
+}
+
+.footer-links li a {
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 14px;
+	line-height: 2.2;
+}
+
+.footer-links li a:hover {
+	color: var(--md-sys-color-primary);
+}
+
+.footer {
+	background-color: var(--md-sys-color-surface-container);
+	color: var(--md-sys-color-outline);
+	border-top: 1px solid var(--md-sys-color-outline-variant);
+	font-size: 13px;
+}
+
+.footer .text-highlighted {
+	color: var(--md-sys-color-primary) !important;
+}
+
+/* Barra inferior mobile — M3 bottom navigation */
+.xb-mobnav {
+	background-color: var(--md-sys-color-surface-container) !important;
+	border-top: 1px solid var(--md-sys-color-outline-variant) !important;
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	box-shadow: var(--md-sys-elevation-level2);
+}
+
+.xb-mobnav a {
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 11px;
+}
+
+.xb-mobnav a i {
+	font-size: 20px;
+}
+
+.xb-mobnav a.active,
+.xb-mobnav a:hover {
+	color: var(--md-sys-color-primary);
+}
+
+/* --------------------------------------------------------------------------
+   Autocomplete (easy-autocomplete) — M3 menu
+   -------------------------------------------------------------------------- */
+.easy-autocomplete-container ul {
+	background-color: var(--md-sys-color-surface-container);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-extra-small);
+	box-shadow: var(--md-sys-elevation-level2);
+}
+
+.easy-autocomplete-container ul li {
+	color: var(--md-sys-color-on-surface-variant);
+	border-color: transparent;
+}
+
+.easy-autocomplete-container ul li b {
+	color: var(--md-sys-color-on-surface);
+	font-weight: 500;
+}
+
+.easy-autocomplete-container ul li.selected {
+	background-color: var(--md-sys-color-surface-container-high);
+}
+
+/* --------------------------------------------------------------------------
+   Ripple (md3-ripple.js)
+   -------------------------------------------------------------------------- */
+.md3-ripple {
+	position: absolute;
+	border-radius: 50%;
+	background-color: currentColor;
+	opacity: .38;
+	transform: scale(0);
+	pointer-events: none;
+	z-index: 0;
+	animation: md3-ripple-in 600ms ease-out forwards;
+}
+
+@keyframes md3-ripple-in {
+	to {
+		transform: scale(1);
+		opacity: 0;
+	}
+}

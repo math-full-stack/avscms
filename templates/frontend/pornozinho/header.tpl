@@ -98,6 +98,13 @@
 	<link href="{$relative_tpl}/css/style.css" rel="stylesheet">
 	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.1" rel="stylesheet">
 	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+
+	<!-- Material Design 3 -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.0" rel="stylesheet">
 	
 	<!-- Video Player -->
 	{if $view && !$video.embed_code}

@@ -73,6 +73,7 @@
     <script type="text/javascript" src="{$relative_tpl}/js/jquery.rotator.js"></script>
     <script type="text/javascript" src="{$relative_tpl}/js/jquery.main.js"></script>	
     <script type="text/javascript" src="{$relative_tpl}/js/jquery.easy-autocomplete.min.js"></script>
+    <script type="text/javascript" src="{$relative_tpl}/js/md3-ripple.js"></script>
 <script>
 	{literal}
 		$(document).ready(function() {

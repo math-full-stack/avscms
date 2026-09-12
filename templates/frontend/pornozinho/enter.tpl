@@ -25,6 +25,12 @@
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">	
 	<link href="{$relative_tpl}/css/style.css" rel="stylesheet">
 	<link href="{$relative_tpl}/css/enter.css" rel="stylesheet">	
+
+	<!-- Material Design 3 -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.0" rel="stylesheet">	
 	
 </head>
 <body>
@@ -59,6 +65,7 @@
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="{$relative_tpl}/js/bootstrap.min.js"></script>
+	<script src="{$relative_tpl}/js/md3-ripple.js"></script>
 	<script>
 	{literal}
 			if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
