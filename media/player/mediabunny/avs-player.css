@@ -506,7 +506,7 @@
 
 .avs-player .avs-settings-title .material-symbols-rounded {
     font-size: 18px;
-    color: var(--md-sys-color-primary, var(--avs-accent));
+    color: var(--md-sys-color-primary, #FFB1C9);
 }
 
 /* Abas — M3 primary tabs */
