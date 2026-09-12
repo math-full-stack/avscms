@@ -653,7 +653,7 @@ CREATE TABLE `photo_rating_ip` (
 CREATE TABLE `player` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `profile` varchar(255) NOT NULL DEFAULT '',
-  `engine` enum('videojs','mediabunny') NOT NULL DEFAULT 'videojs',
+  `engine` enum('videojs','mediabunny','vidstack') NOT NULL DEFAULT 'videojs',
   `autoplay` enum('0','1') NOT NULL DEFAULT '0',
   `start_muted` enum('0','1') NOT NULL DEFAULT '1',
   `quick_controls` enum('0','1') NOT NULL DEFAULT '1',
