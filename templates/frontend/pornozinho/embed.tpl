@@ -93,6 +93,8 @@ var vitem = "{$vitem}";
 		</script>	
 		{if $player.engine == 'mediabunny'}
 			{include file='video_mbplayer.tpl'}
+		{elseif $player.engine == 'vidstack'}
+			{include file='video_vsplayer.tpl'}
 		{else}
 		<video id="video" class="video-js vjs-16-9 vjs-big-play-centered vjs-sublime-skin" preload="auto" controls="true" playsinline webkit-playsinline poster="{insert name=thumb_path vid=$video.VID}/default.jpg" data-setup='{
 		  "autoplay": {if $player.autoplay}true{else}false{/if}{if $vast_vpaid && $player.vast_vpaid_adv},
@@ -111,7 +113,7 @@ var vitem = "{$vitem}";
 	</div>
 	{/if}
 {/if}
-{if $player.engine == 'mediabunny'}
+{if $player.engine == 'mediabunny' || $player.engine == 'vidstack'}
 <script type="text/javascript" src="{$relative_tpl}/js/decrypt.min.js?ver=1.0.35"></script>
 {else}
 <script type="text/javascript" src="{$relative_tpl}/js/player.js?ver=1.0.35"></script>

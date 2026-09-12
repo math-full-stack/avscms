@@ -6,6 +6,8 @@
 <div class="video-container{if $player.engine == 'mediabunny'} video-container-mb{/if}">
 	{if $player.engine == 'mediabunny'}
 		{include file='video_mbplayer.tpl'}
+	{elseif $player.engine == 'vidstack'}
+		{include file='video_vsplayer.tpl'}
 	{else}
 		<video id="video" class="video-js {if $vertical}vjs-fluid{else}vjs-16-9{/if} vjs-big-play-centered vjs-sublime-skin" preload="auto" controls="true" playsinline webkit-playsinline {if $player.start_muted == '1'}muted{/if} poster="{insert name=thumb_path vid=$video.VID}/default.jpg" data-setup='{
 		  "autoplay": {if $smarty.get.autoplay == '1'}true{elseif $player.autoplay}true{else}false{/if}{if $vast_vpaid && $player.vast_vpaid_adv},

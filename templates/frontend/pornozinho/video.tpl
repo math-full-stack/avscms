@@ -784,7 +784,7 @@ $( document ).ready(function() {
 		</div>			
 	{/if}		
 </div>
-{if $player.engine == 'mediabunny'}
+{if $player.engine == 'mediabunny' || $player.engine == 'vidstack'}
 <script type="text/javascript" src="{$relative_tpl}/js/decrypt.min.js?ver=1.0.35"></script>
 {else}
 <script type="text/javascript" src="{$relative_tpl}/js/player.js?ver=1.0.35"></script>

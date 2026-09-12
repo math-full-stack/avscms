@@ -352,7 +352,7 @@
 		});
 	{/literal}
 </script>
-	{if $view && !$video.embed_code && $player.engine != 'mediabunny'}
+	{if $view && !$video.embed_code && $player.engine != 'mediabunny' && $player.engine != 'vidstack'}
 		<script src="{$baseurl}/media/player/videojs/video-js-events.js?ver=1.1.1"></script>			
 	{/if}
 	{if $g_signin == '1' || $fb_signin == '1'}

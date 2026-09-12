@@ -28,8 +28,9 @@
 												<select id="engine" name="engine" style="width:100%">
 													<option value="videojs"{if $player.engine == 'videojs' || $player.engine == ''} selected{/if}>Video.js (default)</option>
 													<option value="mediabunny"{if $player.engine == 'mediabunny'} selected{/if}>Media Bunny</option>
+													<option value="vidstack"{if $player.engine == 'vidstack'} selected{/if}>Vidstack</option>
 												</select>
-												<span class="help">Media Bunny requires a modern browser (WebCodecs). For GCS servers the videos are served via short-lived signed URLs and the bucket must be private with CORS enabled.</span>
+												<span class="help">Media Bunny requires a modern browser (WebCodecs). For GCS servers the videos are served via short-lived signed URLs and the bucket must be private with CORS enabled. Vidstack uses the web components player (CDN) with plain playback URLs.</span>
 											</div>
 											<div class="clearfix"></div>
 										</div>
