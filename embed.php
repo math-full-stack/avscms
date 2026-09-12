@@ -37,9 +37,10 @@ if ($video['embed_code'] == '') {
 	$player = $player['0'];
 
 	$secret = '';
-	if ($player['engine'] == 'mediabunny') {
-		// Media Bunny: plain (signed/expiring) URLs — the security comes from
-		// the V4 signature + TTL, not from client-side obfuscation.
+	if ($player['engine'] == 'mediabunny' || $player['engine'] == 'vidstack') {
+		// Media Bunny / Vidstack: plain (signed/expiring or proxied) URLs — the
+		// security comes from the V4 signature + TTL / same-origin proxy, not
+		// from client-side obfuscation.
 		$sources = get_video_sources($video);
 	} else {
 		// Video.js: keep the legacy AES obfuscation layer (decrypt.min.js)

@@ -25,7 +25,9 @@
 		'.tag',
 		'.xb-cat-card',
 		'.thumb-overlay',
-		'.xb-covers-item a'
+		'.xb-covers-item a',
+		'.avs-settings-tab',
+		'.avs-settings-item'
 	].join(', ');
 
 	var isDisabled = function (el) {

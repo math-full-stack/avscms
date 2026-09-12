@@ -96,7 +96,7 @@
 	<link rel="stylesheet" href="{$relative_tpl}/css/easy-autocomplete.themes.min.css">	
 	
 	<link href="{$relative_tpl}/css/style.css" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.1" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.2" rel="stylesheet">
 	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
 	<!-- Material Design 3 -->
@@ -145,6 +145,44 @@
 	
 </head>
 <body>
+
+<div class="xb-agegate" id="xbAgeGate">
+	<div class="xb-agegate-card">
+		<div class="xb-agegate-badge">18<span style="font-size:12px">+</span></div>
+		<h1 class="xb-agegate-title">Aviso de conteúdo adulto</h1>
+		<p class="xb-agegate-text">Este site contém conteúdo adulto e é destinado exclusivamente a maiores de 18 anos. Ao continuar, você confirma que é maior de idade e que o acesso a este tipo de material é permitido na sua região.<br><br>Caso contrário, saia imediatamente.</p>
+		<button type="button" class="xb-agegate-btn xb-agegate-btn-enter" id="xbAgeGateEnter">Tenho mais de 18 anos — Entrar</button>
+		<button type="button" class="xb-agegate-btn xb-agegate-btn-leave" id="xbAgeGateLeave">Não tenho 18 anos — Sair</button>
+	</div>
+</div>
+
+<script>
+{literal}
+(function() {
+	var gate = document.getElementById('xbAgeGate');
+	if (!gate) return;
+	var ok = false;
+	try {
+		ok = window.localStorage.getItem('avs_age18') === '1';
+	} catch (e) {}
+	if (ok) {
+		gate.classList.add('hidden');
+		return;
+	}
+	document.body.classList.add('xb-agegate-lock');
+	document.getElementById('xbAgeGateEnter').addEventListener('click', function() {
+		try {
+			window.localStorage.setItem('avs_age18', '1');
+		} catch (e) {}
+		gate.classList.add('hidden');
+		document.body.classList.remove('xb-agegate-lock');
+	});
+	document.getElementById('xbAgeGateLeave').addEventListener('click', function() {
+		window.location.href = 'https://www.google.com';
+	});
+})();
+{/literal}
+</script>
 
 <div class="modal fade in" id="login-modal">
 	<div class="modal-dialog login-modal">

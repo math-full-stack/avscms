@@ -87,9 +87,11 @@ import {
     const canvas = player.querySelector('canvas');
     const posterImg = player.querySelector('.avs-poster');
     const errorBox = player.querySelector('.avs-error');
-    const playBtn = player.querySelector('[data-action="play"]');
+    const playBtn = player.querySelector('.avs-controls-row [data-action="play"]');
     const muteBtn = player.querySelector('[data-action="volume"]');
     const fullBtn = player.querySelector('[data-action="fullscreen"]');
+    const settingsBtn = player.querySelector('[data-action="settings"]');
+    const volumeSlider = player.querySelector('.avs-volume-slider');
     const seekBar = player.querySelector('.avs-seek');
     const controlsBar = player.querySelector('.avs-controls');
     const seekFill = player.querySelector('.avs-seek-fill');
@@ -97,11 +99,23 @@ import {
     const currentEl = player.querySelector('.avs-current');
     const durationEl = player.querySelector('.avs-duration');
     const qualitySel = player.querySelector('.avs-quality');
+    const settingsPanel = player.querySelector('.avs-settings');
+    const centerEl = player.querySelector('.avs-center');
+    const centerToggle = player.querySelector('.avs-center-toggle');
+    const centerRw = player.querySelector('.avs-center-rw');
+    const centerFw = player.querySelector('.avs-center-fw');
+
+    // Troca o ícone de um botão que envolve <svg><use>, apontando o <use>
+    // para outro <symbol> do sprite.
+    const setIcon = (el, id) => {
+        if (!el) return;
+        const use = el.querySelector('use');
+        if (use) use.setAttribute('href', '#' + id);
+    };
 
     const context2d = canvas.getContext('2d');
     const autoplay = player.dataset.autoplay === '1';
     const startMuted = (typeof window.player_start_muted !== 'undefined') ? window.player_start_muted === '1' : true;
-    const quickControls = (typeof window.player_quick_controls !== 'undefined') ? window.player_quick_controls === '1' : true;
     const poster = player.dataset.poster || '';
     if (poster) {
         posterImg.src = poster;
@@ -176,7 +190,7 @@ import {
         player.insertBefore(fallbackVideo, player.firstChild);
         posterImg.style.display = 'none';
         player.classList.add('avs-fallback');
-        muteBtn.textContent = startMuted ? '🔇' : '🔊';
+        setIcon(muteBtn, startMuted ? 'avs-i-vol-mute' : 'avs-i-vol-high');
         setupFallbackControls();
         markPlaybackReady();
         return fallbackVideo;
@@ -250,10 +264,15 @@ import {
             player.classList.add('avs-playing');
             hidePauseAd();
             updatePlayIcon(true);
+            hideCenter();
+            cancelIdle();
+            armIdle();
         });
         fb.addEventListener('pause', () => {
             player.classList.remove('avs-playing');
             updatePlayIcon(false);
+            if (!seeking) showCenter();
+            cancelIdle();
             // Pause ad parity: only on a real user pause past 1s, never while
             // seeking or at the very end of the video.
             if (!seeking && fb.currentTime > 1 && fb.currentTime < (fb.duration || Infinity) - 0.5) {
@@ -363,7 +382,11 @@ import {
     const syncQualitySel = (src) => {
         if (!qualitySel) return;
         const idx = sources.indexOf(src);
-        if (idx >= 0) qualitySel.value = String(idx);
+        if (idx >= 0) {
+            qualitySel.value = String(idx);
+            if (automaticQuality) markAutoQuality();
+            else markQuality(idx);
+        }
     };
 
     const initMediaPlayer = async (source) => {
@@ -656,6 +679,9 @@ import {
         posterImg.style.display = 'none';
         player.classList.add('avs-playing');
         updatePlayIcon(true);
+        hideCenter();
+        cancelIdle();
+        armIdle();
     };
 
     const pause = () => {
@@ -667,6 +693,8 @@ import {
         queuedAudioNodes.clear();
         player.classList.remove('avs-playing');
         updatePlayIcon(false);
+        if (!seeking) showCenter();
+        cancelIdle();
         // Pause ad (parity with video-js-events.js): only on a real user pause
         // past 1s, never while seeking or at the very end of the video.
         if (!seeking && getPlaybackTime() > 1 && getPlaybackTime() < endTimestamp - 0.5) {
@@ -716,13 +744,19 @@ import {
         if (fallbackVideo) {
             fallbackVideo.muted = volumeMuted;
             fallbackVideo.volume = Math.max(0, Math.min(1, volume));
-            const actual = volumeMuted ? 0 : volume;
-            muteBtn.textContent = actual === 0 ? '🔇' : (actual < 0.5 ? '🔉' : '🔊');
-            return;
         }
         const actual = volumeMuted ? 0 : volume;
         if (gainNode) gainNode.gain.value = actual * actual;
-        muteBtn.textContent = actual === 0 ? '🔇' : (actual < 0.5 ? '🔉' : '🔊');
+        updateVolumeUi();
+    };
+
+    // Atualiza o slider e o ícone de volume. Separada para ser chamada de
+    // outros pontos (updateVolume, slider input, teclado) sem re-aplicar o
+    // ganho de áudio.
+    const updateVolumeUi = () => {
+        if (volumeSlider) volumeSlider.value = String(Math.round(volume * 100));
+        const actual = volumeMuted ? 0 : volume;
+        setIcon(muteBtn, actual === 0 ? 'avs-i-vol-mute' : (actual < 0.5 ? 'avs-i-vol-low' : 'avs-i-vol-high'));
     };
 
     // Play/seek disparados por gesto do usuário tocam COM SOM: desmuda quando o
@@ -736,13 +770,16 @@ import {
     };
 
     const updatePlayIcon = (isPlaying) => {
-        playBtn.textContent = isPlaying ? '⏸' : '▶';
+        setIcon(playBtn, isPlaying ? 'avs-i-pause' : 'avs-i-play');
+        setIcon(centerToggle, isPlaying ? 'avs-i-pause' : 'avs-i-play');
     };
 
     const renderTime = (seconds) => {
         currentEl.textContent = formatSeconds(seconds);
         const range = (endTimestamp - firstTimestamp) || 1;
-        seekFill.style.width = `${Math.max(0, Math.min(100, ((seconds - firstTimestamp) / range) * 100))}%`;
+        const pct = Math.max(0, Math.min(100, ((seconds - firstTimestamp) / range) * 100));
+        seekFill.style.width = `${pct}%`;
+        if (seekBar) seekBar.setAttribute('aria-valuenow', String(Math.round(pct)));
     };
 
     const renderBuffer = () => {
@@ -811,19 +848,31 @@ import {
         });
     }
     muteBtn.addEventListener('click', () => { muteTouched = true; volumeMuted = !volumeMuted; updateVolume(); });
-    fullBtn.addEventListener('click', () => {
+    const toggleFullscreen = () => {
         if (document.fullscreenElement) {
             void document.exitFullscreen();
         } else {
             player.requestFullscreen().catch(() => {});
         }
+    };
+    fullBtn.addEventListener('click', toggleFullscreen);
+    // Duplo clique = fullscreen (YouTube). O clique do player suprime o toggle
+    // de play quando vem logo atrás de outro (parte de um dblclick), senão o
+    // dblclick pausaria o vídeo por engano.
+    let lastPlayerClick = 0;
+    player.addEventListener('dblclick', (e) => {
+        if (e.target.closest('.avs-controls, .avs-settings, .avs-center, .avs-ad, .avs-pause-ad, #autoplay-overlay, .avs-error')) return;
+        toggleFullscreen();
     });
     player.addEventListener('click', (e) => {
         // Clicks on the control bar or on any overlay (VAST ad, pause ad,
-        // autoplay-next, logo, big play) must NOT toggle the content — their own
-        // handlers deal with them (avoids a double-toggle that would pause
-        // playback right after resume/skip).
-        if (e.target.closest('.avs-controls, .avs-ad, .avs-pause-ad, .avs-logo, #autoplay-overlay, .avs-error, .avs-quick-controls, .avs-big-play')) return;
+        // autoplay-next, logo, big play, settings, volume, center overlay) must
+        // NOT toggle the content — their own handlers deal with them (avoids a
+        // double-toggle that would pause playback right after resume/skip).
+        if (e.target.closest('.avs-controls, .avs-ad, .avs-pause-ad, .avs-logo, #autoplay-overlay, .avs-error, .avs-big-play, .avs-settings, .avs-volume-wrap, .avs-center')) return;
+        const now = Date.now();
+        if (now - lastPlayerClick < 350) { lastPlayerClick = now; return; }
+        lastPlayerClick = now;
         togglePlay();
     });
 
@@ -847,7 +896,6 @@ import {
 
     // Quality selector
     if (sources.length > 1) {
-        qualitySel.style.display = '';
         sources.forEach((s, i) => {
             const opt = document.createElement('option');
             opt.value = i;
@@ -890,34 +938,59 @@ import {
     // Keyboard shortcuts (space/k, arrows, m, f)
     window.addEventListener('keydown', (e) => {
         if (!fileLoaded && !fallbackVideo) return;
-        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA')) return;
-        if (e.code === 'Space' || e.code === 'KeyK') {
-            togglePlay();
-        } else if (e.code === 'ArrowLeft') {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON')) return;
+        const code = e.code;
+        const seek = (delta) => {
             if (fallbackVideo) {
-                fallbackVideo.currentTime = Math.max(0, fallbackVideo.currentTime - 5);
+                fallbackVideo.currentTime = Math.max(0, Math.min(fallbackVideo.duration || 0, fallbackVideo.currentTime + delta));
             } else {
-                void seekToTime(getPlaybackTime() - 5);
+                void seekToTime(getPlaybackTime() + delta);
             }
-        } else if (e.code === 'ArrowRight') {
-            if (fallbackVideo) {
-                fallbackVideo.currentTime = Math.min(fallbackVideo.duration || 0, fallbackVideo.currentTime + 5);
-            } else {
-                void seekToTime(getPlaybackTime() + 5);
-            }
-        } else if (e.code === 'KeyM') {
-            volumeMuted = !volumeMuted;
+            flashCenter();
+        };
+        const changeVolume = (delta) => {
+            volumeMuted = false;
+            volume = Math.max(0, Math.min(1, volume + delta));
             updateVolume();
-        } else if (e.code === 'KeyF') {
-            fullBtn.click();
-        } else {
-            return;
+        };
+        let handled = false;
+        if (code === 'Space' || code === 'KeyK') {
+            togglePlay(); handled = true;
+        } else if (code === 'KeyJ') {
+            seek(-10); handled = true;
+        } else if (code === 'KeyL') {
+            seek(10); handled = true;
+        } else if (code === 'ArrowLeft') {
+            seek(-5); handled = true;
+        } else if (code === 'ArrowRight') {
+            seek(5); handled = true;
+        } else if (code === 'ArrowUp') {
+            changeVolume(0.1); handled = true;
+        } else if (code === 'ArrowDown') {
+            changeVolume(-0.1); handled = true;
+        } else if (code === 'KeyM') {
+            volumeMuted = !volumeMuted;
+            updateVolume(); handled = true;
+        } else if (code === 'KeyF') {
+            toggleFullscreen(); handled = true;
+        } else if (code === 'Home') {
+            seek(-getPlaybackTime()); handled = true;
+        } else if (code === 'End') {
+            seek(endTimestamp - getPlaybackTime()); handled = true;
+        } else if (code === 'Escape') {
+            closeSettings();
+            hideCenter(); handled = true;
+        } else if (/^Digit[0-9]$/.test(code)) {
+            const pct = parseInt(code.slice(5), 10) / 10;
+            seek((endTimestamp * pct) - getPlaybackTime()); handled = true;
         }
+        if (!handled) return;
         e.preventDefault();
     });
 
     // ------------------------------------------------------------------
-    // 8.1 Quick controls card (play / speed / +5s) in the bottom-right corner
+    // 8.1 Playback helpers (velocidade / seek) — usados pelo menu de
+    //     configurações, teclado e overlay central.
     // ------------------------------------------------------------------
     const applyFallbackRate = (rate) => {
         if (fallbackVideo) fallbackVideo.playbackRate = rate;
@@ -926,6 +999,7 @@ import {
     const applyRate = (rate) => {
         playbackRate = rate;
         applyFallbackRate(rate);
+        markSpeed(rate);
         // Re-sync the audio pipeline when the rate changes mid-playback
         if (playing && !fallbackVideo && audioSink) {
             if (audioBufferIterator) audioBufferIterator.return();
@@ -945,43 +1019,241 @@ import {
         void seekToTime(getPlaybackTime() + delta);
     };
 
-    let quickControlsEl = null;
-    if (quickControls) {
-        quickControlsEl = document.createElement('div');
-        quickControlsEl.className = 'avs-quick-controls';
-        quickControlsEl.innerHTML =
-            '<button type="button" class="avs-qc-btn avs-qc-speed" title="Playback speed">1x</button>' +
-            '<button type="button" class="avs-qc-btn avs-qc-back" title="-5 seconds">-5</button>' +
-            '<button type="button" class="avs-qc-btn avs-qc-forward" title="+5 seconds">+5</button>';
-        player.appendChild(quickControlsEl);
+    // ------------------------------------------------------------------
+    // 8.2 YouTube-style overlays: volume slider, settings menu, center
+    //     overlay (pausa / seek), idle auto-hide, dblclick fullscreen
+    // ------------------------------------------------------------------
+    const adBreakActive = () => player.classList.contains('avs-ad-playing');
 
-        const qcSpeed = quickControlsEl.querySelector('.avs-qc-speed');
-        const qcBack = quickControlsEl.querySelector('.avs-qc-back');
-        const qcFwd = quickControlsEl.querySelector('.avs-qc-forward');
+    // Center overlay [‹10][play][10›] — aparece na pausa e por um instante
+    // quando o usuário busca pelo teclado.
+    let centerFlashTimer = null;
+    const canShowCenter = () => !adBreakActive() && fileLoaded && !endedFired
+        && getPlaybackTime() < (endTimestamp - 0.1);
+    const showCenter = () => {
+        if (!canShowCenter()) return hideCenter();
+        player.classList.add('avs-center-visible');
+    };
+    const hideCenter = () => {
+        clearTimeout(centerFlashTimer);
+        player.classList.remove('avs-center-visible');
+    };
+    const flashCenter = () => {
+        if (!canShowCenter()) return;
+        player.classList.add('avs-center-visible');
+        clearTimeout(centerFlashTimer);
+        centerFlashTimer = setTimeout(hideCenter, 600);
+    };
+    if (centerToggle) {
+        centerToggle.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); togglePlay(); });
+        centerRw.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); seekBy(-10); flashCenter(); });
+        centerFw.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); seekBy(10); flashCenter(); });
+    }
 
-        const qcSpeeds = [1, 1.25, 1.5, 2, 0.75, 0.5];
-        let qcSpeedIndex = 0;
-
-        qcSpeed.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            qcSpeedIndex = (qcSpeedIndex + 1) % qcSpeeds.length;
-            applyRate(qcSpeeds[qcSpeedIndex]);
-            qcSpeed.textContent = qcSpeeds[qcSpeedIndex] + 'x';
-        });
-
-        qcBack.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            seekBy(-5);
-        });
-
-        qcFwd.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            seekBy(5);
+    // Idle auto-hide (só desktop com hover): esconde controles e cursor
+    // enquanto toca, reaparece ao mexer o mouse.
+    const idleSupported = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+    let idleTimer = null;
+    const cancelIdle = () => {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+        player.classList.remove('avs-idle');
+    };
+    const armIdle = () => {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            if (playing && settingsPanel && !settingsPanel.classList.contains('avs-settings-open')) {
+                player.classList.add('avs-idle');
+            }
+        }, 3000);
+    };
+    if (idleSupported) {
+        player.addEventListener('mousemove', () => {
+            if (!playing) return;
+            cancelIdle();
+            armIdle();
         });
     }
+
+    // Volume slider (YouTube-style)
+    if (volumeSlider) {
+        volumeSlider.addEventListener('input', () => {
+            volumeMuted = false;
+            volume = Math.max(0, Math.min(1, (parseInt(volumeSlider.value, 10) || 0) / 100));
+            updateVolume();
+        });
+    }
+
+    // Settings menu (velocidade + qualidade). O <select> nativo permanece
+    // oculto como driver: seus itens gravam nele e disparam change — o resto
+    // do pipeline de troca de resolução fica intacto.
+    const RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
+    // Qualidade "Automática": acompanha a preferência do usuário
+    // (player_resolution) e a troca automática de rendição por arquivo
+    // corrompido no startPlayer.
+    let automaticQuality = true;
+
+    const qualityName = (s, i) => (s.res ? s.res + 'p' : (s.label || 'Qualidade ' + (i + 1)));
+
+    const buildSettingsItem = (label, value, onClick, sub) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'avs-settings-item';
+        btn.dataset.value = String(value);
+
+        const text = document.createElement('span');
+        text.className = 'avs-settings-item-text';
+        text.textContent = label;
+        if (sub) {
+            const subEl = document.createElement('span');
+            subEl.className = 'avs-settings-item-sub';
+            subEl.textContent = sub;
+            text.appendChild(subEl);
+        }
+        btn.appendChild(text);
+
+        const check = document.createElement('span');
+        check.className = 'material-symbols-rounded avs-settings-check';
+        check.setAttribute('aria-hidden', 'true');
+        check.textContent = 'check';
+        btn.appendChild(check);
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClick();
+        });
+        return btn;
+    };
+
+    const markSpeed = (rate) => {
+        if (!settingsPanel) return;
+        settingsPanel.querySelectorAll('[data-settings-group="speed"] .avs-settings-item').forEach((el) => {
+            el.classList.toggle('avs-settings-active', parseFloat(el.dataset.value) === rate);
+        });
+    };
+
+    const markQuality = (idx) => {
+        if (!settingsPanel) return;
+        settingsPanel.querySelectorAll('[data-settings-group="quality"] .avs-settings-item').forEach((el) => {
+            el.classList.toggle('avs-settings-active', el.dataset.value !== 'auto' && parseInt(el.dataset.value, 10) === idx);
+        });
+    };
+
+    const markAutoQuality = () => {
+        if (!settingsPanel) return;
+        settingsPanel.querySelectorAll('[data-settings-group="quality"] .avs-settings-item').forEach((el) => {
+            el.classList.toggle('avs-settings-active', el.dataset.value === 'auto');
+        });
+    };
+
+    const openSettings = () => {
+        cancelIdle();
+        player.classList.add('avs-settings-open');
+    };
+    const closeSettings = () => {
+        player.classList.remove('avs-settings-open');
+        armIdle();
+    };
+    const toggleSettings = () => {
+        if (player.classList.contains('avs-settings-open')) closeSettings();
+        else openSettings();
+    };
+
+    // Abas do menu: cada grupo (Qualidade / Velocidade) vira uma tab M3.
+    const initSettingsTabs = () => {
+        if (!settingsPanel) return;
+        const tabs = settingsPanel.querySelectorAll('.avs-settings-tab');
+        const panes = settingsPanel.querySelectorAll('.avs-settings-pane');
+        const activate = (name) => {
+            tabs.forEach((t) => {
+                const on = t.dataset.settingsTab === name;
+                t.classList.toggle('avs-settings-tab-active', on);
+                t.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            panes.forEach((p) => {
+                p.classList.toggle('avs-settings-pane-active', p.dataset.settingsGroup === name);
+            });
+        };
+        tabs.forEach((t) => {
+            t.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                activate(t.dataset.settingsTab);
+            });
+        });
+    };
+    initSettingsTabs();
+
+    const switchQualitySource = (i) => {
+        qualitySel.value = String(i);
+        qualitySel.dispatchEvent(new Event('change'));
+    };
+
+    const populateSettings = () => {
+        if (!settingsPanel) return;
+        const speedGroup = settingsPanel.querySelector('[data-settings-group="speed"]');
+        const qualityGroup = settingsPanel.querySelector('[data-settings-group="quality"]');
+        if (speedGroup) {
+            speedGroup.textContent = '';
+            RATES.forEach((rate) => {
+                speedGroup.appendChild(buildSettingsItem(
+                    rate === 1 ? 'Normal' : rate + 'x',
+                    rate,
+                    () => applyRate(rate)
+                ));
+            });
+        }
+        if (qualityGroup) {
+            qualityGroup.textContent = '';
+            if (sources.length > 1) {
+                const auto = pickSource();
+                qualityGroup.appendChild(buildSettingsItem(
+                    'Automática',
+                    'auto',
+                    () => {
+                        automaticQuality = true;
+                        markAutoQuality();
+                        const idx = sources.indexOf(auto);
+                        if (idx >= 0 && auto !== activeSource) switchQualitySource(idx);
+                    },
+                    auto && (auto.res ? auto.res + 'p' : (auto.label || ''))
+                ));
+            }
+            sources.forEach((s, i) => {
+                qualityGroup.appendChild(buildSettingsItem(
+                    qualityName(s, i),
+                    i,
+                    () => {
+                        automaticQuality = false;
+                        switchQualitySource(i);
+                        markQuality(i);
+                    }
+                ));
+            });
+        }
+        markSpeed(playbackRate);
+        if (automaticQuality) markAutoQuality();
+        else markQuality(qualitySel ? (parseInt(qualitySel.value, 10) || 0) : 0);
+    };
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleSettings();
+        });
+    }
+    document.addEventListener('click', (e) => {
+        if (!settingsPanel || !player.classList.contains('avs-settings-open')) return;
+        if (!e.target.closest('.avs-settings') && !e.target.closest('[data-action="settings"]')) {
+            closeSettings();
+        }
+    });
+
+    // Fullscreen icon sync
+    document.addEventListener('fullscreenchange', () => {
+        setIcon(fullBtn, document.fullscreenElement ? 'avs-i-fs-exit' : 'avs-i-fs-enter');
+    });
 
     // ------------------------------------------------------------------
     // 9. Player profile features (parity with the original Video.js player)
@@ -1605,6 +1877,8 @@ import {
     // ------------------------------------------------------------------
     markWatched();
     populateAutoplayCard();
+    populateSettings();
+    updateVolumeUi();
 
     // Prévia muda + play central antes do vídeo completo.
     setupPreview();
