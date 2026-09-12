@@ -13,16 +13,30 @@
  * Fallback: browsers without WebCodecs get a plain <video> element with the
  * same source, so playback never hard-fails on old browsers.
  */
+// Mediabunny empacotado localmente (media/player/mediabunny/mediabunny.min.js,
+// v1.55.6), copiado de:
+// https://cdn.jsdelivr.net/npm/mediabunny@1.55.6/dist/bundles/mediabunny.min.mjs
+// Sem CDN de propósito: bloqueador de anúncio ou filtro de DNS derrubava o import
+// inteiro e o player nem inicializava (módulo com import que falha não executa
+// nada — a tela só mostrava "desative bloqueadores"). Para atualizar a lib: baixar
+// o novo bundle no mesmo diretório e ajustar a versão aqui (o ?ver também serve
+// de cache-buster).
 import {
     AudioBufferSink,
     CanvasSink,
     Input,
     UrlSource,
     ALL_FORMATS
-} from 'https://cdn.jsdelivr.net/npm/mediabunny@1.55.6/dist/bundles/mediabunny.min.mjs';
+} from './mediabunny.min.js?ver=1.55.6';
 
 (() => {
     'use strict';
+
+    // Sinaliza que o módulo (e portanto o import do mediabunny no CDN) subiu.
+    // O fallback do video_mbplayer.tpl usa este flag para diferenciar "script
+    // não carregou/bloqueado" de "ainda inicializando" — sem ele, uma carga
+    // lenta era reportada como bloqueador de scripts.
+    window.__avsModuleLoaded = true;
 
     const player = document.getElementById('avs-player');
 
@@ -91,6 +105,8 @@ import {
     const muteBtn = player.querySelector('[data-action="volume"]');
     const fullBtn = player.querySelector('[data-action="fullscreen"]');
     const settingsBtn = player.querySelector('[data-action="settings"]');
+    const miniBtn = player.querySelector('[data-action="mini"]');
+    const dlWrap = player.querySelector('.avs-dl-wrap');
     const volumeSlider = player.querySelector('.avs-volume-slider');
     const seekBar = player.querySelector('.avs-seek');
     const controlsBar = player.querySelector('.avs-controls');
@@ -682,6 +698,7 @@ import {
         hideCenter();
         cancelIdle();
         armIdle();
+        miniPersist();
     };
 
     const pause = () => {
@@ -700,6 +717,7 @@ import {
         if (!seeking && getPlaybackTime() > 1 && getPlaybackTime() < endTimestamp - 0.5) {
             showPauseAd();
         }
+        miniClear();
     };
 
     const togglePlay = () => {
@@ -1147,6 +1165,13 @@ import {
         });
     };
 
+    const markPlayback = () => {
+        if (!settingsPanel) return;
+        settingsPanel.querySelectorAll('[data-settings-group="playback"] .avs-settings-item').forEach((el) => {
+            el.classList.toggle('avs-settings-active', miniPref);
+        });
+    };
+
     const openSettings = () => {
         cancelIdle();
         player.classList.add('avs-settings-open');
@@ -1232,7 +1257,21 @@ import {
                 ));
             });
         }
+        const playbackGroup = settingsPanel.querySelector('[data-settings-group="playback"]');
+        if (playbackGroup) {
+            playbackGroup.textContent = '';
+            playbackGroup.appendChild(buildSettingsItem(
+                'Mini player automático',
+                miniPref ? '1' : '0',
+                () => {
+                    miniPref = !miniPref;
+                    try { localStorage.setItem('avs_mini_auto', miniPref ? '1' : '0'); } catch (e) { /* noop */ }
+                    markPlayback();
+                }
+            ));
+        }
         markSpeed(playbackRate);
+        markPlayback();
         if (automaticQuality) markAutoQuality();
         else markQuality(qualitySel ? (parseInt(qualitySel.value, 10) || 0) : 0);
     };
@@ -1249,6 +1288,213 @@ import {
             closeSettings();
         }
     });
+
+    // ------------------------------------------------------------------
+    // 8.3 Download no player (reutiliza os endpoints download.php/legados)
+    // ------------------------------------------------------------------
+    if (dlWrap) {
+        // Os itens são gerados server-side pelo template; sem nenhum formato
+        // disponível (ex.: backoffice, embed sem arquivos) remove o botão.
+        if (!dlWrap.querySelector('.avs-dl-menu a')) {
+            dlWrap.remove();
+        } else {
+            const dlBtn = dlWrap.querySelector('[data-action="download"]');
+            dlBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dlWrap.classList.toggle('avs-dl-open');
+                if (dlWrap.classList.contains('avs-dl-open')) cancelIdle();
+                else armIdle();
+            });
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.avs-dl-wrap')) dlWrap.classList.remove('avs-dl-open');
+            });
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // 8.4 Mini player no site (picture-in-picture interno)
+    // ------------------------------------------------------------------
+    // Sem a API nativa do navegador. Quando o player sai do viewport (scroll)
+    // e o vídeo toca, ele fixa no canto da página (classe .avs-mini-mode) e o
+    // estado da reprodução é persistido em sessionStorage. Em qualquer outra
+    // página do site o avs-mini.js (carregado no footer) lê esse estado e
+    // recria um <video> flutuante continuando de onde parou. Fechar (X),
+    // pausar ou terminar limpa o estado; voltar à página do vídeo retoma a
+    // posição gravada.
+    //
+    // Entrar/sair do mini é decidido por dois alvos diferentes (player no fluxo
+    // para entrar, spacer para sair) — ver o comentário do spacer logo abaixo,
+    // que explica o laço de realimentação que existia aqui.
+    const MINI_STATE_KEY = 'avs_mini_state';
+    const miniSupported = 'IntersectionObserver' in window;
+    let miniActive = false;
+    let miniPref = (() => {
+        try {
+            const v = localStorage.getItem('avs_mini_auto');
+            return v === null ? true : v === '1';
+        } catch (e) {
+            return true;
+        }
+    })();
+
+    const miniReadState = () => {
+        try {
+            const raw = sessionStorage.getItem(MINI_STATE_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const miniPersist = () => {
+        if (!fileLoaded && !fallbackVideo) return;
+        try {
+            const source = fallbackVideo
+                ? (fallbackVideo.currentSrc || fallbackVideo.src || '')
+                : ((activeSource || pickSource()).src || '');
+            if (!source) return;
+            sessionStorage.setItem(MINI_STATE_KEY, JSON.stringify({
+                vid: cfg.videoId,
+                source: source,
+                time: Math.round((fallbackVideo ? fallbackVideo.currentTime : getPlaybackTime()) * 10) / 10,
+                href: location.href.split('#')[0],
+                ts: Date.now()
+            }));
+        } catch (e) { /* storage indisponível */ }
+    };
+
+    const miniClear = () => {
+        try { sessionStorage.removeItem(MINI_STATE_KEY); } catch (e) { /* noop */ }
+    };
+
+    // Enquanto toca, mantém o estado fresco (throttle 5s) para "atravessar"
+    // páginas; pagehide/visibilityhidden gravam a última posição antes da
+    // navegação.
+    setInterval(() => {
+        const isPlaying = fallbackVideo ? !fallbackVideo.paused : playing;
+        if (isPlaying) miniPersist();
+    }, 5000);
+    window.addEventListener('pagehide', () => miniPersist());
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) miniPersist();
+    });
+
+    // Não dá para decidir o mini observando o PRÓPRIO player: ao entrar em
+    // .avs-mini-mode ele vira `position: fixed` no canto, volta a intersectar o
+    // viewport, o observer manda sair do mini e o ciclo recomeça — medido em
+    // ~17 trocas por segundo (o player piscando). A saída agora vem de um spacer
+    // que fica no fluxo ocupando o lugar do player: ele nunca se move por nossa
+    // causa, então não há realimentação. Bônus: a página não pula de layout
+    // quando o player sai do fluxo.
+    const miniSpacer = document.createElement('div');
+    miniSpacer.className = 'avs-mini-spacer';
+    miniSpacer.setAttribute('aria-hidden', 'true');
+    let miniSlotRatio = 16 / 9;
+
+    const miniSpacerObserver = miniSupported
+        ? new IntersectionObserver((entries) => {
+              const entry = entries[0];
+              if (!entry) return;
+              // Spacer visível = o usuário voltou para o lugar do vídeo.
+              if (entry.isIntersecting && miniActive) deactivateMini();
+          }, { threshold: 0.15 })
+        : null;
+
+    const insertMiniSpacer = () => {
+        if (miniSpacer.parentNode) return;
+        const rect = player.getBoundingClientRect();
+        if (rect.height) miniSlotRatio = rect.width / rect.height;
+        miniSpacer.style.height = Math.round(rect.height) + 'px';
+        if (player.parentNode) player.parentNode.insertBefore(miniSpacer, player);
+        if (miniSpacerObserver) miniSpacerObserver.observe(miniSpacer);
+    };
+
+    const removeMiniSpacer = () => {
+        if (miniSpacerObserver) miniSpacerObserver.unobserve(miniSpacer);
+        if (miniSpacer.parentNode) miniSpacer.parentNode.removeChild(miniSpacer);
+    };
+
+    // O spacer é 100% da coluna: repõe a altura em resize/rotação.
+    window.addEventListener('resize', () => {
+        if (!miniActive || !miniSpacer.parentNode) return;
+        const w = miniSpacer.clientWidth;
+        if (w) miniSpacer.style.height = Math.round(w / miniSlotRatio) + 'px';
+    });
+
+    const activateMini = () => {
+        if (miniActive) return;
+        miniActive = true;
+        insertMiniSpacer();
+        player.classList.add('avs-mini-mode');
+        if (miniBtn) miniBtn.classList.add('avs-btn-active');
+        cancelIdle();
+        miniPersist();
+    };
+
+    const deactivateMini = () => {
+        if (!miniActive) return;
+        miniActive = false;
+        player.classList.remove('avs-mini-mode');
+        if (miniBtn) miniBtn.classList.remove('avs-btn-active');
+        removeMiniSpacer();
+        armIdle();
+    };
+
+    // Só entra com o vídeo tocando e a preferência ativa (cobre também anúncios
+    // VAST/pause: mini não deve roubar a cena durante ad-break).
+    const miniEligible = () => miniPref && miniSupported && !adBreakActive()
+        && ((!fallbackVideo && playing) || (fallbackVideo && !fallbackVideo.paused));
+
+    const miniObserver = miniSupported
+        ? new IntersectionObserver((entries) => {
+              const entry = entries[0];
+              // Enquanto está em mini, o player é `fixed`: ignorar o que ele diz
+              // (quem manda nesse estado é o spacer).
+              if (!entry || miniActive) return;
+              if (!entry.isIntersecting && miniEligible()) activateMini();
+          }, { threshold: 0.15 })
+        : null;
+    if (miniObserver) miniObserver.observe(player);
+
+    if (miniBtn) {
+        miniBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (miniActive) deactivateMini();
+            else activateMini();
+        });
+    }
+
+    const miniExpand = player.querySelector('.avs-mini-expand');
+    const miniClose = player.querySelector('.avs-mini-close');
+    if (miniExpand) {
+        miniExpand.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            deactivateMini();
+            try { player.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (err) { /* noop */ }
+        });
+    }
+    if (miniClose) {
+        miniClose.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            deactivateMini();
+            // Fechar = não ressuscitar o vídeo em outras páginas do site.
+            miniClear();
+        });
+    }
+
+    // Estado gravado de um mini / reprodução anterior (mesma página): usar para
+    // retomar do ponto onde o usuário navegou (só se recente e mesmo vídeo).
+    const miniResumeState = (() => {
+        const s = miniReadState();
+        if (!s || !s.time) return null;
+        if (String(s.vid) !== String(cfg.videoId)) return null;
+        if (Date.now() - (s.ts || 0) > 120000) return null;
+        return s;
+    })();
 
     // Fullscreen icon sync
     document.addEventListener('fullscreenchange', () => {
@@ -1870,6 +2116,7 @@ import {
     const onEnded = () => {
         markWatched();
         showAutoplayNext();
+        miniClear();
     };
 
     // ------------------------------------------------------------------
@@ -1885,13 +2132,29 @@ import {
 
     if (supportsWebCodecs) {
         void startPlayer().then(() => {
-            if (autoplay) beginPlayback();
+            if (miniResumeState) {
+                // Voltar à página do vídeo com mini ativo: retoma da posição
+                // gravada, tocando (sem re-prerol de anúncio no meio do vídeo).
+                const resumeAt = Math.min(miniResumeState.time, endTimestamp || miniResumeState.time);
+                void seekToTime(resumeAt, true);
+            } else if (autoplay) {
+                beginPlayback();
+            }
         });
     } else {
         // Native fallback: plain <video> with the same (signed) URL. Controls
         // and ended handling are wired by setupFallbackControls().
         fallbackVideo.src = pickSource().src;
         fallbackVideo.load();
-        if (autoplay) beginPlayback();
+        if (miniResumeState) {
+            fallbackVideo.addEventListener('loadedmetadata', () => {
+                try {
+                    fallbackVideo.currentTime = Math.min(miniResumeState.time, fallbackVideo.duration || miniResumeState.time);
+                } catch (e) { /* keep 0 */ }
+                void fallbackVideo.play().catch(() => {});
+            }, { once: true });
+        } else if (autoplay) {
+            beginPlayback();
+        }
     }
 })();

@@ -39,6 +39,15 @@
 				<path d="M5 5l2.3 2.3M16.7 16.7 19 19M5 19l2.3-2.3M16.7 7.3 19 5"/>
 			</g>
 		</symbol>
+		<symbol id="avs-i-download" viewBox="0 0 24 24">
+			<path fill="currentColor" d="M5 20h14v-2H5zM19 9h-4V3H9v6H5l7 7 7-7z"/>
+		</symbol>
+		<symbol id="avs-i-pip" viewBox="0 0 24 24">
+			<path fill="currentColor" d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-11-9h9v6h-9z"/>
+		</symbol>
+		<symbol id="avs-i-close" viewBox="0 0 24 24">
+			<path fill="currentColor" d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13l-6.3 6.3-1.4-1.4L9.8 12 3.5 5.7l1.4-1.4 6.3 6.3 6.3-6.3z"/>
+		</symbol>
 		<symbol id="avs-i-fs-enter" viewBox="0 0 24 24">
 			<g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/>
@@ -86,6 +95,26 @@
 				<button type="button" class="avs-btn avs-settings-btn" data-action="settings" title="Configurações">
 					<svg class="avs-icon" aria-hidden="true"><use href="#avs-i-settings"></use></svg>
 				</button>
+<button type="button" class="avs-btn" data-action="mini" title="Mini player">
+					<svg class="avs-icon" aria-hidden="true"><use href="#avs-i-pip"></use></svg>
+				</button>
+			{if $downloads == '1' && $video.embed_code == '' && (!isset($is_friend) || $is_friend)}
+				<div class="avs-dl-wrap">
+					<button type="button" class="avs-btn" data-action="download" title="Baixar">
+						<svg class="avs-icon" aria-hidden="true"><use href="#avs-i-download"></use></svg>
+					</button>
+					<div class="avs-dl-menu" role="menu" aria-label="Baixar vídeo">
+						{if isset($video.files) && $video.formats && $video.files|@count > 0}
+							{section name=i loop=$video.files}
+							<a href="{$baseurl}/download.php?id={$video.VID}&label={$video.files[i].label}" role="menuitem">{if $video.files[i].height >= 480}HD - {$video.files[i].label} (MP4){else}SD - {$video.files[i].label} (MP4){/if}</a>
+							{/section}
+						{else}
+							{if $video.hd == '1'}<a href="{$baseurl}/download_hd.php?id={$video.VID}" role="menuitem">HD (MP4)</a>{/if}
+							{if $video.iphone == '1'}<a href="{$baseurl}/download_mobile.php?id={$video.VID}" role="menuitem">Mobile (MP4)</a>{/if}
+						{/if}
+					</div>
+				</div>
+				{/if}
 				<select class="avs-quality" hidden title="Quality"></select>
 				<button type="button" class="avs-btn" data-action="fullscreen" title="Tela cheia">
 					<svg class="avs-icon" aria-hidden="true"><use href="#avs-i-fs-enter"></use></svg>
@@ -108,10 +137,15 @@
 					<span class="material-symbols-rounded" aria-hidden="true">speed</span>
 					Velocidade
 				</button>
+				<button type="button" class="avs-settings-tab" data-settings-tab="playback" role="tab" aria-selected="false">
+					<span class="material-symbols-rounded" aria-hidden="true">play_circle</span>
+					Reprodução
+				</button>
 			</div>
 		</div>
 		<div class="avs-settings-pane avs-settings-pane-active" data-settings-group="quality" role="tabpanel" aria-label="Qualidade"></div>
 		<div class="avs-settings-pane" data-settings-group="speed" role="tabpanel" aria-label="Velocidade"></div>
+		<div class="avs-settings-pane" data-settings-group="playback" role="tabpanel" aria-label="Reprodução"></div>
 	</div>
 	<div class="avs-center" aria-hidden="true">
 		<button type="button" class="avs-center-btn avs-center-rw" title="-10 segundos">
@@ -124,21 +158,47 @@
 			<svg class="avs-icon" aria-hidden="true"><use href="#avs-i-fw10"></use></svg>
 		</button>
 	</div>
+	<div class="avs-mini-actions">
+		<button type="button" class="avs-mini-expand" title="Voltar ao player grande">
+			<svg class="avs-icon" aria-hidden="true"><use href="#avs-i-fs-exit"></use></svg>
+		</button>
+		<button type="button" class="avs-mini-close" title="Fechar">
+			<svg class="avs-icon" aria-hidden="true"><use href="#avs-i-close"></use></svg>
+		</button>
+	</div>
 	<div class="avs-error" style="display:none;"></div>
 </div>
 {if $player.timeline_preview}<link rel="preload" as="image" href="{insert name=thumb_path vid=$video.VID}/sprite.jpg">{/if}
-<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=3.1.0">
-<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=3.1.0"></script>
+<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=3.2.3">
+<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=3.2.3"></script>
 <script>
 {literal}
 window.__avsReady = false;
-setTimeout(function () {
-	if (window.__avsReady) return;
-	var box = document.querySelector('#avs-player .avs-error');
-	if (box && box.style.display === 'none' && !box.textContent) {
-		box.textContent = 'O player não carregou. Verifique sua conexão ou desative bloqueadores e recarregue a página.';
+// avs-player.js é um módulo que importa o mediabunny de um CDN. Se o módulo nem
+// executar (bloqueador, rede, CDN fora), __avsModuleLoaded fica false e a
+// mensagem de bloqueador é o diagnóstico correto. Se ele executou mas ainda
+// inicializa (bundle + metadata + primeiro frame), avisamos só bem depois, para
+// não acusar bloqueador por causa de conexão lenta.
+(function () {
+	var SEM_MODULO = 32;   // ~8s sem o módulo rodar
+	var DEMORADO   = 180;  // ~45s inicializando
+	var tentativas = 0;
+	var timer = setInterval(function () {
+		tentativas++;
+		if (window.__avsReady) { clearInterval(timer); return; }
+		var box = document.querySelector('#avs-player .avs-error');
+		if (!box) { clearInterval(timer); return; }
+		// Não pisa em erro já exibido pelo próprio player (showError).
+		if (box.style.display !== 'none' || box.textContent) { clearInterval(timer); return; }
+		var bloqueado = !window.__avsModuleLoaded && tentativas >= SEM_MODULO;
+		var demorou   = window.__avsModuleLoaded && tentativas >= DEMORADO;
+		if (!bloqueado && !demorou) return;
+		box.textContent = bloqueado
+			? 'O player não carregou. Verifique sua conexão ou desative bloqueadores e recarregue a página.'
+			: 'O player está demorando para carregar. Verifique sua conexão e recarregue a página.';
 		box.style.display = '';
-	}
-}, 10000);
+		clearInterval(timer);
+	}, 250);
+})();
 {/literal}
 </script>

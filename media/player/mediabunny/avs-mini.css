@@ -1,0 +1,142 @@
+/* AVSCMS - Mini player do mediabunny (janela flutuante entre páginas).
+   Recria o vídeo em uma janelinha fixa nas demais páginas do site quando o
+   usuário estava reproduzindo (estado em sessionStorage gravado por
+   avs-player.js). A página do próprio vídeo usa .avs-mini-mode do
+   avs-player.css e não renderiza este elemento.
+
+   O visual daqui espelha o .avs-mini-mode (avs-player.css): mesmo tamanho,
+   mesmo canto, mesmo raio/sombra, e expandir/fechar como overlay no canto
+   superior direito. Ao mexer em um, conferir o outro — para o usuário os dois
+   são o "mesmo" mini player; a diferença é que um é o player real e o outro um
+   <video> nativo (a home não tem player mediabunny). */
+
+#avs-mini-floating {
+    position: fixed;
+    right: 16px;
+    bottom: 88px;
+    left: auto;
+    /* Igual ao .avs-mini-mode: 400px, não 360px. */
+    width: min(400px, calc(100vw - 32px));
+    z-index: 12000;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-family: Roboto, system-ui, -apple-system, sans-serif;
+}
+
+#avs-mini-floating .avs-mini-stage {
+    position: relative;
+    line-height: 0;
+    cursor: pointer;
+}
+
+#avs-mini-floating video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+}
+
+/* Overlay de expandir/fechar: mesmos números do .avs-mini-actions do player. */
+#avs-mini-floating .avs-mini-actions {
+    display: flex;
+    gap: 6px;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 30;
+}
+
+#avs-mini-floating .avs-mini-actions .avs-mini-btn {
+    width: 30px;
+    height: 30px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+}
+
+#avs-mini-floating .avs-mini-actions .avs-mini-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+#avs-mini-floating .avs-mini-actions .avs-mini-icon {
+    width: 18px;
+    height: 18px;
+}
+
+#avs-mini-floating .avs-mini-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    background: #151515;
+    color: #eee;
+    line-height: 1;
+}
+
+#avs-mini-floating .avs-mini-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: background-color 0.15s ease;
+}
+
+#avs-mini-floating .avs-mini-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+#avs-mini-floating .avs-mini-icon {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+#avs-mini-floating .avs-mini-icon-pause,
+#avs-mini-floating .avs-mini-icon-mute {
+    display: none;
+}
+
+#avs-mini-floating .avs-mini-play.is-playing .avs-mini-icon-pause,
+#avs-mini-floating .avs-mini-mute.is-muted .avs-mini-icon-mute {
+    display: block;
+}
+
+#avs-mini-floating .avs-mini-play.is-playing .avs-mini-icon-play,
+#avs-mini-floating .avs-mini-mute.is-muted .avs-mini-icon-vol,
+#avs-mini-floating .avs-mini-play.is-paused .avs-mini-icon-pause {
+    display: none;
+}
+
+#avs-mini-floating .avs-mini-seek {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 18px;
+    accent-color: var(--avs-accent, #e23662);
+    cursor: pointer;
+}
+
+#avs-mini-floating .avs-mini-time {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+#avs-mini-floating .avs-mini-expand {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Sem override para viewport estreito: o player (.avs-mini-mode) mantém
+   right/bottom em 16/88 — as media queries por largura nem casam no celular
+   porque header.tpl fixa o viewport em width=1280. Manter os dois iguais. */

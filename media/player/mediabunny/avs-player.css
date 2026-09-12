@@ -190,6 +190,10 @@
     background-color: rgba(255, 255, 255, 0.12);
 }
 
+.avs-player .avs-btn.avs-btn-active {
+    color: var(--md-sys-color-primary, var(--avs-accent));
+}
+
 .avs-player .avs-time {
     color: #fff;
     font-size: 12px;
@@ -201,6 +205,108 @@
 .avs-player .avs-time.avs-sep {
     margin: 0 2px;
     opacity: 0.55;
+}
+
+/* --- Download (no player) --------------------------------------- */
+.avs-player .avs-dl-wrap {
+    position: relative;
+    display: inline-flex;
+}
+
+.avs-player .avs-dl-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 8px);
+    min-width: 180px;
+    padding: 6px;
+    background: rgba(24, 24, 24, 0.96);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    z-index: 20;
+}
+
+.avs-player .avs-dl-wrap.avs-dl-open .avs-dl-menu {
+    display: block;
+}
+
+.avs-player .avs-dl-menu a {
+    display: block;
+    padding: 8px 12px;
+    color: #e4e4e4;
+    font-size: 13px;
+    text-decoration: none;
+    border-radius: 8px;
+    white-space: nowrap;
+    transition: background-color 0.15s var(--avs-ease);
+}
+
+.avs-player .avs-dl-menu a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* --- Mini player no site (janela fixa ao rolar) ------------------- */
+.avs-player.avs-mini-mode {
+    position: fixed;
+    top: auto;
+    right: 16px;
+    bottom: 88px;
+    left: auto;
+    width: min(400px, calc(100vw - 32px));
+    aspect-ratio: 16 / 9;
+    z-index: 12000;
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Spacer do mini player: reserva o lugar do player no fluxo enquanto ele está
+   `position: fixed` no canto. Sem ele o conteúdo abaixo sobe (salto de layout)
+   e, principalmente, não haveria alvo estável para decidir a saída do mini —
+   observar o próprio player criava um laço ativar/desativar (piscar). */
+.avs-mini-spacer {
+    display: block;
+    width: 100%;
+    background: transparent;
+    pointer-events: none;
+}
+
+.avs-player .avs-mini-actions {
+    display: none;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    gap: 6px;
+    z-index: 30;
+}
+
+.avs-player.avs-mini-mode .avs-mini-actions {
+    display: flex;
+}
+
+.avs-player .avs-mini-actions button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    border: 0;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.15s var(--avs-ease);
+}
+
+.avs-player .avs-mini-actions button:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.avs-player .avs-mini-actions .avs-icon {
+    width: 18px;
+    height: 18px;
 }
 
 /* --- Timeline -------------------------------------------------- */
@@ -346,7 +452,8 @@
     right: 12px;
     bottom: 74px;
     z-index: 5;
-    width: 280px;
+    /* 280px não comporta as 3 abas (rótulo + ícone + padding ≈ 336px). */
+    width: min(360px, calc(100% - 24px));
     max-width: calc(100% - 24px);
     padding: 10px 8px 8px;
     background: var(--md-sys-color-surface-container, rgba(28, 28, 28, 0.95));
@@ -396,12 +503,26 @@
     display: flex;
     gap: 4px;
     padding: 0 2px;
+    /* Em painéis estreitos a faixa rola em vez de vazar para fora da borda. */
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
     border-bottom: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.12));
+}
+
+.avs-player .avs-settings-tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .avs-player .avs-settings-tab {
     position: relative;
-    flex: 1 1 0;
+    /* `flex: 1 1 0` com min-width automático não encolhe abaixo do min-content:
+       as 3 abas estouravam o painel (a "Reprodução" saía ~75px da borda).
+       Cresce sem encolher + faixa rolável mantém tudo dentro do painel. */
+    flex: 1 0 auto;
+    min-width: 0;
+    white-space: nowrap;
     display: inline-flex;
     align-items: center;
     justify-content: center;
