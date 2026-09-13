@@ -87,6 +87,22 @@
 	--xb-accent-d: #D30F7E;
 	--xb-radius: 12px;
 	--xb-radius-sm: 8px;
+
+	/* ---- Vidro (frosted glass estilo macOS) ---- */
+	--xb-glass-bg: rgba(33, 27, 32, 0.82);
+	--xb-glass-bg-dark: rgba(18, 15, 19, 0.72);
+	--xb-glass-border: rgba(255, 255, 255, 0.16);
+	--xb-glass-hl: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+	--xb-glass-blur: blur(24px) saturate(180%);
+	--xb-glass-blur-sm: blur(12px) saturate(160%);
+
+	/* ---- Cor viva / gradientes (DRY) — botões, ícones e glows M3 ---- */
+	--xb-accent-2: #9a6bff;
+	--xb-grad: linear-gradient(135deg, var(--xb-accent), var(--xb-accent-2));
+	--xb-grad-v: linear-gradient(180deg, var(--xb-accent), var(--xb-accent-2));
+	--xb-glow: 0 0 22px rgba(255, 20, 147, .5);
+	--xb-glow-soft: 0 8px 24px rgba(255, 20, 147, .22);
+	--xb-glow-v: 0 0 18px rgba(154, 107, 255, .45);
 }
 
 /* --------------------------------------------------------------------------
@@ -136,8 +152,8 @@ a {
 }
 
 ::selection {
-	background: var(--md-sys-color-primary-container);
-	color: var(--md-sys-color-on-primary-container);
+	background: var(--xb-accent);
+	color: #fff;
 }
 
 :focus-visible {
@@ -154,11 +170,11 @@ a {
 }
 
 .xb-topbar.xb-topbar-scrolled {
-	background-color: var(--md-sys-color-surface-container);
-	backdrop-filter: none;
-	-webkit-backdrop-filter: none;
+	background-color: var(--xb-glass-bg-dark);
+	backdrop-filter: var(--xb-glass-blur);
+	-webkit-backdrop-filter: var(--xb-glass-blur);
 	border-bottom-color: var(--md-sys-color-outline-variant);
-	box-shadow: var(--md-sys-elevation-level1);
+	box-shadow: var(--md-sys-elevation-level2);
 }
 
 .xb-topbar-inner {
@@ -204,15 +220,33 @@ a {
 }
 
 .xb-actions .xb-action:hover {
-	background-color: var(--md-sys-state-hover);
+	background-color: rgba(255, 177, 201, .1);
 	color: var(--md-sys-color-on-surface);
 }
 
+.xb-actions .xb-action i {
+	transition: color .15s ease, text-shadow .15s ease;
+}
+
+.xb-actions .xb-action:hover i {
+	color: var(--md-sys-color-primary);
+	text-shadow: 0 0 10px rgba(255, 20, 147, .6);
+}
+
 .xb-action-upload {
-	background: linear-gradient(135deg, var(--xb-accent), var(--xb-accent-d)) !important;
+	background-color: var(--xb-accent);
+	background-image: var(--xb-grad) !important;
 	color: #fff !important;
 	font-weight: 600;
 	border-radius: var(--md-sys-shape-corner-full) !important;
+	box-shadow: var(--xb-glow-soft) !important;
+}
+
+.xb-action-upload:hover {
+	background-image: var(--xb-grad) !important;
+	color: #fff !important;
+	box-shadow: var(--xb-glow) !important;
+	filter: brightness(1.08);
 }
 
 .xb-hamburger {
@@ -257,17 +291,36 @@ a {
 	height: 3px;
 	background: var(--md-sys-color-primary);
 	border-radius: 3px 3px 0 0;
-	box-shadow: none;
+	box-shadow: 0 2px 10px rgba(255, 20, 147, .55);
+}
+
+/* Ícones vivos — Material Symbols preenchem + ganham cor/brilho no hover */
+.xb-mm-item .xb-ms-icon,
+.xb-dropdown-list li a .xb-ms-icon,
+.xb-dropdown-tag .xb-ms-icon,
+.xb-dropdown-view-all .xb-ms-icon {
+	transition: color .15s ease, text-shadow .15s ease;
+}
+
+.xb-mm-item:hover .xb-ms-icon,
+.xb-dropdown-list li a:hover .xb-ms-icon,
+.xb-dropdown-tag:hover .xb-ms-icon,
+.xb-dropdown-view-all:hover .xb-ms-icon {
+	color: var(--md-sys-color-primary);
+	font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 20;
+	text-shadow: 0 0 10px rgba(255, 20, 147, .6);
 }
 
 /* --------------------------------------------------------------------------
    Mega dropdown — M3 attached menu
    -------------------------------------------------------------------------- */
 .xb-dropdown-menu {
-	background-color: var(--md-sys-color-surface-container);
-	border: 1px solid var(--md-sys-color-outline-variant);
+	background-color: var(--xb-glass-bg);
+	backdrop-filter: var(--xb-glass-blur);
+	-webkit-backdrop-filter: var(--xb-glass-blur);
+	border: 1px solid var(--xb-glass-border);
 	border-radius: var(--md-sys-shape-corner-medium);
-	box-shadow: var(--md-sys-elevation-level3);
+	box-shadow: var(--md-sys-elevation-level3), var(--xb-glass-hl);
 	animation: xb-dropdown-in .18s cubic-bezier(.2, 0, 0, 1);
 	transform-origin: top left;
 }
@@ -532,28 +585,33 @@ a {
 	font-weight: 500;
 }
 
-/* Filled — primário (container) */
+/* Filled — primário (gradiente da marca) */
 .btn-primary {
-	background-color: var(--md-sys-color-primary-container) !important;
-	border-color: var(--md-sys-color-primary-container) !important;
-	color: var(--md-sys-color-on-primary-container) !important;
-	box-shadow: none !important;
+	background-color: var(--xb-accent) !important;
+	background-image: var(--xb-grad) !important;
+	background-size: 170% 100%;
+	background-position: 0% 50%;
+	border-color: transparent !important;
+	color: #fff !important;
+	box-shadow: var(--xb-glow-soft) !important;
+	transition: background-position .35s ease, box-shadow .2s ease, filter .2s ease;
 }
 
 .btn-primary:hover,
 .btn-primary:focus,
 .btn-primary:active,
 .btn-primary.active {
-	background-color: var(--md-sys-color-primary-container) !important;
-	border-color: var(--md-sys-color-primary-container) !important;
-	color: var(--md-sys-color-on-primary-container) !important;
-	background-image: linear-gradient(0deg, rgba(255, 217, 227, .08), rgba(255, 217, 227, .08)) !important;
-	box-shadow: none !important;
+	background-color: var(--xb-accent) !important;
+	background-image: var(--xb-grad) !important;
+	background-position: 100% 50%;
+	border-color: transparent !important;
+	color: #fff !important;
+	box-shadow: var(--xb-glow) !important;
 }
 
 .btn-primary.active,
 .btn-primary:active {
-	background-image: linear-gradient(0deg, rgba(255, 217, 227, .16), rgba(255, 217, 227, .16)) !important;
+	filter: brightness(.92);
 }
 
 /* Filled tonal — secundário */
@@ -787,12 +845,18 @@ a:hover .thumb-overlay {
 .xb-creator-card:hover {
 	border-color: var(--md-sys-color-primary);
 	transform: translateY(-2px);
-	box-shadow: var(--md-sys-elevation-level1);
+	box-shadow: var(--xb-glow-soft), var(--md-sys-elevation-level1);
 }
 
 .xb-cat-card {
 	border-radius: var(--md-sys-shape-corner-medium);
 	border: 1px solid var(--md-sys-color-outline-variant);
+	transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.xb-cat-card:hover {
+	border-color: var(--md-sys-color-primary);
+	box-shadow: var(--xb-glow-soft);
 }
 
 .xb-creator-card .xb-avatar-lg {
@@ -857,6 +921,7 @@ a:hover .thumb-overlay {
 	background-color: var(--md-sys-color-primary-container);
 	border-color: var(--md-sys-color-primary-container);
 	color: var(--md-sys-color-on-primary-container);
+	box-shadow: 0 0 12px rgba(255, 20, 147, .35);
 }
 
 .xb-thumb-meta {
@@ -875,10 +940,12 @@ a:hover .thumb-overlay {
 .video-actions .dropdown-menu,
 .comments-section .dropdown-menu,
 .top-menu .dropdown-menu-right {
-	background-color: var(--md-sys-color-surface-container);
-	border: 1px solid var(--md-sys-color-outline-variant);
+	background-color: var(--xb-glass-bg);
+	backdrop-filter: var(--xb-glass-blur);
+	-webkit-backdrop-filter: var(--xb-glass-blur);
+	border: 1px solid var(--xb-glass-border);
 	border-radius: var(--md-sys-shape-corner-extra-small);
-	box-shadow: var(--md-sys-elevation-level2);
+	box-shadow: var(--md-sys-elevation-level2), var(--xb-glass-hl);
 	padding: 8px 0;
 }
 
@@ -970,10 +1037,12 @@ a:hover .thumb-overlay {
    Dialogs — M3 (shape extra-large, surface-container-high)
    -------------------------------------------------------------------------- */
 .modal-content {
-	background-color: var(--md-sys-color-surface-container-high);
-	border: none;
+	background-color: var(--xb-glass-bg);
+	backdrop-filter: var(--xb-glass-blur);
+	-webkit-backdrop-filter: var(--xb-glass-blur);
+	border: 1px solid var(--xb-glass-border);
 	border-radius: var(--md-sys-shape-corner-extra-large);
-	box-shadow: var(--md-sys-elevation-level3);
+	box-shadow: var(--md-sys-elevation-level3), var(--xb-glass-hl);
 }
 
 .modal-header {
@@ -1079,6 +1148,7 @@ a:hover .thumb-overlay {
 	background-color: var(--md-sys-color-primary-container);
 	border-color: var(--md-sys-color-primary-container);
 	color: var(--md-sys-color-on-primary-container);
+	box-shadow: 0 0 14px rgba(255, 20, 147, .45);
 }
 
 .page-item.disabled .page-link {
@@ -1116,6 +1186,7 @@ a:hover .thumb-overlay {
 	border: none;
 	border-bottom: 3px solid var(--md-sys-color-primary);
 	color: var(--md-sys-color-primary);
+	box-shadow: 0 6px 14px -6px rgba(255, 20, 147, .5);
 }
 
 #commentsMediaModal .nav-tabs .nav-link.active,
@@ -1155,7 +1226,8 @@ a:hover .thumb-overlay {
 }
 
 .progress-bar {
-	background-color: var(--md-sys-color-primary);
+	background-color: var(--xb-accent);
+	background-image: var(--xb-grad);
 }
 
 /* --------------------------------------------------------------------------
@@ -1200,22 +1272,26 @@ a:hover .thumb-overlay {
 	font-weight: 600;
 	letter-spacing: .1px;
 	text-transform: none;
-	background: none;
-	-webkit-text-fill-color: var(--md-sys-color-on-surface);
-	background-clip: border-box;
+	background: linear-gradient(90deg, #fff, #ffc2de 60%, var(--xb-accent-2));
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
 }
 
 .xb-section h2 i {
-	color: var(--xb-accent);
-	-webkit-text-fill-color: var(--xb-accent);
+	background: var(--xb-grad);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	filter: drop-shadow(0 0 8px rgba(255, 20, 147, .5));
 }
 
 .xb-section .xb-section-bar {
 	width: 4px;
 	height: 22px;
 	border-radius: var(--md-sys-shape-corner-extra-small);
-	background: linear-gradient(180deg, var(--xb-accent), var(--xb-accent-d));
-	box-shadow: 0 0 10px rgba(255, 20, 147, .4);
+	background: var(--xb-grad-v);
+	box-shadow: 0 0 12px rgba(255, 20, 147, .45);
 }
 
 .xb-section .xb-section-link,
@@ -1275,10 +1351,10 @@ a:hover .thumb-overlay {
 
 /* Barra inferior mobile — M3 bottom navigation */
 .xb-mobnav {
-	background-color: var(--md-sys-color-surface-container) !important;
+	background-color: var(--xb-glass-bg-dark) !important;
 	border-top: 1px solid var(--md-sys-color-outline-variant) !important;
-	backdrop-filter: none;
-	-webkit-backdrop-filter: none;
+	backdrop-filter: var(--xb-glass-blur);
+	-webkit-backdrop-filter: var(--xb-glass-blur);
 	box-shadow: var(--md-sys-elevation-level2);
 }
 
@@ -1296,12 +1372,24 @@ a:hover .thumb-overlay {
 	color: var(--md-sys-color-primary);
 }
 
+.xb-mobnav a.active {
+	background-color: rgba(255, 177, 201, .1);
+	border-radius: 14px;
+}
+
+.xb-mobnav a.active i,
+.xb-mobnav a:hover i {
+	text-shadow: 0 0 12px rgba(255, 20, 147, .7);
+}
+
 /* --------------------------------------------------------------------------
    Autocomplete (easy-autocomplete) — M3 menu
    -------------------------------------------------------------------------- */
 .easy-autocomplete-container ul {
-	background-color: var(--md-sys-color-surface-container);
-	border: 1px solid var(--md-sys-color-outline-variant);
+	background-color: var(--xb-glass-bg);
+	backdrop-filter: var(--xb-glass-blur-sm);
+	-webkit-backdrop-filter: var(--xb-glass-blur-sm);
+	border: 1px solid var(--xb-glass-border);
 	border-radius: var(--md-sys-shape-corner-extra-small);
 	box-shadow: var(--md-sys-elevation-level2);
 }
@@ -1339,4 +1427,287 @@ a:hover .thumb-overlay {
 		transform: scale(1);
 		opacity: 0;
 	}
+}
+
+/* --------------------------------------------------------------------------
+   Botão de tema (claro/escuro) na topbar
+   -------------------------------------------------------------------------- */
+button.xb-action {
+	cursor: pointer;
+}
+
+.xb-action-theme {
+	background: transparent !important;
+	border: none;
+	font-family: var(--md-sys-font);
+}
+
+.xb-action-theme .material-symbols-rounded {
+	font-size: 22px;
+	font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+
+.xb-action-theme:hover .material-symbols-rounded {
+	color: var(--md-sys-color-primary);
+	text-shadow: 0 0 10px rgba(255, 20, 147, .6);
+}
+
+/* ==========================================================================
+   TEMA CLARO (light) — html[data-theme="light"]
+   Definido pelo script inline do header.tpl (localStorage.avs_theme ou
+   prefers-color-scheme na 1ª visita). Aplica-se sobre TODOS os tokens M3.
+   O mega menu (submenu do nav) e o player do mediabunny seguem o tema;
+   dropdowns comuns (Bootstrap .dropdown-menu), autocomplete e modais
+   permanecem ESCUROS nos dois temas — decisão de design do projeto.
+   ========================================================================== */
+html[data-theme="light"] {
+	/* ---- Material 3 color scheme (light, seed #FF1493) ---- */
+	--md-sys-color-primary: #B60D66;
+	--md-sys-color-on-primary: #FFFFFF;
+	--md-sys-color-primary-container: #FFD9E3;
+	--md-sys-color-on-primary-container: #3B0022;
+	--md-sys-color-inverse-primary: #FFB1C9;
+	--md-sys-color-secondary: #79525C;
+	--md-sys-color-on-secondary: #FFFFFF;
+	--md-sys-color-secondary-container: #FFD9E2;
+	--md-sys-color-on-secondary-container: #2B151D;
+	--md-sys-color-tertiary: #74523A;
+	--md-sys-color-on-tertiary: #FFFFFF;
+	--md-sys-color-tertiary-container: #FFDDB3;
+	--md-sys-color-on-tertiary-container: #291800;
+	--md-sys-color-error: #BA1A1A;
+	--md-sys-color-on-error: #FFFFFF;
+	--md-sys-color-error-container: #FFDAD6;
+	--md-sys-color-on-error-container: #410002;
+	--md-sys-color-surface: #FFF8F8;
+	--md-sys-color-on-surface: #1E1519;
+	--md-sys-color-surface-variant: #F3DEE3;
+	--md-sys-color-on-surface-variant: #524346;
+	--md-sys-color-outline: #847478;
+	--md-sys-color-outline-variant: #D2C3C7;
+	--md-sys-color-surface-container-lowest: #FFFFFF;
+	--md-sys-color-surface-container-low: #FEF1F2;
+	--md-sys-color-surface-container: #F8E9EC;
+	--md-sys-color-surface-container-high: #F2E3E6;
+	--md-sys-color-surface-container-highest: #ECDDDF;
+	--md-sys-color-inverse-surface: #33262B;
+	--md-sys-color-inverse-on-surface: #FBE4E8;
+	--md-sys-color-scrim: #000000;
+	--md-sys-color-success-container: #A7F8C4;
+	--md-sys-color-on-success-container: #0E5231;
+
+	/* ---- M3 state layers (light) ---- */
+	--md-sys-state-hover: rgba(30, 21, 25, .08);
+	--md-sys-state-pressed: rgba(30, 21, 25, .12);
+	--md-sys-state-dragged: rgba(30, 21, 25, .16);
+
+	/* ---- Remap xb -> light (equivalentes de superfície) ---- */
+	--xb-bg: #FFF8F8;
+	--xb-bg-alt: #F8E9EC;
+	--xb-card: #FFFFFF;
+	--xb-card-2: #F2E3E6;
+	--xb-border: #D2C3C7;
+	--xb-text: #1E1519;
+	--xb-muted: #6C585D;
+	--xb-accent: #B60D66;
+	--xb-accent-d: #8A0B50;
+
+	/* ---- Cor viva (gradiente saturado + glow suave p/ fundo claro) ---- */
+	--xb-accent-2: #7C4DFF;
+	--xb-accent-cyan: #0093CC;
+	--xb-glow: 0 0 22px rgba(182, 13, 102, .32);
+	--xb-glow-soft: 0 8px 24px rgba(182, 13, 102, .14);
+	--xb-glow-v: 0 0 18px rgba(124, 77, 255, .3);
+}
+
+/* Aurora suave para o fundo claro (pink + violeta em vez de magenta forte) */
+html[data-theme="light"] body {
+	background-image:
+		radial-gradient(1200px 500px at 50% -200px, rgba(182, 13, 102, 0.05), transparent 60%),
+		radial-gradient(900px 600px at 92% -2%, rgba(124, 77, 255, 0.05), transparent 55%),
+		radial-gradient(700px 500px at 4% 0%, rgba(0, 147, 204, 0.035), transparent 55%);
+}
+
+/* Scrollbar clara */
+html[data-theme="light"] {
+	scrollbar-color: var(--xb-accent) var(--xb-bg-alt);
+}
+
+html[data-theme="light"] ::-webkit-scrollbar-track {
+	background: var(--xb-bg-alt);
+}
+
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+	background: var(--xb-grad);
+}
+
+/* Textos legados hardcoded que precisam de cor escura sobre fundo claro */
+html[data-theme="light"] h1,
+html[data-theme="light"] h2,
+html[data-theme="light"] h3,
+html[data-theme="light"] h4,
+html[data-theme="light"] h5,
+html[data-theme="light"] h6 {
+	color: var(--xb-text);
+}
+
+html[data-theme="light"] a {
+	color: #5A4A4F;
+}
+
+html[data-theme="light"] .form-control {
+	background-color: var(--xb-card);
+	border-color: var(--xb-border);
+	color: var(--xb-text);
+}
+
+html[data-theme="light"] .form-control:focus {
+	background-color: var(--xb-card-2);
+	border-color: var(--xb-accent);
+}
+
+html[data-theme="light"] .form-control::placeholder {
+	color: var(--xb-muted);
+}
+
+html[data-theme="light"] .content-row a,
+html[data-theme="light"] .content-row a:focus {
+	color: #5A4A4F;
+}
+
+html[data-theme="light"] .content-row a:hover {
+	color: var(--xb-accent);
+}
+
+html[data-theme="light"] .xb-search-btn:hover {
+	color: var(--xb-accent);
+}
+
+/* Logo no tema claro: silhueta preta (brightness(0) transforma o branco em
+   preto; invert(1) distorceria o acento rosa da logo para ciano) */
+html[data-theme="light"] .xb-logo img {
+	filter: brightness(0);
+}
+
+.xb-logo img {
+	transition: filter .2s ease;
+}
+
+/* Topbar ao rolar: vidro CLARO (texto dos tokens já fica escuro) */
+html[data-theme="light"] .xb-topbar.xb-topbar-scrolled {
+	background-color: rgba(255, 255, 255, .78);
+	border-bottom-color: var(--md-sys-color-outline-variant);
+	box-shadow: 0 4px 24px rgba(30, 21, 25, .08);
+}
+
+/* Bottom nav mobile: vidro claro */
+html[data-theme="light"] .xb-mobnav {
+	background-color: rgba(255, 255, 255, .82) !important;
+	border-top-color: var(--md-sys-color-outline-variant) !important;
+}
+
+/* Títulos de seção: gradiente escuro (começa no texto da superfície) */
+html[data-theme="light"] .xb-section h2 {
+	background: linear-gradient(90deg, var(--xb-text), var(--xb-accent) 60%, var(--xb-accent-2));
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+html[data-theme="light"] .xb-creator-card .xb-creator-name {
+	color: var(--xb-text);
+}
+
+html[data-theme="light"] .xb-creator-card:hover .xb-creator-name,
+html[data-theme="light"] .xb-creator-card:hover {
+	border-color: var(--xb-accent);
+}
+
+/* ---- Dropdowns comuns (Bootstrap) e modais permanecem ESCUROS nos dois
+   temas: fixar de volta as cores dos tokens dark ---- */
+html[data-theme="light"] .dropdown-divider {
+	border-top-color: #4E4448;
+}
+
+html[data-theme="light"] .dropdown-item,
+html[data-theme="light"] .well-filters .dropdown-menu a {
+	color: #D4C2C7;
+}
+
+html[data-theme="light"] .dropdown-item:hover,
+html[data-theme="light"] .dropdown-item:focus,
+html[data-theme="light"] .dropdown-item.active,
+html[data-theme="light"] .well-filters .dropdown-menu a:hover {
+	background-color: rgba(236, 224, 228, .08);
+	color: #ECE0E4;
+}
+
+html[data-theme="light"] .modal-title {
+	color: #ECE0E4;
+}
+
+html[data-theme="light"] .modal-body {
+	color: #D4C2C7;
+}
+
+html[data-theme="light"] .modal .close,
+html[data-theme="light"] .modal .close:hover,
+html[data-theme="light"] .modal .close:focus {
+	color: #ECE0E4;
+	background-color: transparent;
+}
+
+/* ---- Mega menu (submenu do nav) segue o tema: vidro CLARO no desktop.
+   No mobile os tokens M3 já flipam (bottom sheet com surface-container-high). ---- */
+@media (min-width: 992px) {
+	html[data-theme="light"] .xb-dropdown-menu {
+		background-color: rgba(255, 248, 248, 0.9);
+		border-color: rgba(30, 21, 25, 0.14);
+		box-shadow: 0 12px 40px rgba(30, 21, 25, 0.2), 0 0 0 1px rgba(182, 13, 102, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+	}
+}
+
+/* Cores legadas hardcoded (#ccc/#fff) do submenu não flipam sozinhas */
+html[data-theme="light"] .xb-dropdown-list li a {
+	color: var(--xb-text);
+}
+
+html[data-theme="light"] .xb-dropdown-list li a:hover {
+	background-color: rgba(182, 13, 102, 0.08);
+	color: var(--xb-accent);
+}
+
+html[data-theme="light"] .xb-dropdown-video-title {
+	color: var(--xb-text);
+}
+
+html[data-theme="light"] .xb-dropdown-video:hover {
+	background-color: rgba(182, 13, 102, 0.06);
+}
+
+html[data-theme="light"] .xb-dropdown-view-all:hover {
+	color: var(--xb-accent);
+}
+
+html[data-theme="light"] .xb-dropdown-tag {
+	color: var(--xb-muted);
+}
+
+/* ---- Player mediabunny segue o tema: superfícies dos menus flipam ---- */
+html[data-theme="light"] .avs-player {
+	--avs-menu-bg: rgba(255, 248, 248, 0.92);
+	--avs-menu-border: rgba(30, 21, 25, 0.16);
+	--avs-menu-hl: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+html[data-theme="light"] .easy-autocomplete-container ul li {
+	color: #D4C2C7;
+}
+
+html[data-theme="light"] .easy-autocomplete-container ul li b {
+	color: #ECE0E4;
+}
+
+html[data-theme="light"] .easy-autocomplete-container ul li.selected {
+	background-color: #2B2529;
 }

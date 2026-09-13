@@ -8,6 +8,12 @@
     --avs-timeline-h-hover: 6px;
     --avs-icon: 24px;
     --avs-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    /* Superfícies dos menus (config/download): escuro por padrão; o bloco
+       light do pornozinho-md3.css troca estas vars em html[data-theme="light"]
+       para que o player obedeça ao tema do site */
+    --avs-menu-bg: rgba(33, 27, 32, 0.82);
+    --avs-menu-border: rgba(255, 255, 255, 0.16);
+    --avs-menu-hl: inset 0 1px 0 rgba(255, 255, 255, 0.08);
     position: relative;
     width: 100%;
     background: var(--md-sys-color-surface, #171318);
@@ -222,10 +228,12 @@
     bottom: calc(100% + 8px);
     min-width: 180px;
     padding: 6px;
-    background: var(--md-sys-color-surface-container-high, rgba(24, 24, 24, 0.96));
-    border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.12));
+    background: var(--avs-menu-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--avs-menu-border);
     border-radius: var(--md-sys-shape-corner-medium, 12px);
-    box-shadow: var(--md-sys-elevation-level3, 0 4px 20px rgba(0, 0, 0, 0.5));
+    box-shadow: var(--md-sys-elevation-level3, 0 4px 20px rgba(0, 0, 0, 0.5)), var(--avs-menu-hl);
     z-index: 20;
 }
 
@@ -459,12 +467,12 @@
     width: min(360px, calc(100% - 24px));
     max-width: calc(100% - 24px);
     padding: 10px 8px 8px;
-    background: var(--md-sys-color-surface-container, rgba(28, 28, 28, 0.95));
-    border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.12));
+    background: var(--avs-menu-bg);
+    border: 1px solid var(--avs-menu-border);
     border-radius: var(--md-sys-shape-corner-medium, 10px);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    box-shadow: var(--md-sys-elevation-level3, 0 6px 22px rgba(0, 0, 0, 0.5));
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: var(--md-sys-elevation-level3, 0 6px 22px rgba(0, 0, 0, 0.5)), var(--avs-menu-hl);
     font-family: var(--md-sys-font, "Roboto", "Open Sans", "Helvetica Neue", Arial, sans-serif);
     user-select: none;
     opacity: 0;

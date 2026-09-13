@@ -96,7 +96,7 @@
 	<link rel="stylesheet" href="{$relative_tpl}/css/easy-autocomplete.themes.min.css">	
 	
 	<link href="{$relative_tpl}/css/style.css" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.6" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.8" rel="stylesheet">
 	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
 	<!-- Material Design 3 -->
@@ -104,7 +104,36 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.3" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.8" rel="stylesheet">
+
+	<!-- Tema claro/escuro: aplica antes da 1ª pintura (evita flash) e persiste em avs_theme -->
+	<script>
+	{literal}
+	(function () {
+		var KEY = 'avs_theme';
+		var root = document.documentElement;
+		var stored = null;
+		try { stored = localStorage.getItem(KEY); } catch (e) {}
+		var theme = (stored === 'light' || stored === 'dark') ? stored
+			: (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		root.setAttribute('data-theme', theme);
+		function syncIcon() {
+			var cur = root.getAttribute('data-theme');
+			var s = document.querySelector('[data-theme-toggle] .material-symbols-rounded');
+			if (s) s.textContent = cur === 'dark' ? 'light_mode' : 'dark_mode';
+		}
+		document.addEventListener('click', function (ev) {
+			var btn = ev.target.closest ? ev.target.closest('[data-theme-toggle]') : null;
+			if (!btn) return;
+			var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+			root.setAttribute('data-theme', next);
+			try { localStorage.setItem(KEY, next); } catch (e) {}
+			syncIcon();
+		});
+		document.addEventListener('DOMContentLoaded', syncIcon);
+	})();
+	{/literal}
+	</script>
 	
 	<!-- Video Player -->
 	{if $view && !$video.embed_code}
@@ -323,10 +352,11 @@
 				<a class="xb-action" data-toggle="modal" href="#login-modal"><i class="fas fa-key"></i><span class="xb-action-text"> {translate c='global.login'}</span></a>
 				<a class="xb-action" href="{$relative}/signup" rel="nofollow"><i class="fas fa-user-plus"></i><span class="xb-action-text"> {translate c='global.sign_up'}</span></a>
 			{/if}
-			{if $video_module == '1'}
-				<a class="xb-action xb-action-upload" href="{$relative}/upload"><i class="fas fa-upload"></i><span> {translate c='menu.upload'}</span></a>
-			{/if}
-			<button class="xb-hamburger d-lg-none" type="button" data-toggle="collapse" data-target="#xbNav" aria-controls="xbNav" aria-expanded="false" aria-label="Toggle navigation"><i class="fas fa-bars"></i></button>
+{if $video_module == '1'}
+			<a class="xb-action xb-action-upload" href="{$relative}/upload"><i class="fas fa-upload"></i><span> {translate c='menu.upload'}</span></a>
+		{/if}
+		<button type="button" class="xb-action xb-action-theme" data-theme-toggle aria-label="Tema claro/escuro" title="Tema claro/escuro"><i class="material-symbols-rounded" aria-hidden="true">light_mode</i></button>
+		<button class="xb-hamburger d-lg-none" type="button" data-toggle="collapse" data-target="#xbNav" aria-controls="xbNav" aria-expanded="false" aria-label="Toggle navigation"><i class="fas fa-bars"></i></button>
 		</div>
 	</div>
 </div>

@@ -169,7 +169,7 @@
 	<div class="avs-error" style="display:none;"></div>
 </div>
 {if $player.timeline_preview}<link rel="preload" as="image" href="{insert name=thumb_path vid=$video.VID}/sprite.jpg">{/if}
-<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=3.2.5">
+<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=3.2.7">
 <script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=3.2.5"></script>
 <script>
 {literal}
