@@ -163,12 +163,7 @@
 			</div>
 		{/if}
 
-		<!-- Spinner de Carregamento Infinito -->
-		<div class="avs-shorts-infinite-loader" id="avs-shorts-infinite-loader" style="display:none;">
-			<div class="avs-spinner"></div>
-			<span>Carregando mais vídeos...</span>
-		</div>
-	</main>
+		</main>
 
 	<!-- Drawer / Painel de Comentários (Lateral Desktop / Bottom Sheet Mobile) -->
 	<aside class="avs-comments-drawer" id="avs-comments-drawer" aria-hidden="true">

@@ -22,12 +22,14 @@
 		activeIndex: 0,
 		page: 1,
 		isLoadingMore: false,
-		hasMore: true,
+		hasMore: false, // Sem infinite scroll - todos carregados no server-side
 		seenVids: new Set(window.__AVS_EXCLUDE_VIDS || []),
 		wheelCooldown: false,
 		lastTapTime: 0,
 		tapTimeout: null,
-		activeCommentsVid: 0
+		activeCommentsVid: 0,
+		canLoopForward: false,
+		canLoopBackward: false
 	};
 
 	// Recuperar preferência de mudo no localStorage
@@ -145,11 +147,20 @@
 					}
 				}
 
-				// Checar se estamos perto do fim para buscar mais vídeos (Infinite Scroll)
+				// Checar se estamos no fim para loop infinito (em vez de infinite scroll)
 				var allCards = stream.querySelectorAll('.avs-short-card');
 				var currentIndex = Array.prototype.indexOf.call(allCards, card);
-				if (currentIndex >= allCards.length - 2) {
-					loadMoreVideos();
+				if (currentIndex >= allCards.length - 1) {
+					// No último card - preparar para loop para o primeiro
+					// Não faz scroll automático, apenas marca que pode loopar
+					state.canLoopForward = true;
+				} else {
+					state.canLoopForward = false;
+				}
+				if (currentIndex <= 0) {
+					state.canLoopBackward = true;
+				} else {
+					state.canLoopBackward = false;
 				}
 			} else {
 				// Pausar se saiu do viewport
@@ -489,11 +500,20 @@
 		return String(num);
 	}
 
-	// Navegação entre cards (offset: +1 ou -1)
+	// Navegação entre cards (offset: +1 ou -1) com loop infinito
 	function scrollCard(offset) {
 		var cards = stream.querySelectorAll('.avs-short-card');
 		if (!cards.length) return;
-		var targetIndex = Math.max(0, Math.min(cards.length - 1, state.activeIndex + offset));
+		
+		var targetIndex = state.activeIndex + offset;
+		
+		// Loop infinito: último -> primeiro, primeiro -> último
+		if (targetIndex >= cards.length) {
+			targetIndex = 0; // Loop para o primeiro
+		} else if (targetIndex < 0) {
+			targetIndex = cards.length - 1; // Loop para o último
+		}
+		
 		var targetCard = cards[targetIndex];
 		if (targetCard) {
 			targetCard.scrollIntoView({ behavior: 'smooth' });

@@ -97,7 +97,7 @@ function shorts_select_url($sources, $default_res = 'high') {
 // A referência é `video.orientation` (enum portrait/landscape/square).
 $shorts_cond = " AND v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait'";
 
-// Carregar lote inicial de vídeos server-side (até 6 vídeos) para FCP imediato
+// Carregar TODOS os shorts que atendem aos critérios (sem limite) para exibição em loop
 $initial_videos = array();
 $exclude_vids = array();
 
@@ -153,7 +153,7 @@ if ($initial_vid > 0) {
     }
 }
 
-// 2. Buscar restante do lote inicial
+// 2. Buscar TODOS os shorts restantes (sem limite) para loop infinito
 switch ($tab) {
     case 'trending':
         $order_by = "ORDER BY v.viewnumber DESC, v.likes DESC, v.VID DESC";
@@ -171,63 +171,59 @@ switch ($tab) {
         break;
 }
 
-$limit = 6;
-$needed = $limit - count($initial_videos);
 $not_in_sql = (!empty($exclude_vids)) ? " AND v.VID NOT IN (" . implode(',', $exclude_vids) . ")" : "";
 
-if ($needed > 0) {
-    $sql = "SELECT v.*, u.username, u.photo, u.gender, u.fname 
-            FROM video AS v, signup AS u 
-            WHERE v.UID = u.UID" . $active_cond . $shorts_cond . $not_in_sql . " 
-            " . $order_by . " 
-            LIMIT " . intval($needed);
-    $rs = $conn->execute($sql);
-    if ($rs) {
-        while (!$rs->EOF) {
-            $row = $rs->fields;
-            $vid = intval($row['VID']);
-            $sources = get_video_sources($row);
-            $vurl = shorts_select_url($sources, $default_res);
+$sql = "SELECT v.*, u.username, u.photo, u.gender, u.fname 
+        FROM video AS v, signup AS u 
+        WHERE v.UID = u.UID" . $active_cond . $shorts_cond . $not_in_sql . " 
+        " . $order_by;
 
-            if (!empty($vurl)) {
-                // Capa rotativa entre as escolhidas pelo admin (thumbnails_opt).
-                $thumb_num = video_rotate_cover($row);
-                $gender = isset($row['gender']) ? $row['gender'] : 'm';
-                $photo = (empty($row['photo'])) ? 'nopic-' . $gender . '.gif' : $row['photo'];
+$rs = $conn->execute($sql);
+if ($rs) {
+    while (!$rs->EOF) {
+        $row = $rs->fields;
+        $vid = intval($row['VID']);
+        $sources = get_video_sources($row);
+        $vurl = shorts_select_url($sources, $default_res);
 
-                $sql_c = "SELECT COUNT(CID) AS total FROM video_comments WHERE VID = " . $vid . " AND status = '1'";
-                $rs_c = $conn->execute($sql_c);
-                $cc = ($rs_c && !$rs_c->EOF) ? intval($rs_c->fields['total']) : 0;
+        if (!empty($vurl)) {
+            // Capa rotativa entre as escolhidas pelo admin (thumbnails_opt).
+            $thumb_num = video_rotate_cover($row);
+            $gender = isset($row['gender']) ? $row['gender'] : 'm';
+            $photo = (empty($row['photo'])) ? 'nopic-' . $gender . '.gif' : $row['photo'];
 
-                $initial_videos[] = array(
-                    'vid' => $vid,
-                    'title' => (string)$row['title'],
-                    'description' => isset($row['description']) ? (string)$row['description'] : '',
-                    'duration_formatted' => shorts_fmt_duration($row['duration']),
-                    'views_formatted' => shorts_fmt_num($row['viewnumber']),
-                    'likes' => intval($row['likes']),
-                    'likes_formatted' => shorts_fmt_num($row['likes']),
-                    'comments' => $cc,
-                    'comments_formatted' => shorts_fmt_num($cc),
-                    'creator' => array(
-                        'uid' => intval($row['UID']),
-                        'username' => (string)$row['username'],
-                        'avatar_url' => $config['BASE_URL'] . '/media/users/' . $photo,
-                        'channel_url' => $config['BASE_URL'] . '/user/' . urlencode($row['username']),
-                        'is_subscribed' => false
-                    ),
-                    'poster_url' => get_video_thumb_src($vid, $thumb_num),
-                    'video_url' => $vurl,
-                    'is_vertical' => (isset($row['orientation']) && $row['orientation'] === 'portrait'),
-                    'aspect' => video_aspect_ratio($row),
-                    'is_liked' => false,
-                    'is_fav' => false,
-                    'share_url' => $config['BASE_URL'] . '/shorts?v=' . $vid
-                );
-                $exclude_vids[$vid] = $vid;
-            }
-            $rs->MoveNext();
+            $sql_c = "SELECT COUNT(CID) AS total FROM video_comments WHERE VID = " . $vid . " AND status = '1'";
+            $rs_c = $conn->execute($sql_c);
+            $cc = ($rs_c && !$rs_c->EOF) ? intval($rs_c->fields['total']) : 0;
+
+            $initial_videos[] = array(
+                'vid' => $vid,
+                'title' => (string)$row['title'],
+                'description' => isset($row['description']) ? (string)$row['description'] : '',
+                'duration_formatted' => shorts_fmt_duration($row['duration']),
+                'views_formatted' => shorts_fmt_num($row['viewnumber']),
+                'likes' => intval($row['likes']),
+                'likes_formatted' => shorts_fmt_num($row['likes']),
+                'comments' => $cc,
+                'comments_formatted' => shorts_fmt_num($cc),
+                'creator' => array(
+                    'uid' => intval($row['UID']),
+                    'username' => (string)$row['username'],
+                    'avatar_url' => $config['BASE_URL'] . '/media/users/' . $photo,
+                    'channel_url' => $config['BASE_URL'] . '/user/' . urlencode($row['username']),
+                    'is_subscribed' => false
+                ),
+                'poster_url' => get_video_thumb_src($vid, $thumb_num),
+                'video_url' => $vurl,
+                'is_vertical' => (isset($row['orientation']) && $row['orientation'] === 'portrait'),
+                'aspect' => video_aspect_ratio($row),
+                'is_liked' => false,
+                'is_fav' => false,
+                'share_url' => $config['BASE_URL'] . '/shorts?v=' . $vid
+            );
+            $exclude_vids[$vid] = $vid;
         }
+        $rs->MoveNext();
     }
 }
 

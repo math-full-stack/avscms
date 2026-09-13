@@ -276,51 +276,22 @@ switch ($tab) {
         break;
 }
 
-$fetch_limit = $limit - count($videos_out);
-if ($fetch_limit > 0) {
-    $sql = "SELECT v.*, u.username, u.photo, u.gender, u.fname 
-            FROM video AS v, signup AS u 
-            WHERE v.UID = u.UID" . $active_cond . $shorts_cond . $not_in_sql . " 
-            " . $order_by . " 
-            LIMIT " . intval($fetch_limit);
-            
-    $rs = $conn->execute($sql);
-    if ($rs) {
-        while (!$rs->EOF) {
-            $row = $rs->fields;
-            $item = build_short_item($row, $conn, $config, $uid, $default_res);
-            if ($item) {
-                $videos_out[] = $item;
-                $exclude_vids[$item['vid']] = $item['vid'];
-            }
-            $rs->MoveNext();
-        }
-    }
-}
+// Retornar TODOS os vídeos (sem paginação) para loop infinito
+$sql = "SELECT v.*, u.username, u.photo, u.gender, u.fname 
+        FROM video AS v, signup AS u 
+        WHERE v.UID = u.UID" . $active_cond . $shorts_cond . $not_in_sql . " 
+        " . $order_by;
 
-// Se a exclusão esgotou os vídeos (sessão muito longa), permitir reciclar sem exclusão
-if (count($videos_out) < $limit && !empty($exclude_vids)) {
-    $needed = $limit - count($videos_out);
-    $current_batch_ids = array();
-    foreach ($videos_out as $vo) {
-        $current_batch_ids[] = $vo['vid'];
-    }
-    $curr_not_in = (!empty($current_batch_ids)) ? " AND v.VID NOT IN (" . implode(',', $current_batch_ids) . ")" : "";
-    $sql_recycle = "SELECT v.*, u.username, u.photo, u.gender, u.fname 
-                    FROM video AS v, signup AS u 
-                    WHERE v.UID = u.UID" . $active_cond . $shorts_cond . $curr_not_in . " 
-                    " . $order_by . " 
-                    LIMIT " . intval($needed);
-    $rs_rec = $conn->execute($sql_recycle);
-    if ($rs_rec) {
-        while (!$rs_rec->EOF) {
-            $row = $rs_rec->fields;
-            $item = build_short_item($row, $conn, $config, $uid, $default_res);
-            if ($item) {
-                $videos_out[] = $item;
-            }
-            $rs_rec->MoveNext();
+$rs = $conn->execute($sql);
+if ($rs) {
+    while (!$rs->EOF) {
+        $row = $rs->fields;
+        $item = build_short_item($row, $conn, $config, $uid, $default_res);
+        if ($item) {
+            $videos_out[] = $item;
+            $exclude_vids[$item['vid']] = $item['vid'];
         }
+        $rs->MoveNext();
     }
 }
 
@@ -331,6 +302,6 @@ echo json_encode(array(
     'page' => $page,
     'count' => count($videos_out),
     'videos' => $videos_out,
-    'has_more' => (count($videos_out) >= 3)
+    'has_more' => false
 ));
 die();
