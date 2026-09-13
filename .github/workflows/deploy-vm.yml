@@ -25,6 +25,9 @@ jobs:
             --exclude='.github' \
             --exclude='*.log' \
             --exclude='setup-deploy.sh' \
+            --exclude='cache' \
+            --exclude='tmp' \
+            --exclude='logs' \
             ${{ runner.workspace }}/avscms/ ${{ env.DEPLOY_PATH }}/
 
       - name: Set permissions
@@ -60,6 +63,23 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
+
+      - name: Invalidate template & opcode caches
+        run: |
+          cd ${{ env.DEPLOY_PATH }}
+          # O Smarty decide recompilar comparando o MTIME do .tpl com o do PHP
+          # compilado (cache/frontend). Como o rsync -a preserva o mtime da
+          # origem, é possível o .tpl chegar com mtime MAIS ANTIGO que o cache e
+          # o template nunca ser recompilado: o HTML sai do commit anterior.
+          # Foi exatamente o que deixou /shorts sem o <link> do avs-shorts.css
+          # (arquivo novo no disco, HTML velho servido). Touch + cache limpo.
+          sudo find templates -name '*.tpl' -exec touch {} +
+          sudo rm -rf cache/frontend cache/backend
+          sudo mkdir -p cache/frontend cache/backend
+          sudo chown -R www-data:www-data cache
+          # OPcache com validate_timestamps=0 sobrevive a reload: só restart limpa.
+          sudo systemctl restart apache2
+          sudo systemctl restart 'php*-fpm' 2>/dev/null || true
 
       - name: Reload Apache
         run: sudo systemctl reload apache2
