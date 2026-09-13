@@ -83,38 +83,9 @@
 		<div class="content-left">
             {if $videos}		
 			<div class="row content-row">
+			{capture name=videos_cols}{if $min_col == '2'}col-6 {/if}col-sm-6 col-md-4 col-lg-4{if $max_col == '5'} col-xl-3{/if}{/capture}
             {section name=i loop=$videos}
-				<div class="{if $min_col == '2'}col-6{/if} col-sm-6 col-md-4 col-lg-4 {if $max_col == '5'}col-xl-3{/if}">
-					<a href="{$relative}/video/{$videos[i].VID}/{$videos[i].title|clean}">
-						<div class="thumb-overlay{if isset($videos[i].orientation) && $videos[i].orientation == 'portrait'} xb-portrait{/if}" {if $videos[i].vthumbs == '1'} id="playvthumb_{$videos[i].VID}"{/if}>
-							{if isset($videos[i].orientation) && $videos[i].orientation == 'portrait'}{insert name=video_trio vid=$videos[i].VID thumb=$videos[i].thumb thumbs=$videos[i].thumbs opt=$videos[i].thumbnails_opt title=$videos[i].title type=$videos[i].type}{else}<img src="{insert name=thumb_path vid=$videos[i].VID}/{$videos[i].thumb}.jpg" title="{$videos[i].title|escape:'html'}" alt="{$videos[i].title|escape:'html'}" {if $videos[i].vthumbs == '0'}id="rotate_{$videos[i].VID}_{$videos[i].thumbs}_{$videos[i].thumb}_viewed"{/if} class="img-responsive {if $videos[i].type == 'private'}img-private{/if}"/>{/if}
-							{if $videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
-							<span class="xb-thumb-meta">
-								{insert name=views assign=s_views views=$videos[i].viewnumber text='0'}
-								{insert name=views assign=s_views_w views=$videos[i].viewnumber text='w'}
-								<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
-								{if isset($videos[i].username) && $videos[i].username != 'anonymous'}
-								<span class="xb-thumb-user">@{$videos[i].username}</span>
-								{/if}
-								<span class="xb-thumb-title">
-									<span class="xb-thumb-title-inner">
-										<span class="xb-tt">{$videos[i].title|escape:'html'}</span><span class="xb-tt">{$videos[i].title|escape:'html'}</span>
-									</span>
-								</span>
-							</span>
-							<div class="duration">
-								{if $videos[i].hd==1}<span class="hd-text-icon">HD</span>{/if}
-								{insert name=duration assign=duration duration=$videos[i].duration}
-								{$duration}
-							</div>
-						</div>
-					</a>
-					<div class="content-info">
-						<a href="{$relative}/video/{$videos[i].VID}/{$videos[i].title|clean}">
-							<span class="content-title">{$videos[i].title|escape:'html'}</span>
-						</a>
-					</div>
-				</div>			
+				{include file='video_card.tpl' v=$videos[i] card_cols=$smarty.capture.videos_cols show_tags=0}
             {/section}
 			
 			</div>

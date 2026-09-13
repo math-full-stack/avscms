@@ -1,8 +1,12 @@
-<div class="footer-container">
+<div class="footer-container xb-apple-footer">
+	<div class="xb-apple-footer-brand">
+		<a class="xb-logo" href="{$relative}/" aria-label="{$site_name}" style="--xb-logo-img:url('{$relative}/images/logo/logo.png')"><img src="{$relative}/images/logo/logo.png" alt="{$site_name}"></a>
+	</div>
+	<hr class="xb-apple-footer-rule" role="presentation">
 	<div class="footer-links">
 		<div class="container">
 			<div class="row">
-				<div class="col-sm-3">
+				<div class="col-sm-4">
 					<h4>{t c='footer.information'}</h4>
 					<ul class="list-unstyled">
 						<li><a href="{$relative}/static/terms" rel="nofollow">{translate c='footer.terms'}</a></li>
@@ -11,43 +15,35 @@
 						<li><a href="{$relative}/static/_2257" rel="nofollow">{translate c='footer.2257'}</a></li>
 					</ul>
 				</div>
-				<div class="col-sm-3">
+				<div class="col-sm-4">
 					<h4>{t c='footer.work_with_us'}</h4>
 					<ul class="list-unstyled">
 						<li><a href="{$relative}/static/advertise" rel="nofollow">{translate c='footer.advertise'}</a></li>
 						<li><a href="{$relative}/static/webmasters" rel="nofollow">{translate c='footer.webmasters'}</a></li>
-						<li><a href="{$relative}/invite" rel="nofollow">{translate c='global.invite_friends'}</a></li>						
+						<li><a href="{$relative}/invite" rel="nofollow">{translate c='global.invite_friends'}</a></li>
 					</ul>
 				</div>
-				<div class="col-sm-3">
+				<div class="col-sm-4">
 					<h4>{t c='footer.support_and_help'}</h4>
 					<ul class="list-unstyled">
-						<li><a href="{$relative}/notices">{translate c='global.notice'}</a></li>				
+						<li><a href="{$relative}/notices">{translate c='global.notice'}</a></li>
 						<li><a href="{$relative}/static/faq" rel="nofollow">{translate c='footer.faq'}</a></li>
-						<li><a href="{$relative}/feedback" rel="nofollow">{translate c='global.support_feedback'}</a></li>				
+						<li><a href="{$relative}/feedback" rel="nofollow">{translate c='global.support_feedback'}</a></li>
 					</ul>
 				</div>
-				<div class="col-sm-3">
-					<h4>Redes sociais</h4>
-					<ul class="list-unstyled">
-						<li><a href="https://www.facebook.com/{$facebook_id}/" target="_blank" rel="nofollow"><i class="fab fa-facebook-f"></i>&nbsp;&nbsp;Facebook</a></li>							
-						<li><a href="https://www.instagram.com/{$instagram_id}/" target="_blank" rel="nofollow"><i class="fab fa-instagram"></i>&nbsp;&nbsp;Instagram</a></li>					
-						<li><a href="https://twitter.com/{$twitter_id}/" target="_blank" rel="nofollow"><i class="fab fa-twitter"></i>&nbsp;&nbsp;Twitter</a></li>
-						<li><a href="https://www.reddit.com/user/{$reddit_id}/" target="_blank" rel="nofollow"><i class="fab fa-reddit"></i>&nbsp;&nbsp;Reddit</a></li>							
-					</ul>
-				</div>					
 			</div>
 		</div>
 	</div>
 	<div class="footer">
-		<div class="container">
-			<div class="d-none d-sm-block">
-				<div class="float-left">
-					<span>{t c='footer.copyright'} &#169; 2008-2023</span> <span class="text-highlighted">{$site_name}</span>
-				</div>
-				<div class="clearfix"></div>
-			</div>
-			<div class="d-block d-sm-none"><span>{t c='footer.copyright'} &#169; 2008-2023</span> <span class="text-highlighted">{$site_name}</span></div>
+		<div class="container xb-footer-copy">
+			<span class="xb-footer-social">
+				<a href="https://www.facebook.com/{$facebook_id}/" target="_blank" rel="nofollow" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+				<a href="https://www.instagram.com/{$instagram_id}/" target="_blank" rel="nofollow" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+				<a href="https://twitter.com/{$twitter_id}/" target="_blank" rel="nofollow" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+				<a href="https://www.reddit.com/user/{$reddit_id}/" target="_blank" rel="nofollow" aria-label="Reddit"><i class="fab fa-reddit"></i></a>
+			</span>
+			<span class="xb-footer-legal">&#169; 2016-{$smarty.now|date_format:'%Y'}</span>
+			<span class="text-highlighted">{$site_name}</span>
 		</div>
 	</div>
 	<div id="alerts_bottom"></div>

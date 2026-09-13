@@ -1315,6 +1315,7 @@ a:hover .thumb-overlay {
 }
 
 .footer-links {
+	background-color: transparent;
 	padding: 32px 0 20px;
 }
 
@@ -1347,6 +1348,65 @@ a:hover .thumb-overlay {
 
 .footer .text-highlighted {
 	color: var(--md-sys-color-primary) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Footer estilo Apple — pornozinho-md3
+   -------------------------------------------------------------------------- */
+.xb-apple-footer-brand {
+	display: flex;
+	justify-content: center;
+	padding-top: 18px;
+}
+
+.xb-apple-footer-brand .xb-logo {
+	font-size: 0;
+	line-height: 0;
+}
+
+.xb-apple-footer-brand .xb-logo img {
+	max-height: 41px;
+	width: auto;
+}
+
+.xb-apple-footer-brand  {
+	display: flex;
+	justify-content: center;
+	padding-top: 18px;
+}
+
+.xb-apple-footer-rule {
+	border: 0;
+	border-top: 1px solid var(--md-sys-color-outline-variant);
+	max-width: 320px;
+	margin: 14px auto 6px;
+}
+
+.xb-apple-footer-brand  {
+	display: flex;
+	justify-content: center;
+	padding-top: 18px;
+}
+
+.xb-apple-footer-sep {
+	color: var(--md-sys-color-outline);
+	margin: 0 8px;
+}
+
+.float-right.xb-apple-footer-locale {
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: 13px;
+}
+
+.xb-apple-footer-locale i {
+	color: var(--md-sys-color-primary);
+	margin-right: 6px;
+}
+
+@media (max-width: 575.98px) {
+	.xb-apple-footer-locale {
+		display: none;
+	}
 }
 
 /* Barra inferior mobile — M3 bottom navigation */
@@ -1581,6 +1641,17 @@ html[data-theme="light"] .content-row a:hover {
 
 html[data-theme="light"] .xb-search-btn:hover {
 	color: var(--xb-accent);
+}
+
+/* Inputs de busca legíveis no claro (a base traz cor #fff — invisível) */
+html[data-theme="light"] .xb-search .xb-search-input,
+html[data-theme="light"] .xb-mobilesearch .xb-search-input {
+	color: var(--xb-text);
+}
+
+html[data-theme="light"] .xb-search .xb-search-input::placeholder,
+html[data-theme="light"] .xb-mobilesearch .xb-search-input::placeholder {
+	color: var(--xb-muted);
 }
 
 /* Topbar ao rolar: vidro CLARO (texto dos tokens já fica escuro) */

@@ -178,6 +178,7 @@ $smarty->assign('title', $title);
 $smarty->assign('self_title', $self_title);
 $smarty->assign('self_description', $self_description);
 $smarty->assign('self_keywords', $self_keywords);
+$smarty->assign('video_listing', true);
 $smarty->loadFilter('output', 'trimwhitespace');
 $smarty->display('header.tpl');
 $smarty->display('videos.tpl');

@@ -25,7 +25,7 @@
     <title>{if isset($self_title) && $self_title != ''}{$self_title|escape:'html'}{else}{$site_name}{/if}</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=1280, initial-scale=1, maximum-scale=1, user-scalable=no">	
+    <meta name="viewport" content="{if (isset($index) && $index) || (isset($video_listing) && $video_listing)}width=device-width, initial-scale=1{else}width=1280, initial-scale=1, maximum-scale=1, user-scalable=no{/if}">	
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="robots" content="index, follow" />
     <meta name="revisit-after" content="1 days" />
@@ -96,7 +96,7 @@
 	<link rel="stylesheet" href="{$relative_tpl}/css/easy-autocomplete.themes.min.css">	
 	
 	<link href="{$relative_tpl}/css/style.css" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.11" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.16" rel="stylesheet">
 	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
 	<!-- Material Design 3 -->
@@ -104,7 +104,7 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.10" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.14" rel="stylesheet">
 	<link href="{$relative_tpl}/css/avs-disguise.css?ver=1.0.2" rel="stylesheet">
 
 	<!-- Tema claro/escuro: aplica antes da 1ª pintura (evita flash) e persiste em avs_theme -->
@@ -357,7 +357,6 @@
 			<a class="xb-action xb-action-upload" href="{$relative}/upload"><i class="fas fa-upload"></i><span> {translate c='menu.upload'}</span></a>
 		{/if}
 		<button type="button" class="xb-action xb-action-theme" data-theme-toggle aria-label="Tema claro/escuro" title="Tema claro/escuro"><i class="material-symbols-rounded" aria-hidden="true">light_mode</i></button>
-		<button type="button" class="xb-action xb-action-disguise" data-dg-toggle data-tip="Modo camuflado · atalho: pressione Y duas vezes" aria-label="Modo camuflado de carros (atalho: pressione Y duas vezes)" title="Modo camuflado · atalho: pressione Y duas vezes"><i class="material-symbols-rounded" aria-hidden="true">visibility_off</i></button>
 		<button class="xb-hamburger d-lg-none" type="button" data-toggle="collapse" data-target="#xbNav" aria-controls="xbNav" aria-expanded="false" aria-label="Toggle navigation"><i class="fas fa-bars"></i></button>
 		</div>
 	</div>

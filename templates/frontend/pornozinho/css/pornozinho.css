@@ -54,7 +54,8 @@ body {
    -------------------------------------------------------------------------- */
 .container {
 	width: 100%;
-	max-width: none;
+	max-width: 1280px;
+	margin-inline: auto;
 	padding-left: 24px;
 	padding-right: 24px;
 }
@@ -258,7 +259,7 @@ a:active {
 }
 
 .xb-logo img {
-	max-height: 60px;
+	max-height: 41px;
 	width: auto;
 	visibility: hidden;
 }
@@ -2278,6 +2279,181 @@ a:hover .xb-thumb-meta {
 	font-weight: 700;
 }
 
+.xb-footer-copy {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 8px 20px;
+}
+
+.xb-footer-social {
+	display: inline-flex;
+	align-items: center;
+	gap: 18px;
+}
+
+.xb-footer-social a {
+	color: var(--xb-muted);
+	font-size: 14px;
+}
+
+.xb-footer-social a:hover {
+	color: var(--xb-accent);
+	text-decoration: none;
+}
+
+/* --------------------------------------------------------------------------
+   Footer estilo Apple
+   -------------------------------------------------------------------------- */
+.xb-apple-footer-brand {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 10px 0 0;
+}
+
+.xb-apple-footer-brand .xb-logo {
+	margin: 0;
+}
+
+.xb-apple-footer-brand .xb-logo img {
+	max-height: 33px;
+	width: auto;
+}
+
+.xb-apple-footer-rule {
+	border: 0;
+	border-top: 1px solid #232323;
+	max-width: 980px;
+	margin: 14px auto 0;
+}
+
+.xb-apple-footer-sep {
+	color: #4d4d4d;
+	margin: 0 8px;
+}
+
+.xb-apple-footer-locale {
+	padding-left: 14px;
+	margin-left: 14px;
+	border-left: 1px solid #2d2d2d;
+	color: #bdbdbd;
+}
+
+.footer .xb-apple-footer-locale i {
+	color: #8a8a8a;
+	margin-right: 5px;
+}
+
+@media (max-width: 575.98px) {
+	.xb-apple-footer-locale {
+		display: none;
+	}
+}
+
+/* --------------------------------------------------------------------------
+   Footer estilo Apple
+   -------------------------------------------------------------------------- */
+.xb-apple-footer-brand {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 24px 0 8px;
+}
+
+.xb-apple-footer-brand .xb-logo {
+	margin: 0;
+	font-size: 0;
+}
+
+.xb-apple-footer-brand .xb-logo img {
+	max-height: 40px;
+	width: auto;
+	object-fit: contain;
+}
+
+.xb-apple-footer-rule {
+	border: 0;
+	border-top: 1px solid #2a2a2a;
+	max-width: 980px;
+	margin: 0 auto 26px;
+}
+
+.xb-apple-footer-sep {
+	color: #5a5a5a;
+	margin: 0 7px;
+}
+
+.xb-apple-footer-locale {
+	color: #d0d0d0;
+}
+
+.footer .xb-apple-footer-sep {
+	color: #5a5a5a;
+}
+
+.footer a:hover {
+	color: var(--xb-accent);
+	text-decoration: none;
+}
+
+/* --------------------------------------------------------------------------
+   Footer estilo Apple
+   -------------------------------------------------------------------------- */
+.xb-apple-footer {
+	padding-top: 20px;
+}
+
+.xb-apple-footer .xb-apple-footer-brand {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 8px 0 4px;
+}
+
+.xb-apple-footer .xb-logo {
+	margin: 0 auto;
+	font-size: 0;
+	line-height: 0;
+	display: inline-block;
+}
+
+.xb-apple-footer .xb-logo img {
+	max-height: 40px;
+	width: auto;
+	display: inline-block;
+	vertical-align: middle;
+	object-fit: contain;
+}
+
+.xb-apple-footer-rule {
+	border: 0;
+	border-top: 1px solid #1f1f1f;
+	max-width: 980px;
+	margin: 18px auto 26px;
+}
+
+.xb-apple-footer-sep {
+	color: #4b4b4b;
+	margin: 0 10px;
+	font-weight: 300;
+}
+
+.xb-apple-footer .footer .float-left a,
+.xb-apple-footer .footer .float-left span:not(.xb-apple-footer-sep) {
+	color: #9a9a9a;
+}
+
+.xb-apple-footer .footer .float-left a:hover {
+	color: var(--xb-accent);
+	text-decoration: none;
+}
+
+.xb-apple-footer .xb-apple-footer-locale {
+	color: #d4d4d4;
+}
+
 /* --------------------------------------------------------------------------
    Barra inferior mobile (opcional)
    -------------------------------------------------------------------------- */
@@ -2388,7 +2564,7 @@ a:hover .xb-thumb-meta {
 	}
 
 	.xb-logo img {
-		max-height: 36px;
+		max-height: 25px;
 	}
 
 	.xb-actions .xb-action-text {
@@ -2570,6 +2746,286 @@ a:hover .xb-thumb-meta {
 	.xb-thumb-meta .xb-thumb-user,
 	.xb-thumb-meta .xb-thumb-views-word {
 		display: none;
+	}
+}
+
+/* --------------------------------------------------------------------------
+   Home — responsivo real (device-width)
+   A home troca o viewport para width=device-width (header.tpl via $index),
+   então estes media queries só disparam nela. Nas demais páginas o viewport
+   continua fixo em 1280 e este bloco fica dormente — mesmo efeito do resto
+   do tema. Regras apontam para classes COMPARTILHADAS (.content-row, xb-section,
+   xb-hero-*, xb-creator/cat-card, carousel), cobrindo todos os grids de uma vez.
+   -------------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+	/* Header: logo na esquerda e o grupo (ações + hamburger) ancorado à direita */
+	.xb-topbar-inner {
+		justify-content: space-between;
+	}
+
+	.xb-topbar-inner .xb-logo img {
+		max-height: 23px;
+	}
+
+	/* Cabeçalhos de seção mais compactos */
+	.xb-section {
+		margin: 24px 0 14px;
+		gap: 10px;
+	}
+
+	.xb-section h2 {
+		font-size: 17px;
+		letter-spacing: .4px;
+	}
+
+	.xb-section .xb-section-link {
+		font-size: 12px;
+	}
+
+	/* Títulos dos cards dos grids (Novos/Em alta e hero lateral): no touch não
+	   existe hover/marquee, então o título precisa voltar abaixo do thumb.
+	   Uma regra para todos os grids — .content-row é o que todos compartilham. */
+	.content-row .content-title {
+		display: -webkit-box !important;
+		font-size: 13px;
+		line-height: 1.35;
+		max-height: 36px;
+		margin-top: 6px;
+	}
+
+	/* Hero lateral: mantém o texto do card menor que o dos grids */
+	.xb-hero-side-info .content-title {
+		font-size: 11.5px;
+		max-height: 31px;
+	}
+}
+
+@media (max-width: 575.98px) {
+	/* Header: logo (máscara ~4.9:1) + login/signup/upload/tema/camuflado/hamburger
+	   passavam de 490px numa linha — estouravam a tela. Compacta os ítens para
+	   caber desde 320px. Specificity .xb-topbar-inner vence md3/avs-disguise. */
+	.xb-topbar-inner {
+		flex-wrap: nowrap;
+		gap: 8px;
+	}
+
+	.xb-topbar-inner .xb-logo {
+		min-width: 0;
+	}
+
+	.xb-topbar-inner .xb-logo img {
+		max-height: 17px;
+	}
+
+	.xb-topbar-inner .xb-actions {
+		gap: 2px;
+	}
+
+	.xb-topbar-inner .xb-actions .xb-action {
+		padding: 7px 9px;
+		border-radius: 18px;
+	}
+
+	.xb-topbar-inner .xb-actions .xb-action .material-symbols-rounded {
+		font-size: 20px;
+	}
+
+	.xb-topbar-inner .xb-actions .xb-action-upload {
+		padding: 7px 11px;
+	}
+
+	.xb-topbar-inner .xb-actions .xb-hamburger {
+		padding: 5px 8px;
+		font-size: 16px;
+	}
+
+	/* Menos respiro horizontal em tela pequena */
+	.container {
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+
+	/* Grid 2-col mais apertado */
+	.row.content-row > [class*="col-"] {
+		padding-bottom: 10px;
+	}
+
+	/* Hero principal: overlay e tipos calibrados */
+	.thumb-overlay.xb-hero-main .xb-hero-title {
+		font-size: 13.5px;
+	}
+
+	.thumb-overlay.xb-hero-main .xb-hero-meta {
+		font-size: 10px;
+		gap: 6px;
+	}
+
+	.thumb-overlay.xb-hero-main .xb-hero-overlay {
+		padding: 13px 8px 5px;
+	}
+
+	.xb-hero-side-grid {
+		gap: 6px;
+	}
+
+	.xb-hero-side-info .content-title {
+		font-size: 10.5px;
+	}
+
+	/* Creators: cards compactos (grid auto-fill já vira 2 col) */
+	.xb-creator-card {
+		padding: 12px 8px 10px;
+	}
+
+	.xb-creator-card .xb-avatar-lg {
+		width: 54px;
+		height: 54px;
+	}
+
+	.xb-creator-card .xb-creator-name {
+		font-size: 12px;
+	}
+
+	.xb-creator-card .xb-creator-meta {
+		font-size: 11px;
+	}
+
+	/* Categorias: capa mais baixa nas 2 col */
+	.xb-cat-card img {
+		height: 96px;
+	}
+
+	.xb-cat-card .xb-cat-name {
+		font-size: 12px;
+	}
+
+	/* Tags populares menores */
+	.xb-tags-lg a {
+		font-size: 12px;
+		padding: 4px 10px;
+	}
+
+	/* Carousel temático ocupa a tela com folga menor */
+	.xb-carousel-sec--themed {
+		margin: 1.5rem -1rem;
+		padding: 1.5rem .75rem;
+		border-radius: 20px;
+	}
+}
+
+/* Telas muito estreitas (≤390px): aperta mais os ícones do header */
+@media (max-width: 389.98px) {
+	.xb-topbar-inner {
+		gap: 5px;
+	}
+
+	.xb-topbar-inner .xb-logo img {
+		max-height: 14px;
+	}
+
+	.xb-topbar-inner .xb-actions {
+		gap: 0;
+	}
+
+	.xb-topbar-inner .xb-actions .xb-action {
+		padding: 6px 7px;
+	}
+
+	.xb-topbar-inner .xb-actions .xb-action .material-symbols-rounded {
+		font-size: 18px;
+	}
+
+	.xb-topbar-inner .xb-actions .xb-hamburger {
+		padding: 4px 6px;
+		font-size: 15px;
+	}
+}
+
+/* --------------------------------------------------------------------------
+   Videos — responsivo real (device-width)
+   O listado de vídeos também troca o viewport (videos.php via $video_listing).
+   O grid já herda o tratamento da home (.content-row -> títulos e colunas).
+   Aqui só a faixa de filtros (well-filters/well-info) e a sidebar de
+   categorias (content-right). Dorme nas demais páginas (viewport 1280) e na
+   própria home (que não usa esses blocos).
+   -------------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+	/* Barra de filtros completa (tablet): aperta para não estourar o width real */
+	.well-filters .well-action {
+		padding: 6px 2px;
+		font-size: 12px;
+	}
+
+	.well-filters .btn-group {
+		margin-right: 4px;
+	}
+
+	.well-filters .btn-group .dropdown-menu {
+		left: 0 !important;
+		width: 170px;
+	}
+}
+
+@media (max-width: 767.98px) {
+	/* Filtros (modo mobile: "Filters" + Upload): flex embrulhável em vez dos */
+	/* floats fixos, que estouravam em tela estreita */
+	.well-filters {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 14px;
+		margin-bottom: 4px;
+	}
+
+	.well-filters .float-right {
+		margin-left: auto;
+	}
+}
+
+@media (max-width: 575.98px) {
+	.well-filters h1 {
+		font-size: 20px;
+	}
+
+	.well-filters h1, .well-filters h2, .well-filters h3, .well-filters h4, .well-filters h5, .well-filters h6 {
+		padding: 8px 0;
+	}
+
+	/* Dropdown "Filters" e link Upload viram chips */
+	.well-filters .btn-group .well-action.dropdown-toggle,
+	.well-filters > .float-right a {
+		display: inline-block;
+		border-radius: 999px;
+		padding: 7px 14px;
+		box-shadow: none;
+		border: 1px solid var(--xb-border);
+		background: var(--xb-card);
+	}
+
+	.well-filters > .float-right {
+		box-shadow: none;
+	}
+
+	.well-info {
+		font-size: 12px;
+		margin: 0 0 8px;
+	}
+
+	/* Sidebar de categorias: chips em 2 col em vez de lista vertical */
+	.content-right .list-group {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 8px;
+	}
+
+	.content-right .list-group-item {
+		border-radius: 999px;
+		text-align: center;
+		padding: 8px 10px;
+		font-size: 13px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 }
 

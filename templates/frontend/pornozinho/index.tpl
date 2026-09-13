@@ -9,43 +9,7 @@
 	{if $recent_videos}
 	<div class="row content-row">
 		{section name=i loop=$recent_videos}
-		<div class="col-6 col-sm-6 col-md-4 col-lg-3">
-			<a href="{$relative}/video/{$recent_videos[i].VID}/{$recent_videos[i].title|clean}">					<div class="thumb-overlay{if isset($recent_videos[i].orientation) && $recent_videos[i].orientation == 'portrait'} xb-portrait{/if}" {if $recent_videos[i].vthumbs == '1'} id="playvthumb_{$recent_videos[i].VID}"{/if}>
-						{if isset($recent_videos[i].orientation) && $recent_videos[i].orientation == 'portrait'}{insert name=video_trio vid=$recent_videos[i].VID thumb=$recent_videos[i].thumb thumbs=$recent_videos[i].thumbs opt=$recent_videos[i].thumbnails_opt title=$recent_videos[i].title type=$recent_videos[i].type}{else}<img src="{insert name=thumb_path vid=$recent_videos[i].VID}/{$recent_videos[i].thumb}.jpg" title="{$recent_videos[i].title|escape:'html'}" alt="{$recent_videos[i].title|escape:'html'}" {if $recent_videos[i].vthumbs == '0'}id="rotate_{$recent_videos[i].VID}_{$recent_videos[i].thumbs}_{$recent_videos[i].thumb}_viewed"{/if} class="img-responsive {if $recent_videos[i].type == 'private'}img-private{/if}"/>{/if}
-						{if $recent_videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
-						<span class="xb-thumb-meta">
-							{insert name=views assign=s_views views=$recent_videos[i].viewnumber text='0'}
-							{insert name=views assign=s_views_w views=$recent_videos[i].viewnumber text='w'}
-							<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
-							{if isset($recent_videos[i].username) && $recent_videos[i].username != 'anonymous'}
-							<span class="xb-thumb-user">@{$recent_videos[i].username}</span>
-							{/if}
-							<span class="xb-thumb-title">
-								<span class="xb-thumb-title-inner">
-									<span class="xb-tt">{$recent_videos[i].title|escape:'html'}</span><span class="xb-tt">{$recent_videos[i].title|escape:'html'}</span>
-								</span>
-							</span>
-						</span>
-					<div class="duration">
-						{if $recent_videos[i].hd==1}<span class="hd-text-icon">HD</span>{/if}
-						{insert name=duration assign=duration duration=$recent_videos[i].duration}
-						{$duration}
-					</div>
-				</div>
-			</a>
-			<div class="content-info">
-				<a href="{$relative}/video/{$recent_videos[i].VID}/{$recent_videos[i].title|clean}">
-					<span class="content-title">{$recent_videos[i].title|escape:'html'}</span>
-				</a>
-				{if $recent_videos[i].keywords}
-				<div class="xb-tags">
-					{section name=t loop=$recent_videos[i].keywords max=4}
-						<a href="{$relative}/search/tags/{$recent_videos[i].keywords[t]}">#{$recent_videos[i].keywords[t]}</a>
-					{/section}
-				</div>
-				{/if}
-			</div>
-		</div>
+			{include file='video_card.tpl' v=$recent_videos[i]}
 		{/section}
 	</div>
 	{else}
@@ -90,7 +54,7 @@
 		</div>
 
 		{* Cards menores para os demais *}
-		<div class="col-12 col-lg-4 d-none d-md-block">
+		<div class="col-12 col-lg-4 xb-hero-side-col">
 			<div class="xb-hero-side-grid">
 				{section name=h loop=$hero_videos start=1}
 				<div class="xb-hero-side-card">
@@ -139,43 +103,7 @@
 	{if $viewed_videos}
 	<div class="row content-row">
 		{section name=i loop=$viewed_videos}
-		<div class="col-6 col-sm-6 col-md-4 col-lg-3">
-			<a href="{$relative}/video/{$viewed_videos[i].VID}/{$viewed_videos[i].title|clean}">					<div class="thumb-overlay{if isset($viewed_videos[i].orientation) && $viewed_videos[i].orientation == 'portrait'} xb-portrait{/if}" {if $viewed_videos[i].vthumbs == '1'} id="playvthumb_{$viewed_videos[i].VID}"{/if}>
-						{if isset($viewed_videos[i].orientation) && $viewed_videos[i].orientation == 'portrait'}{insert name=video_trio vid=$viewed_videos[i].VID thumb=$viewed_videos[i].thumb thumbs=$viewed_videos[i].thumbs opt=$viewed_videos[i].thumbnails_opt title=$viewed_videos[i].title type=$viewed_videos[i].type}{else}<img src="{insert name=thumb_path vid=$viewed_videos[i].VID}/{$viewed_videos[i].thumb}.jpg" title="{$viewed_videos[i].title|escape:'html'}" alt="{$viewed_videos[i].title|escape:'html'}" {if $viewed_videos[i].vthumbs == '0'}id="rotate_{$viewed_videos[i].VID}_{$viewed_videos[i].thumbs}_{$viewed_videos[i].thumb}_viewed"{/if} class="img-responsive {if $viewed_videos[i].type == 'private'}img-private{/if}"/>{/if}
-						{if $viewed_videos[i].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
-						<span class="xb-thumb-meta">
-							{insert name=views assign=s_views views=$viewed_videos[i].viewnumber text='0'}
-							{insert name=views assign=s_views_w views=$viewed_videos[i].viewnumber text='w'}
-							<span class="xb-thumb-views"><i class="fas fa-eye"></i> {$s_views}<span class="xb-thumb-views-word"> {$s_views_w}</span></span>
-							{if isset($viewed_videos[i].username) && $viewed_videos[i].username != 'anonymous'}
-							<span class="xb-thumb-user">@{$viewed_videos[i].username}</span>
-							{/if}
-							<span class="xb-thumb-title">
-								<span class="xb-thumb-title-inner">
-									<span class="xb-tt">{$viewed_videos[i].title|escape:'html'}</span><span class="xb-tt">{$viewed_videos[i].title|escape:'html'}</span>
-								</span>
-							</span>
-						</span>
-					<div class="duration">
-						{if $viewed_videos[i].hd==1}<span class="hd-text-icon">HD</span>{/if}
-						{insert name=duration assign=duration duration=$viewed_videos[i].duration}
-						{$duration}
-					</div>
-				</div>
-			</a>
-			<div class="content-info">
-				<a href="{$relative}/video/{$viewed_videos[i].VID}/{$viewed_videos[i].title|clean}">
-					<span class="content-title">{$viewed_videos[i].title|escape:'html'}</span>
-				</a>
-				{if $viewed_videos[i].keywords}
-				<div class="xb-tags">
-					{section name=t loop=$viewed_videos[i].keywords max=4}
-						<a href="{$relative}/search/tags/{$viewed_videos[i].keywords[t]}">#{$viewed_videos[i].keywords[t]}</a>
-					{/section}
-				</div>
-				{/if}
-			</div>
-		</div>
+			{include file='video_card.tpl' v=$viewed_videos[i]}
 		{/section}
 	</div>
 	{else}
