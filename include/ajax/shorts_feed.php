@@ -231,9 +231,9 @@ function build_short_item($row, $conn, $config, $uid, $default_res = 'high') {
     );
 }
 
-// Shorts: só os VERTICAIS (o feed é vertical) e com menos de 1 minuto.
+// Shorts: só os VERTICAIS (o feed é vertical) e com até 1:40 (100s).
 // A referência é `video.orientation` (enum portrait/landscape/square).
-$shorts_cond = " AND v.duration > 0 AND v.duration < 60 AND v.orientation = 'portrait'";
+$shorts_cond = " AND v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait'";
 
 $videos_out = array();
 
