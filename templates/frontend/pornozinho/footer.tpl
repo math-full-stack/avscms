@@ -537,6 +537,7 @@
 	{/if}
 	<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-mini.css?ver=2.1.0">
 	<script type="text/javascript" src="{$baseurl}/media/player/mediabunny/avs-mini.js?ver=2.1.0"></script>
+	<script type="text/javascript" src="{$relative_tpl}/js/avs-disguise.js?ver=1.0.0"></script>
 	{include file='../../../templates/backend/default/analytics/analytics.tpl'}
 </body>
 </html>
