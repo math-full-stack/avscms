@@ -51,13 +51,14 @@
 
 <!-- Barra de navegação inferior (mobile) -->
 <nav class="xb-mobnav">
-	<a href="{$relative}/" class="{if $menu == 'home'}active{/if}"><i class="fas fa-home"></i>Início</a>
-	<a href="{$relative}/videos?o=mv"><i class="fas fa-fire"></i>Hot</a>
+	<a href="{$relative}/" class="{if $menu == 'home'}active{/if}"><span class="material-symbols-rounded xb-mobnav-icon" aria-hidden="true">home</span>Início</a>
+	<a href="{$relative}/shorts" class="{if $menu == 'shorts'}active{/if}"><span class="material-symbols-rounded xb-mobnav-icon" aria-hidden="true">play_circle</span>Shorts</a>
+	<a href="{$relative}/videos?o=mv"><span class="material-symbols-rounded xb-mobnav-icon" aria-hidden="true">local_fire_department</span>Hot</a>
 	{if $video_module == '1'}
-	<a href="{$relative}/upload"><i class="fas fa-plus-circle"></i>Upload</a>
+	<a href="{$relative}/upload"><span class="material-symbols-rounded xb-mobnav-icon" aria-hidden="true">add_circle</span>Upload</a>
 	{/if}
-	<a href="{$relative}/categories"><i class="fas fa-th-large"></i>Categorias</a>
-	<a href="{if isset($smarty.session.uid)}{$relative}/user{else}{$relative}/signup{/if}"><i class="fas fa-user"></i>Perfil</a>
+	<a href="{$relative}/categories"><span class="material-symbols-rounded xb-mobnav-icon" aria-hidden="true">category</span>Categorias</a>
+	<a href="{if isset($smarty.session.uid)}{$relative}/user{else}{$relative}/signup{/if}"><span class="material-symbols-rounded xb-mobnav-icon" aria-hidden="true">person</span>Perfil</a>
 </nav>
 
     <!-- Bootstrap core JavaScript
@@ -544,6 +545,9 @@
 	<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-mini.css?ver=2.1.0">
 	<script type="text/javascript" src="{$baseurl}/media/player/mediabunny/avs-mini.js?ver=2.1.0"></script>
 	<script type="text/javascript" src="{$relative_tpl}/js/avs-disguise.js?ver=1.0.0"></script>
+	{if isset($shorts_page) && $shorts_page}
+	<script type="text/javascript" src="{$relative_tpl}/js/avs-shorts.js?ver=1.0.0"></script>
+	{/if}
 	{include file='../../../templates/backend/default/analytics/analytics.tpl'}
 </body>
-</html>
+</html>
