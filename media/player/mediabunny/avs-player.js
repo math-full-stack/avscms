@@ -436,10 +436,21 @@ import {
         if (sources.length <= 1) {
             return [...sources];
         }
-        // Honor the player_settings.tpl resolution preference when present
-        const pref = typeof window.player_resolution !== 'undefined' ? window.player_resolution : 'high';
+        // Honor the player_settings.tpl resolution preference when present.
+        // 'low'/'high' pick the lowest/highest rendition; a numeric height
+        // (e.g. '720') starts at that rendition, fallback to nearest match.
+        const pref = typeof window.player_resolution !== 'undefined' ? String(window.player_resolution) : 'high';
         const sorted = [...sources].sort((a, b) => a.res - b.res);
-        return pref === 'low' ? sorted : sorted.reverse();
+        if (pref === 'low') return sorted;
+        if (pref === 'high' || !/^\d+$/.test(pref)) return sorted.reverse();
+        const target = parseInt(pref, 10) || 0;
+        sorted.sort((a, b) => {
+            const da = Math.abs(a.res - target);
+            const db = Math.abs(b.res - target);
+            if (da !== db) return da - db;
+            return b.res - a.res;
+        });
+        return sorted;
     };
 
     // Keeps the quality selector in sync when playback auto-downgrades to a

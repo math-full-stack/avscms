@@ -72,18 +72,24 @@
 										</div>
 										<div class="clearfix"></div>
 									</div>
-										<div class="form-group">
-											<label class="col-lg-4 control-label">Default Resolution</label>
-											<div class="col-lg-8">
-												<div class="radio p-t-9">
-													<input id="resolution_l" type="radio" name="resolution" value="low" {if $player.resolution == 'low'}checked="checked"{/if} class="radio-enabled">
-													<label for="resolution_l">Low</label>
-													<input id="resolution_h" type="radio" name="resolution" value="high" {if $player.resolution == 'high'}checked="checked"{/if} class="radio-enabled">
-													<label for="resolution_h">High</label>												
-												</div>
-											</div>
-											<div class="clearfix"></div>
+<div class="form-group">
+										<label class="col-lg-4 control-label">Default Resolution</label>
+										<div class="col-lg-8">
+											<select id="resolution" name="resolution" style="width:100%">
+												<option value="high"{if $player.resolution == 'high'} selected{/if}>High (automática)</option>
+												<option value="low"{if $player.resolution == 'low'} selected{/if}>Low (automática)</option>
+												<option value="2160"{if $player.resolution == '2160'} selected{/if}>2160p (4K)</option>
+												<option value="1440"{if $player.resolution == '1440'} selected{/if}>1440p (2K)</option>
+												<option value="1080"{if $player.resolution == '1080'} selected{/if}>1080p (Full HD)</option>
+												<option value="720"{if $player.resolution == '720'} selected{/if}>720p (HD)</option>
+												<option value="480"{if $player.resolution == '480'} selected{/if}>480p (SD)</option>
+												<option value="360"{if $player.resolution == '360'} selected{/if}>360p</option>
+												<option value="240"{if $player.resolution == '240'} selected{/if}>240p</option>
+											</select>
+											<span class="help">Media Bunny starts playback at this rendition (closest available match). Video.js honors it when the exact rendition exists.</span>
 										</div>
+										<div class="clearfix"></div>
+									</div>
 										<div class="form-group">
 											<label class="col-lg-4 control-label">Timeline Preview</label>
 											<div class="col-lg-8">

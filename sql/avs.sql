@@ -657,7 +657,7 @@ CREATE TABLE `player` (
   `autoplay` enum('0','1') NOT NULL DEFAULT '0',
   `start_muted` enum('0','1') NOT NULL DEFAULT '1',
   `quick_controls` enum('0','1') NOT NULL DEFAULT '1',
-  `resolution` enum('low','high') NOT NULL DEFAULT 'low',
+  `resolution` varchar(20) NOT NULL DEFAULT 'low',
   `timeline_preview` enum('0','1') NOT NULL DEFAULT '1',
   `logo` enum('0','1') NOT NULL DEFAULT '0',
   `logo_redirect` enum('0','1') NOT NULL DEFAULT '0',

@@ -25,6 +25,10 @@ if ( isset($_POST['submit_settings']) && !$errors ) {
 	$start_muted        = intval($_POST['start_muted']);
 	$quick_controls     = intval($_POST['quick_controls']);
 	$resolution 		= trim($_POST['resolution']);
+	$allowed_resolutions = array('high', 'low', '240', '360', '480', '720', '1080', '1440', '2160');
+	if ( !in_array($resolution, $allowed_resolutions, true) ) {
+		$resolution = ( isset($player['resolution']) && $player['resolution'] != '' ) ? $player['resolution'] : 'high';
+	}
 	$timeline_preview   = intval($_POST['timeline_preview']);
 	$engine             = ( isset($_POST['engine']) && in_array($_POST['engine'], array('mediabunny', 'vidstack'), true) ) ? $_POST['engine'] : 'videojs';
 	
