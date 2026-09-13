@@ -1,6 +1,11 @@
 <?php
 defined('_VALID') or die('Restricted Access!');
 
+if (defined('AVS_FUNCTION_THUMBS_LOADED')) {
+    return;
+}
+define('AVS_FUNCTION_THUMBS_LOADED', true);
+
 /**
  * Caminho local de thumbs de um vídeo (pasta tmb/tmbN por volume).
  *
