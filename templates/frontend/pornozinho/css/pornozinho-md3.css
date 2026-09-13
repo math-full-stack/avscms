@@ -1583,16 +1583,6 @@ html[data-theme="light"] .xb-search-btn:hover {
 	color: var(--xb-accent);
 }
 
-/* Logo no tema claro: silhueta preta (brightness(0) transforma o branco em
-   preto; invert(1) distorceria o acento rosa da logo para ciano) */
-html[data-theme="light"] .xb-logo img {
-	filter: brightness(0);
-}
-
-.xb-logo img {
-	transition: filter .2s ease;
-}
-
 /* Topbar ao rolar: vidro CLARO (texto dos tokens já fica escuro) */
 html[data-theme="light"] .xb-topbar.xb-topbar-scrolled {
 	background-color: rgba(255, 255, 255, .78);
@@ -1698,6 +1688,12 @@ html[data-theme="light"] .avs-player {
 	--avs-menu-bg: rgba(255, 248, 248, 0.92);
 	--avs-menu-border: rgba(30, 21, 25, 0.16);
 	--avs-menu-hl: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+/* Overlay "próximo vídeo" do player: vidro claro no light (textos já flipam via
+   tokens --md-sys-color-*; aqui só o fundo translúcido precisa de equivalente). */
+html[data-theme="light"] .avs-player .avs-autoplay {
+	--avs-autoplay-bg: rgba(247, 242, 244, 0.92);
 }
 
 html[data-theme="light"] .easy-autocomplete-container ul li {
