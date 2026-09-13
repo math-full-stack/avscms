@@ -20,5 +20,5 @@
 	var base_url = "{$baseurl}";	
 	var aid = "{$aid}";
 	var thumb_path_base = "{$relative}/media/videos/thumbs";
-	var related_videos_data = [{section name=i loop=$videos}{if !$smarty.section.i.first},{/if}{literal}{{/literal}"vid":{$videos[i].VID},"title":"{$videos[i].title|escape:'html'}","slug":"{$videos[i].title|clean}","thumb":"{insert name=thumb_path vid=$videos[i].VID}/{$videos[i].thumb}.jpg","duration":"{insert name=duration duration=$videos[i].duration}","views":"{insert name=views views=$videos[i].viewnumber}","rate":{$videos[i].rate}{literal}}{/literal}{/section}];
+	var related_videos_data = [{section name=i loop=$videos}{if !$smarty.section.i.first},{/if}{literal}{{/literal}"vid":{$videos[i].VID},"title":"{$videos[i].title|escape:'html'}","slug":"{$videos[i].title|clean}","thumb":"{insert name=thumb_path vid=$videos[i].VID}/{$videos[i].thumb}.jpg","duration":"{insert name=duration duration=$videos[i].duration}","views":"{insert name=views views=$videos[i].viewnumber}","views_w":"{insert name=views views=$videos[i].viewnumber text='w'}","rate":{$videos[i].rate},"thumbs":{if $videos[i].thumbs}{$videos[i].thumbs}{else}0{/if},"opt":"{$videos[i].thumbnails_opt|escape:'html'}","orient":"{$videos[i].orientation}","user":"{$videos[i].username}"{literal}}{/literal}{/section}];
 </script>

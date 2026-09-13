@@ -201,6 +201,12 @@
     color: var(--md-sys-color-primary, #FFB1C9);
 }
 
+/* Estágio "próximo automático" do botão repetir: ícone um pouco maior que o
+   estágio "repetir atual" (que usam o próprio --md-sys-color-primary). */
+.avs-player .avs-btn.avs-rpt-next .avs-icon {
+    transform: scale(1.14);
+}
+
 .avs-player .avs-time {
     color: var(--md-sys-color-on-surface, #fff);
     font-size: 12px;
@@ -956,4 +962,202 @@
 }
 .avs-player.avs-ad-playing .avs-controls {
     display: none;
+}
+
+/* ============================================================
+   Overlay "próximo vídeo" (fim do vídeo) — redesenhado 13/09:
+   painel "Mais vídeos" à esquerda (cards padrão do site: trio de
+   capas + preview no hover) e painel "Próximo vídeo" à direita.
+   Reusa .thumb-overlay/.xb-trio/.duration/.xb-thumb-meta do tema,
+   que o ponteiro do player cobre com line-height normal aqui.
+   ============================================================ */
+.avs-player .avs-autoplay {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    padding: 3.5% 4%;
+    /* Fundo translúcido segue o tema: default escuro aqui, flip claro no bloco
+       light do pornozinho-md3.css (--avs-autoplay-bg), como --avs-menu-bg. */
+    --avs-autoplay-bg: rgba(16, 14, 18, 0.84);
+    background: var(--avs-autoplay-bg, rgba(16, 14, 18, 0.84));
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    line-height: normal;
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface, #eee);
+    font-family: var(--md-sys-font, "Roboto", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif);
+}
+
+.avs-player .avs-autoplay-more {
+    flex: 1 1 60%;
+    min-width: 0;
+    max-width: 62%;
+}
+
+.avs-player .avs-autoplay-more-head,
+.avs-player .avs-autoplay-next-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color: var(--md-sys-color-on-surface-variant, #bbb);
+    margin-bottom: 12px;
+}
+
+.avs-player .avs-autoplay-more-head .material-symbols-rounded,
+.avs-player .avs-autoplay-next-head .material-symbols-rounded {
+    font-size: 17px;
+    color: var(--xb-accent, #ff1493);
+    font-variation-settings: 'FILL' 1;
+}
+
+.avs-player .avs-autoplay-more-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 18px;
+    max-height: 100%;
+    overflow-y: auto;
+}
+
+.avs-player .avs-autoplay-more-card {
+    display: block;
+    min-width: 0;
+    text-decoration: none;
+    color: inherit;
+}
+
+.avs-player .avs-autoplay-more-card:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
+.avs-player .avs-autoplay-more-card .thumb-overlay {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+}
+
+/* Preview no hover (retrato): roda as capas restantes por cima do trio. z-index 3
+   como o <video> de preview da home — cobre o play circle e o chip no hover. */
+.avs-player .avs-autoplay-pv {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: none;
+    pointer-events: none;
+    background: #000;
+}
+
+.avs-player .avs-autoplay-more-card:hover .avs-autoplay-pv {
+    display: block;
+}
+
+.avs-player .avs-autoplay-pv img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    animation: avsAutoplayPvFade .35s ease-in-out;
+}
+
+@keyframes avsAutoplayPvFade {
+    from { opacity: 0; transform: scale(1.04); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* Painel direito: próximo vídeo */
+.avs-player .avs-autoplay-next {
+    flex: 0 0 33%;
+    min-width: 0;
+    max-width: 400px;
+}
+
+.avs-player .avs-autoplay-next .avs-autoplay-next-head {
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.avs-player .avs-autoplay-count {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1;
+    text-align: center;
+    color: var(--md-sys-color-on-surface, #fff);
+    margin: 6px 0 12px;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
+}
+
+.avs-player .avs-autoplay-next-body {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.avs-player .avs-autoplay-next-body:hover {
+    text-decoration: none;
+}
+
+.avs-player .avs-autoplay-next-thumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--md-sys-shape-corner-medium, 12px);
+}
+
+.avs-player .avs-autoplay-next-title {
+    margin-top: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--md-sys-color-on-surface, #fff);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.avs-player .avs-autoplay-next-meta {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant, #9a9a9a);
+}
+
+.avs-player .avs-autoplay-next-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.avs-player .avs-autoplay-btn {
+    flex: 1;
+    background: transparent;
+    color: var(--md-sys-color-on-surface, #fff);
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.28));
+    padding: 9px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    line-height: normal;
+    font-family: inherit;
+    transition: background .2s, border-color .2s;
+}
+
+.avs-player .avs-autoplay-btn:hover {
+    background: var(--md-sys-state-hover, rgba(255, 255, 255, 0.1));
+}
+
+.avs-player .avs-autoplay-btn-primary {
+    background: var(--xb-accent, #ff1493);
+    border-color: transparent;
+    box-shadow: 0 2px 14px rgba(255, 20, 147, 0.35);
+}
+
+.avs-player .avs-autoplay-btn-primary:hover {
+    background: #ff2ea2;
 }

@@ -106,6 +106,7 @@ import {
     const fullBtn = player.querySelector('[data-action="fullscreen"]');
     const settingsBtn = player.querySelector('[data-action="settings"]');
     const miniBtn = player.querySelector('[data-action="mini"]');
+    const repeatBtn = player.querySelector('[data-action="repeat"]');
     const dlWrap = player.querySelector('.avs-dl-wrap');
     const volumeSlider = player.querySelector('.avs-volume-slider');
     const seekBar = player.querySelector('.avs-seek');
@@ -137,6 +138,28 @@ import {
         posterImg.src = poster;
         posterImg.style.display = '';
     }
+
+    // Repetir (loop): desligado por padrão, persistido por usuário em
+    // localStorage (mesmo padrão das demais preferências de reprodução).
+    let repeat = (() => {
+        try {
+            return localStorage.getItem('avs_repeat') === '1';
+        } catch (e) {
+            return false;
+        }
+    })();
+
+    // "Próximo vídeo" (autoplay do próximo ao fim): DESLIGADO por padrão,
+    // persistido por usuário. Mesma chave que o toggle do card + overlay na
+    // página (video.tpl usa localStorage.autoplayNext). Aceita legado 'true'.
+    let autoplayNext = (() => {
+        try {
+            const v = localStorage.getItem('autoplayNext');
+            return v === '1' || v === 'true';
+        } catch (e) {
+            return false;
+        }
+    })();
 
     // Prévia (miniclip das thumbs) + play central: o <video> vem renderizado no
     // template com autoplay mudo (o browser já baixa a mídia durante o parse),
@@ -202,6 +225,7 @@ import {
         fallbackVideo.controls = false;
         fallbackVideo.playsInline = true;
         fallbackVideo.muted = startMuted;
+        fallbackVideo.loop = repeat;
         if (poster) fallbackVideo.poster = poster;
         player.insertBefore(fallbackVideo, player.firstChild);
         posterImg.style.display = 'none';
@@ -618,10 +642,31 @@ import {
         if (fileLoaded) {
             const t = getPlaybackTime();
             if (t >= endTimestamp) {
-                pause();
-                playbackTimeAtStart = endTimestamp;
-                endedFired = true;
-                onEnded();
+                if (repeat && playing) {
+                    // Loop: reinicia do início sem pausar nem disparar onEnded (overlay
+                    // de "próximo vídeo"), reaperando o pipeline como o play() faz ao
+                    // tocar de novo no fim.
+                    playbackTimeAtStart = firstTimestamp;
+                    audioContextStartTime = audioContext.currentTime;
+                    nextFrame = null;
+                    endedFired = false;
+                    if (audioSink) {
+                        if (audioBufferIterator) audioBufferIterator.return();
+                        audioBufferIterator = audioSink.buffers(firstTimestamp);
+                        void runAudioIterator();
+                    }
+                    void startVideoIterator();
+                    renderTime(firstTimestamp);
+                } else if (!endedFired) {
+                    // Guard !endedFired: depois do fim o playbackTimeAtStart continua em
+                    // endTimestamp e render() roda a ~60fps — sem o guard, onEnded() (e o
+                    // countdown/overlay "próximo") reiniciaria a cada frame, travando a
+                    // contagem e ressuscitando o CANCELAR imediatamente após clicado.
+                    pause();
+                    playbackTimeAtStart = endTimestamp;
+                    endedFired = true;
+                    onEnded();
+                }
             }
             if (nextFrame && nextFrame.timestamp <= t) {
                 context2d.clearRect(0, 0, canvas.width, canvas.height);
@@ -709,6 +754,8 @@ import {
         if (getPlaybackTime() === endTimestamp) {
             playbackTimeAtStart = firstTimestamp;
             await startVideoIterator();
+            endedFired = false;
+            hideAutoplayOverlay();
         }
         audioContextStartTime = audioContext.currentTime;
         playing = true;
@@ -777,6 +824,10 @@ import {
         const wasPlaying = playing;
         if (wasPlaying) pause();
         playbackTimeAtStart = Math.max(firstTimestamp, Math.min(seconds, endTimestamp));
+        if (playbackTimeAtStart < endTimestamp) {
+            endedFired = false;
+            hideAutoplayOverlay();
+        }
         await startVideoIterator();
         renderTime(playbackTimeAtStart);
         if ((wasPlaying || forcePlay) && playbackTimeAtStart < endTimestamp) void play();
@@ -800,6 +851,8 @@ import {
         if (volumeSlider) volumeSlider.value = String(Math.round(volume * 100));
         const actual = volumeMuted ? 0 : volume;
         setIcon(muteBtn, actual === 0 ? 'avs-i-vol-mute' : (actual < 0.5 ? 'avs-i-vol-low' : 'avs-i-vol-high'));
+        const mutedNow = volumeMuted || volume === 0;
+        if (muteBtn) muteBtn.setAttribute('title', mutedNow ? 'Ativar som' : 'Mudo');
     };
 
     // Play/seek disparados por gesto do usuário tocam COM SOM: desmuda quando o
@@ -815,6 +868,8 @@ import {
     const updatePlayIcon = (isPlaying) => {
         setIcon(playBtn, isPlaying ? 'avs-i-pause' : 'avs-i-play');
         setIcon(centerToggle, isPlaying ? 'avs-i-pause' : 'avs-i-play');
+        if (playBtn) playBtn.setAttribute('title', isPlaying ? 'Pausar' : 'Play');
+        if (centerToggle) centerToggle.setAttribute('title', isPlaying ? 'Pausar' : 'Play');
     };
 
     const renderTime = (seconds) => {
@@ -904,7 +959,7 @@ import {
     // dblclick pausaria o vídeo por engano.
     let lastPlayerClick = 0;
     player.addEventListener('dblclick', (e) => {
-        if (e.target.closest('.avs-controls, .avs-settings, .avs-center, .avs-ad, .avs-pause-ad, #autoplay-overlay, .avs-error')) return;
+        if (e.target.closest('.avs-controls, .avs-settings, .avs-center, .avs-ad, .avs-pause-ad, #avs-autoplay, .avs-error')) return;
         toggleFullscreen();
     });
     player.addEventListener('click', (e) => {
@@ -912,7 +967,7 @@ import {
         // autoplay-next, logo, big play, settings, volume, center overlay) must
         // NOT toggle the content — their own handlers deal with them (avoids a
         // double-toggle that would pause playback right after resume/skip).
-        if (e.target.closest('.avs-controls, .avs-ad, .avs-pause-ad, .avs-logo, #autoplay-overlay, .avs-error, .avs-big-play, .avs-settings, .avs-volume-wrap, .avs-center, .avs-mini-actions')) return;
+        if (e.target.closest('.avs-controls, .avs-ad, .avs-pause-ad, .avs-logo, #avs-autoplay, .avs-error, .avs-big-play, .avs-settings, .avs-volume-wrap, .avs-center, .avs-mini-actions')) return;
         const now = Date.now();
         if (now - lastPlayerClick < 350) { lastPlayerClick = now; return; }
         lastPlayerClick = now;
@@ -984,12 +1039,17 @@ import {
         if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON')) return;
         const code = e.code;
         const seek = (delta) => {
+            const wasPlaying = playing;
             if (fallbackVideo) {
                 fallbackVideo.currentTime = Math.max(0, Math.min(fallbackVideo.duration || 0, fallbackVideo.currentTime + delta));
             } else {
                 void seekToTime(getPlaybackTime() + delta);
             }
-            flashCenter();
+            // Pausado: mantém o overlay central visível (o flash de 600ms
+            // sumia com os ícones e o próximo clique no mesmo lugar togglava
+            // play em vez de buscar — "busca pausada não funciona").
+            if (wasPlaying) flashCenter();
+            else showCenter();
         };
         const changeVolume = (delta) => {
             volumeMuted = false;
@@ -1089,8 +1149,16 @@ import {
     };
     if (centerToggle) {
         centerToggle.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); togglePlay(); });
-        centerRw.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); seekBy(-10); flashCenter(); });
-        centerFw.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); seekBy(10); flashCenter(); });
+        // Busca pelos botões centrais: pausado mantém o overlay (busca contínua
+        // chave nas setas ±5/±10), tocando usa o flash de 600ms.
+        const seekCenterBy = (delta) => {
+            const wasPlaying = playing;
+            seekBy(delta);
+            if (wasPlaying) flashCenter();
+            else showCenter();
+        };
+        centerRw.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); seekCenterBy(-10); });
+        centerFw.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); seekCenterBy(10); });
     }
 
     // Idle auto-hide (só desktop com hover): esconde controles e cursor
@@ -1143,6 +1211,7 @@ import {
         btn.type = 'button';
         btn.className = 'avs-settings-item';
         btn.dataset.value = String(value);
+        btn.title = label;
 
         const text = document.createElement('span');
         text.className = 'avs-settings-item-text';
@@ -1190,11 +1259,57 @@ import {
         });
     };
 
+    const playbackPref = (id) => {
+        if (id === 'repeat') return repeat;
+        if (id === 'mini') return miniPref;
+        if (id === 'autoplayNext') return autoplayNext;
+        return false;
+    };
+
     const markPlayback = () => {
         if (!settingsPanel) return;
         settingsPanel.querySelectorAll('[data-settings-group="playback"] .avs-settings-item').forEach((el) => {
-            el.classList.toggle('avs-settings-active', miniPref);
+            el.classList.toggle('avs-settings-active', playbackPref(el.dataset.playbackId));
         });
+    };
+
+    // Aplica o estado do loop em tudo que o consome: o menu (markPlayback), o
+    // botão da barra (.avs-btn-active) e o <video> nativo (loop).
+    const setRepeat = (on) => {
+        repeat = on;
+        if (fallbackVideo) fallbackVideo.loop = repeat;
+        try { localStorage.setItem('avs_repeat', repeat ? '1' : '0'); } catch (e) { /* noop */ }
+        syncRepeatUi();
+    };
+
+    const setAutoplayNext = (on) => {
+        autoplayNext = on;
+        try { localStorage.setItem('autoplayNext', on ? '1' : '0'); } catch (e) { /* noop */ }
+        syncRepeatUi();
+    };
+
+    // BOTÃO REPETIR = ciclo de 3 estágios na barra:
+    //   off    → nada (desligado)
+    //   repeat → repetir o vídeo atual (loop)
+    //   next   → próximo vídeo automático (avança sozinho ao fim)
+    // O estágio é derivado das duas preferências (avs_repeat e autoplayNext),
+    // que seguem manipuláveis independentemente no menu de configurações.
+    const syncRepeatUi = () => {
+        if (repeatBtn) {
+            const stage = repeat ? 'repeat' : (autoplayNext ? 'next' : 'off');
+            repeatBtn.classList.toggle('avs-btn-active', stage !== 'off');
+            const useEl = repeatBtn.querySelector('use');
+            if (useEl) {
+                const href = stage === 'next' ? '#avs-i-next' : '#avs-i-repeat';
+                if (useEl.getAttribute('href') !== href) useEl.setAttribute('href', href);
+            }
+            repeatBtn.classList.toggle('avs-rpt-next', stage === 'next');
+            const label = stage === 'repeat' ? 'Repetir vídeo atual'
+                : (stage === 'next' ? 'Próximo automático' : 'Repetir: desligado');
+            repeatBtn.setAttribute('title', label);
+            repeatBtn.setAttribute('aria-label', label);
+        }
+        markPlayback();
     };
 
     const openSettings = () => {
@@ -1285,7 +1400,14 @@ import {
         const playbackGroup = settingsPanel.querySelector('[data-settings-group="playback"]');
         if (playbackGroup) {
             playbackGroup.textContent = '';
-            playbackGroup.appendChild(buildSettingsItem(
+
+            const repeatItem = buildSettingsItem('Repetir vídeo', repeat ? '1' : '0', () => {
+                setRepeat(!repeat);
+            });
+            repeatItem.dataset.playbackId = 'repeat';
+            playbackGroup.appendChild(repeatItem);
+
+            const miniItem = buildSettingsItem(
                 'Mini player automático',
                 miniPref ? '1' : '0',
                 () => {
@@ -1293,10 +1415,18 @@ import {
                     try { localStorage.setItem('avs_mini_auto', miniPref ? '1' : '0'); } catch (e) { /* noop */ }
                     markPlayback();
                 }
-            ));
+            );
+            miniItem.dataset.playbackId = 'mini';
+            playbackGroup.appendChild(miniItem);
+
+            const nextItem = buildSettingsItem('Próximo vídeo', autoplayNext ? '1' : '0', () => {
+                setAutoplayNext(!autoplayNext);
+            });
+            nextItem.dataset.playbackId = 'autoplayNext';
+            playbackGroup.appendChild(nextItem);
         }
         markSpeed(playbackRate);
-        markPlayback();
+        syncRepeatUi();
         if (automaticQuality) markAutoQuality();
         else markQuality(qualitySel ? (parseInt(qualitySel.value, 10) || 0) : 0);
     };
@@ -1515,6 +1645,22 @@ import {
         });
     }
 
+    if (repeatBtn) {
+        repeatBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Ciclo de 3 estágios: desligado → repetir atual → próximo automático.
+            if (repeat) {
+                setRepeat(false);
+                setAutoplayNext(true);
+            } else if (autoplayNext) {
+                setAutoplayNext(false);
+            } else {
+                setRepeat(true);
+            }
+        });
+    }
+
     const miniExpand = player.querySelector('.avs-mini-expand');
     const miniClose = player.querySelector('.avs-mini-close');
     if (miniExpand) {
@@ -1547,7 +1693,9 @@ import {
 
     // Fullscreen icon sync
     document.addEventListener('fullscreenchange', () => {
-        setIcon(fullBtn, document.fullscreenElement ? 'avs-i-fs-exit' : 'avs-i-fs-enter');
+        const on = document.fullscreenElement === player;
+        setIcon(fullBtn, on ? 'avs-i-fs-exit' : 'avs-i-fs-enter');
+        if (fullBtn) fullBtn.setAttribute('title', on ? 'Sair da tela cheia' : 'Tela cheia');
     });
 
     // ------------------------------------------------------------------
@@ -2070,77 +2218,281 @@ import {
     let autoplayTimer = null;
     let autoplayOverlay = null;
 
-    const showAutoplayNext = () => {
-        if (!getNextVideo()) return;
-        if (localStorage.getItem('autoplayNext') === 'false') return;
-        const nextVideo = getNextVideo();
+    const thumbBaseOf = (v) => (v.thumb || '').replace(/\/\d+\.jpg$/, '/');
 
-        let overlay = document.getElementById('autoplay-overlay');
+    // Réplica JS de video_cover_list()/video_cover_trio() (include/function_global.php):
+    // frames 1..N, com prioridade para as capas de thumbnails_opt quando há 3+ válidas.
+    const coverFramesOf = (v) => {
+        const max = parseInt(v.thumbs, 10) || 20;
+        let covers = [];
+        if (v.opt) {
+            for (const raw of String(v.opt).split(',')) {
+                const c = parseInt(raw, 10);
+                if (c >= 1 && c <= max && covers.indexOf(c) === -1) covers.push(c);
+            }
+        }
+        if (covers.length >= 3) return covers;
+        const m = (v.thumb || '').match(/(\d+)\.jpg$/);
+        let start = (m && parseInt(m[1], 10)) || 1;
+        if (start < 1 || start > max) start = 1;
+        covers = [];
+        for (let i = 0; i < max; i++) covers.push(((start - 1 + i) % max) + 1);
+        return covers;
+    };
+
+    // Card padrão do site: thumb-overlay com trio de capas (retrato) ou capa única
+    // (paisagem) + badge de duração + título. No retrato o hover roda as capas
+    // restantes por cima do trio (efeito "preview" como no jquery.rotator.js).
+    const buildAutoplayMoreCard = (v) => {
+        const a = document.createElement('a');
+        a.className = 'avs-autoplay-more-card';
+        a.href = cfg.baseUrl + '/video/' + v.vid + '/' + v.slug + '?autoplay=1';
+        a.__video = v;
+
+        const thumb = document.createElement('div');
+        thumb.className = (v.orient === 'portrait') ? 'thumb-overlay xb-portrait' : 'thumb-overlay';
+        const frames = coverFramesOf(v);
+
+        if (v.orient === 'portrait') {
+            const trio = document.createElement('div');
+            trio.className = 'xb-trio';
+            for (const f of frames.slice(0, 3)) {
+                const img = document.createElement('img');
+                img.src = thumbBaseOf(v) + f + '.jpg';
+                img.alt = v.title;
+                img.loading = 'lazy';
+                trio.appendChild(img);
+            }
+            thumb.appendChild(trio);
+            const pv = document.createElement('div');
+            pv.className = 'avs-autoplay-pv';
+            pv.dataset.frames = frames.join(',');
+            thumb.appendChild(pv);
+        } else {
+            const img = document.createElement('img');
+            img.src = v.thumb;
+            img.alt = v.title;
+            img.loading = 'lazy';
+            thumb.appendChild(img);
+        }
+
+        const dur = document.createElement('div');
+        dur.className = 'duration';
+        dur.textContent = v.duration;
+        thumb.appendChild(dur);
+
+        // Chip de meta igual ao da home (views + @user + título em marquee no hover).
+        const chip = document.createElement('span');
+        chip.className = 'xb-thumb-meta';
+        const viewsEl = document.createElement('span');
+        viewsEl.className = 'xb-thumb-views';
+        const eye = document.createElement('i');
+        eye.className = 'fas fa-eye';
+        viewsEl.appendChild(eye);
+        viewsEl.appendChild(document.createTextNode(' ' + (v.views || '')));
+        if (v.views_w) {
+            const word = document.createElement('span');
+            word.className = 'xb-thumb-views-word';
+            word.textContent = ' ' + v.views_w;
+            viewsEl.appendChild(word);
+        }
+        chip.appendChild(viewsEl);
+        if (v.user && v.user !== 'anonymous') {
+            const userEl = document.createElement('span');
+            userEl.className = 'xb-thumb-user';
+            userEl.textContent = '@' + v.user;
+            chip.appendChild(userEl);
+        }
+        const titleWrap = document.createElement('span');
+        titleWrap.className = 'xb-thumb-title';
+        const titleInner = document.createElement('span');
+        titleInner.className = 'xb-thumb-title-inner';
+        for (let k = 0; k < 2; k++) {
+            const t = document.createElement('span');
+            t.className = 'xb-tt';
+            t.textContent = v.title;
+            titleInner.appendChild(t);
+        }
+        titleWrap.appendChild(titleInner);
+        chip.appendChild(titleWrap);
+        thumb.appendChild(chip);
+
+        a.appendChild(thumb);
+
+        if (a.querySelector('.avs-autoplay-pv')) {
+            a.addEventListener('mouseenter', () => startAutoplayPv(a));
+            a.addEventListener('mouseleave', () => stopAutoplayPv(a));
+        }
+        return a;
+    };
+
+    const startAutoplayPv = (card) => {
+        const pv = card.querySelector('.avs-autoplay-pv');
+        if (!pv || pv.dataset.timer) return;
+        const base = thumbBaseOf(card.__video);
+        const frames = pv.dataset.frames.split(',');
+        let step = 0;
+        const layer = () => {
+            pv.innerHTML = '';
+            const img = document.createElement('img');
+            img.className = 'avs-autoplay-pv-frame';
+            img.src = base + frames[step % frames.length] + '.jpg';
+            img.alt = '';
+            pv.appendChild(img);
+            step++;
+        };
+        layer();
+        pv.dataset.timer = setInterval(layer, 800);
+    };
+
+    const stopAutoplayPv = (card) => {
+        const pv = card.querySelector('.avs-autoplay-pv');
+        if (!pv) return;
+        if (pv.dataset.timer) clearInterval(Number(pv.dataset.timer));
+        delete pv.dataset.timer;
+        pv.innerHTML = '';
+    };
+
+    const hideAutoplayOverlay = () => {
+        if (autoplayTimer) {
+            clearInterval(autoplayTimer);
+            autoplayTimer = null;
+        }
+        if (autoplayOverlay) {
+            autoplayOverlay.style.display = 'none';
+        }
+    };
+
+    const showAutoplayNext = () => {
+        // O estágio do botão repetir manda: 'next' (próximo automático) roda o
+        // countdown; off/repeat não navegam sozinhos. A tela final SEMPRE
+        // aparece (opção desligada só remove a reprodução automática).
+        const autoPlay = autoplayNext;
+        const nextVideo = getNextVideo();
+        if (!nextVideo) return;
+        hideAutoplayOverlay();
+
+        let overlay = document.getElementById('avs-autoplay');
         if (!overlay) {
             overlay = document.createElement('div');
-            overlay.id = 'autoplay-overlay';
-            overlay.style.position = 'absolute';
-            overlay.style.inset = '0';
-            overlay.style.zIndex = '10';
-            overlay.style.display = 'flex';
-            overlay.style.alignItems = 'center';
-            overlay.style.justifyContent = 'center';
-            overlay.style.background = 'rgba(0,0,0,0.88)';
+            overlay.id = 'avs-autoplay';
+            overlay.className = 'avs-autoplay';
             overlay.innerHTML =
-                '<div class="autoplay-overlay-content">' +
-                '  <div class="autoplay-next-count" id="autoplay-count">3</div>' +
-                '  <div class="autoplay-next-thumb">' +
-                '    <img id="autoplay-overlay-thumb" src="" alt="">' +
-                '    <div class="autoplay-next-duration" id="autoplay-overlay-dur"></div>' +
-                '  </div>' +
-                '  <div class="autoplay-next-title" id="autoplay-overlay-title"></div>' +
-                '  <div class="autoplay-overlay-buttons">' +
-                '    <button id="autoplay-cancel" class="autoplay-btn-cancel">CANCELAR</button>' +
-                '    <button id="autoplay-skip" class="autoplay-btn-skip">PRÓXIMO <i class="fas fa-forward"></i></button>' +
+                '<div class="avs-autoplay-more">' +
+                '  <div class="avs-autoplay-more-head"><span class="material-symbols-rounded">video_library</span><span>Mais vídeos</span></div>' +
+                '  <div class="avs-autoplay-more-grid" id="avs-autoplay-more"></div>' +
+                '</div>' +
+                '<div class="avs-autoplay-next">' +
+                '  <div class="avs-autoplay-next-head"><span class="material-symbols-rounded">play_circle</span><span>Próximo vídeo</span></div>' +
+                '  <div class="avs-autoplay-count" id="avs-autoplay-count">3</div>' +
+                '  <a class="avs-autoplay-next-body" id="avs-autoplay-next-body" href="#">' +
+                '    <div class="thumb-overlay avs-autoplay-next-thumb">' +
+                '      <img id="avs-autoplay-next-img" src="" alt="">' +
+                '      <div class="duration" id="avs-autoplay-next-dur"></div>' +
+                '    </div>' +
+                '    <div class="avs-autoplay-next-title" id="avs-autoplay-next-title"></div>' +
+                '    <div class="avs-autoplay-next-meta" id="avs-autoplay-next-meta"></div>' +
+                '  </a>' +
+                '  <div class="avs-autoplay-next-buttons">' +
+                '    <button id="avs-autoplay-cancel" class="avs-autoplay-btn" type="button">CANCELAR</button>' +
+                '    <button id="avs-autoplay-skip" class="avs-autoplay-btn avs-autoplay-btn-primary" type="button">PRÓXIMO</button>' +
                 '  </div>' +
                 '</div>';
             player.appendChild(overlay);
+            autoplayOverlay = overlay;
+            overlay.style.display = 'none';
+            // Clique no fundo (fora dos painéis) = CANCELAR (só congela o timer).
+            overlay.onclick = (e) => {
+                if (e.target === overlay) cancelAutoNav();
+            };
         }
 
-        const thumb = document.getElementById('autoplay-overlay-thumb');
-        const dur = document.getElementById('autoplay-overlay-dur');
-        const title = document.getElementById('autoplay-overlay-title');
-        if (thumb) thumb.src = nextVideo.thumb;
-        if (thumb) thumb.alt = nextVideo.title;
-        if (dur) dur.textContent = nextVideo.duration;
-        if (title) title.textContent = nextVideo.title;
-        overlay.style.display = 'flex';
+        const more = document.getElementById('avs-autoplay-more');
+        if (more) {
+            more.innerHTML = '';
+            try {
+                const list = cfg.related.filter((r) => {
+                    const id = String(r.vid);
+                    return id !== String(cfg.videoId) && id !== String(nextVideo.vid);
+                });
+                for (const v of list.slice(0, 4)) {
+                    more.appendChild(buildAutoplayMoreCard(v));
+                }
+            } catch (err) {
+                // Um card com dados ruins não pode impedir a tela final de aparecer.
+                console.warn('[avs] buildAutoplayMoreCard:', err);
+            }
+        }
 
         const nextUrl = cfg.baseUrl + '/video/' + nextVideo.vid + '/' + nextVideo.slug + '?autoplay=1';
+        const nextImg = document.getElementById('avs-autoplay-next-img');
+        if (nextImg) nextImg.src = nextVideo.thumb;
+        const nextDur = document.getElementById('avs-autoplay-next-dur');
+        if (nextDur) nextDur.textContent = nextVideo.duration;
+        const nextTitle = document.getElementById('avs-autoplay-next-title');
+        if (nextTitle) nextTitle.textContent = nextVideo.title;
+        const nextMeta = document.getElementById('avs-autoplay-next-meta');
+        if (nextMeta) {
+            const metaBits = [nextVideo.views + ' visualizações'];
+            if (nextVideo.rate != 0) metaBits.push(nextVideo.rate + '% de curtidas');
+            nextMeta.textContent = metaBits.join(' · ');
+        }
+        const nextBody = document.getElementById('avs-autoplay-next-body');
+        if (nextBody) nextBody.href = nextUrl;
+
+        const countEl = document.getElementById('avs-autoplay-count');
         let count = 3;
-        const countEl = document.getElementById('autoplay-count');
-        if (countEl) countEl.textContent = count;
-
-        if (autoplayTimer) clearInterval(autoplayTimer);
-        autoplayTimer = setInterval(() => {
-            count--;
-            if (count <= 0) {
-                clearInterval(autoplayTimer);
-                window.location.href = nextUrl;
-            } else if (countEl) {
+        if (countEl) {
+            if (autoPlay) {
                 countEl.textContent = count;
+                countEl.style.display = '';
+            } else {
+                countEl.style.display = 'none';
             }
-        }, 1000);
+        }
+        overlay.style.display = 'flex';
 
-        const cancel = document.getElementById('autoplay-cancel');
-        if (cancel) cancel.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            clearInterval(autoplayTimer);
-            overlay.style.display = 'none';
+        // CANCELAR (e clique no fundo) só congela a reprodução automática: a tela
+        // final fica aberta para o usuário navegar manualmente (PRÓXIMO ou card).
+        const cancelAutoNav = () => {
+            if (autoplayTimer) {
+                clearInterval(autoplayTimer);
+                autoplayTimer = null;
+            }
+            if (countEl) countEl.style.display = 'none';
         };
-        const skip = document.getElementById('autoplay-skip');
-        if (skip) skip.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            clearInterval(autoplayTimer);
+
+        const goNext = () => {
+            if (autoplayTimer) clearInterval(autoplayTimer);
+            autoplayTimer = null;
             window.location.href = nextUrl;
         };
+
+        const cancelBtn = document.getElementById('avs-autoplay-cancel');
+        if (cancelBtn) cancelBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            cancelAutoNav();
+        };
+        const skipBtn = document.getElementById('avs-autoplay-skip');
+        if (skipBtn) skipBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            goNext();
+        };
+
+        if (!autoPlay) {
+            autoplayTimer = null;
+        } else {
+            autoplayTimer = setInterval(() => {
+                count--;
+                if (count <= 0) {
+                    goNext();
+                    return;
+                }
+                if (countEl) countEl.textContent = count;
+            }, 1000);
+        }
     };
 
     const onEnded = () => {

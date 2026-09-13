@@ -45,6 +45,12 @@
 		<symbol id="avs-i-pip" viewBox="0 0 24 24">
 			<path fill="currentColor" d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-11-9h9v6h-9z"/>
 		</symbol>
+		<symbol id="avs-i-repeat" viewBox="0 0 24 24">
+			<path fill="currentColor" d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
+		</symbol>
+		<symbol id="avs-i-next" viewBox="0 0 24 24">
+			<path fill="currentColor" d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+		</symbol>
 		<symbol id="avs-i-close" viewBox="0 0 24 24">
 			<path fill="currentColor" d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13l-6.3 6.3-1.4-1.4L9.8 12 3.5 5.7l1.4-1.4 6.3 6.3 6.3-6.3z"/>
 		</symbol>
@@ -98,6 +104,9 @@
 <button type="button" class="avs-btn" data-action="mini" title="Mini player">
 					<svg class="avs-icon" aria-hidden="true"><use href="#avs-i-pip"></use></svg>
 				</button>
+				<button type="button" class="avs-btn" data-action="repeat" title="Repetir">
+					<svg class="avs-icon" aria-hidden="true"><use href="#avs-i-repeat"></use></svg>
+				</button>
 			{if $downloads == '1' && $video.embed_code == '' && (!isset($is_friend) || $is_friend)}
 				<div class="avs-dl-wrap">
 					<button type="button" class="avs-btn" data-action="download" title="Baixar">
@@ -129,15 +138,15 @@
 				<span>Configurações</span>
 			</div>
 			<div class="avs-settings-tabs" role="tablist" aria-label="Ajustes">
-				<button type="button" class="avs-settings-tab avs-settings-tab-active" data-settings-tab="quality" role="tab" aria-selected="true">
+				<button type="button" class="avs-settings-tab avs-settings-tab-active" data-settings-tab="quality" role="tab" aria-selected="true" title="Qualidade">
 					<span class="material-symbols-rounded" aria-hidden="true">hd</span>
 					Qualidade
 				</button>
-				<button type="button" class="avs-settings-tab" data-settings-tab="speed" role="tab" aria-selected="false">
+				<button type="button" class="avs-settings-tab" data-settings-tab="speed" role="tab" aria-selected="false" title="Velocidade">
 					<span class="material-symbols-rounded" aria-hidden="true">speed</span>
 					Velocidade
 				</button>
-				<button type="button" class="avs-settings-tab" data-settings-tab="playback" role="tab" aria-selected="false">
+				<button type="button" class="avs-settings-tab" data-settings-tab="playback" role="tab" aria-selected="false" title="Reprodução">
 					<span class="material-symbols-rounded" aria-hidden="true">play_circle</span>
 					Reprodução
 				</button>
@@ -169,8 +178,8 @@
 	<div class="avs-error" style="display:none;"></div>
 </div>
 {if $player.timeline_preview}<link rel="preload" as="image" href="{insert name=thumb_path vid=$video.VID}/sprite.jpg">{/if}
-<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=3.2.7">
-<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=3.2.5"></script>
+<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=3.2.10">
+<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=3.2.15"></script>
 <script>
 {literal}
 window.__avsReady = false;
