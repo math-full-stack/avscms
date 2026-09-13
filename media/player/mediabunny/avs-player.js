@@ -912,7 +912,7 @@ import {
         // autoplay-next, logo, big play, settings, volume, center overlay) must
         // NOT toggle the content — their own handlers deal with them (avoids a
         // double-toggle that would pause playback right after resume/skip).
-        if (e.target.closest('.avs-controls, .avs-ad, .avs-pause-ad, .avs-logo, #autoplay-overlay, .avs-error, .avs-big-play, .avs-settings, .avs-volume-wrap, .avs-center')) return;
+        if (e.target.closest('.avs-controls, .avs-ad, .avs-pause-ad, .avs-logo, #autoplay-overlay, .avs-error, .avs-big-play, .avs-settings, .avs-volume-wrap, .avs-center, .avs-mini-actions')) return;
         const now = Date.now();
         if (now - lastPlayerClick < 350) { lastPlayerClick = now; return; }
         lastPlayerClick = now;
