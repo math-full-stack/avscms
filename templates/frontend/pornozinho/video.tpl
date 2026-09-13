@@ -268,14 +268,14 @@ $( document ).ready(function() {
 	$('.video-embedded').css("height" , evheight);	
 	});
 
-    var autoplayState = localStorage.getItem('autoplayNext') !== 'false';
+    var autoplayState = localStorage.getItem('autoplayNext') === '1' || localStorage.getItem('autoplayNext') === 'true';
     var $wrap = $('.autoplay-card-header');
     var $cb = $('#autoplay-toggle-cb');
     $cb.prop('checked', autoplayState);
 
     $cb.on('change', function() {
         var checked = $(this).prop('checked');
-        localStorage.setItem('autoplayNext', checked);
+        localStorage.setItem('autoplayNext', checked ? '1' : '0');
     });
 });
 {/literal}
