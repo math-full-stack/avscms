@@ -1,5 +1,63 @@
 <div class="container mt-3 mb-3">
 
+	{if $shorts_videos}
+	<!-- Seção Shorts & Reels na Tela Inicial -->
+	<div class="xb-section xb-section-shorts">
+		<span class="xb-section-bar"></span>
+		<h2><span class="material-symbols-rounded xb-shorts-badge-icon" aria-hidden="true">play_circle</span> Shorts &amp; Reels</h2>
+		<a class="xb-section-link" href="{$relative}/shorts">Assistir no feed <i class="fas fa-chevron-right"></i></a>
+	</div>
+
+	<div class="xb-shorts-shelf-wrapper mb-4">
+		<button type="button" class="xb-shelf-btn xb-shelf-prev" id="xb-shorts-prev" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
+		<div class="xb-shorts-shelf" id="xb-shorts-shelf">
+			{section name=s loop=$shorts_videos}
+			<a href="{$relative}/shorts?v={$shorts_videos[s].VID}" class="xb-short-home-card" title="{$shorts_videos[s].title|escape:'html'}">
+				<div class="xb-short-home-thumb">
+					<img src="{insert name=thumb_path vid=$shorts_videos[s].VID}/{$shorts_videos[s].thumb}.jpg" alt="{$shorts_videos[s].title|escape:'html'}" loading="lazy">
+					<div class="xb-short-home-badge">
+						<span class="material-symbols-rounded" aria-hidden="true">play_circle</span>
+						<span>Shorts</span>
+					</div>
+					<div class="xb-short-home-duration">
+						{insert name=duration assign=duration duration=$shorts_videos[s].duration}
+						{$duration}
+					</div>
+					<div class="xb-short-home-overlay">
+						<div class="xb-short-home-meta">
+							<span><i class="fas fa-eye"></i> {insert name=views assign=s_views views=$shorts_videos[s].viewnumber}{$s_views}</span>
+						</div>
+						<h4 class="xb-short-home-title">{$shorts_videos[s].title|escape:'html'}</h4>
+					</div>
+				</div>
+			</a>
+			{/section}
+		</div>
+		<button type="button" class="xb-shelf-btn xb-shelf-next" id="xb-shorts-next" aria-label="Próximo"><i class="fas fa-chevron-right"></i></button>
+	</div>
+
+	<script>
+	{literal}
+	(function () {
+		var shelf = document.getElementById('xb-shorts-shelf');
+		var prev = document.getElementById('xb-shorts-prev');
+		var next = document.getElementById('xb-shorts-next');
+		if (!shelf) return;
+		if (prev) {
+			prev.addEventListener('click', function () {
+				shelf.scrollBy({ left: -360, behavior: 'smooth' });
+			});
+		}
+		if (next) {
+			next.addEventListener('click', function () {
+				shelf.scrollBy({ left: 360, behavior: 'smooth' });
+			});
+		}
+	})();
+	{/literal}
+	</script>
+	{/if}
+
 	<div class="xb-section">
 		<span class="xb-section-bar"></span>
 		<h2><i class="fas fa-bolt"></i>Novos vídeos</h2>

@@ -144,6 +144,15 @@ foreach ( $hero_videos as $k => $v ) {
     $hero_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
 }
 
+// Shorts / Vídeos Verticais para a vitrine da home (menos de 1 minuto, prioriza retrato e alto engajamento)
+$sql_shorts = "SELECT " . $video_select . $video_from . " AND v.duration > 0 AND v.duration < 60 ORDER BY (v.orientation = 'portrait') DESC, (v.rate * 10 + v.likes * 2 + v.viewnumber) DESC LIMIT 12";
+$rs_shorts  = $conn->execute($sql_shorts);
+$shorts_videos = $rs_shorts ? $rs_shorts->getrows() : array();
+video_apply_cover_rotation($shorts_videos);
+foreach ( $shorts_videos as $k => $v ) {
+    $shorts_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
+}
+
 $smarty->assign('errors',$errors);
 $smarty->assign('messages',$messages);
 $smarty->assign('menu', 'home');
@@ -152,6 +161,7 @@ $smarty->assign('viewed_total', $viewed_total);
 $smarty->assign('viewed_videos', $viewed_videos);
 $smarty->assign('recent_videos', $recent_videos);
 $smarty->assign('hero_videos', $hero_videos);
+$smarty->assign('shorts_videos', $shorts_videos);
 $smarty->assign('creators', $creators);
 $smarty->assign('self_title', $seo['index_title']);
 $smarty->assign('self_description', $seo['index_desc']);

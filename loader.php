@@ -41,7 +41,8 @@ $loaders  = array(
 	'edit' => 1,
     'embed' => 1,
     'view' => 1,	
-	'ads' => 1
+	'ads' => 1,
+	'shorts' => 1
 );
 
 $query      = ( isset($_SERVER['QUERY_STRING']) ) ? $_SERVER['QUERY_STRING'] : NULL;

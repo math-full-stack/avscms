@@ -191,7 +191,8 @@ $modules_allowed    = array(
 	'delete_blog' => 1,
 	'mediabunny_pending' => 1,
 	'mediabunny_complete' => 1,
-	'mediabunny_serve' => 1
+	'mediabunny_serve' => 1,
+	'shorts_feed' => 1
 );
   
 if ( isset($modules_allowed[$module]) && $modules_allowed[$module] === 1 ) {
