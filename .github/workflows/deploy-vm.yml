@@ -81,8 +81,7 @@ jobs:
           sudo systemctl restart apache2
           sudo systemctl restart 'php*-fpm' 2>/dev/null || true
 
-      - name: Reload Apache
-        run: sudo systemctl reload apache2
+# (step removido: reload é redundante após restart no passo anterior)
 
       - name: Post-deploy health check
         run: |
@@ -114,7 +113,7 @@ jobs:
             sudo rm -rf ${{ env.DEPLOY_PATH }}
             sudo cp -r "$LATEST" ${{ env.DEPLOY_PATH }}
             sudo chown -R www-data:www-data ${{ env.DEPLOY_PATH }}
-            sudo systemctl reload apache2
+            sudo systemctl restart apache2
             echo "✅ Rollback concluído"
           else
             echo "❌ Nenhum backup encontrado"

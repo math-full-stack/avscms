@@ -49,8 +49,8 @@ $GCLOUD_SSH --command="sudo mkdir -p $DEPLOY_PATH && sudo chown $VM_USER:$VM_USE
 step "6. Testando execução remota (dry-run migrations)"
 $GCLOUD_SSH --command="cd $DEPLOY_PATH && ls sql/*.sql 2>/dev/null | head -5"
 
-step "7. Testando sudo systemctl reload apache2"
-$GCLOUD_SSH --command="sudo systemctl reload apache2"
+step "7. Testando sudo systemctl restart apache2"
+$GCLOUD_SSH --command="sudo systemctl restart apache2"
 
 step "✅ Setup completo!"
 echo
