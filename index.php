@@ -144,8 +144,10 @@ foreach ( $hero_videos as $k => $v ) {
     $hero_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
 }
 
-// Shorts / Vídeos Verticais para a vitrine da home (menos de 1 minuto, prioriza retrato e alto engajamento)
-$sql_shorts = "SELECT " . $video_select . $video_from . " AND v.duration > 0 AND v.duration < 60 ORDER BY (v.orientation = 'portrait') DESC, (v.rate * 10 + v.likes * 2 + v.viewnumber) DESC LIMIT 12";
+// Shorts / Vídeos Verticais para a vitrine da home: SÓ verticais (orientation) e
+// menos de 1 minuto, ordenados por recência + audiência no mesmo score
+// (mesma fórmula do feed em shorts.php / ajax/shorts_feed.php).
+$sql_shorts = "SELECT " . $video_select . $video_from . " AND v.duration > 0 AND v.duration < 60 AND v.orientation = 'portrait' ORDER BY (v.viewnumber / POW(TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(CAST(v.addtime AS UNSIGNED)), NOW()) + 2, 1.5)) DESC, v.addtime DESC, v.VID DESC LIMIT 12";
 $rs_shorts  = $conn->execute($sql_shorts);
 $shorts_videos = $rs_shorts ? $rs_shorts->getrows() : array();
 video_apply_cover_rotation($shorts_videos);

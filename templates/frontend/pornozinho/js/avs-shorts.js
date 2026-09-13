@@ -185,6 +185,22 @@
 		var heartBurstContainer = card.querySelector('.avs-heart-burst');
 		var unmuteBadge = card.querySelector('.avs-unmute-overlay-badge');
 
+		// Box do player acompanha o aspecto REAL do vídeo (--avs-video-ar). O
+		// server já manda o do banco; isto refina/conserta quando não há medida
+		// confiável — sem isso um vídeo fora de 9:16 fica com barra ou cortado.
+		if (video && playerWrapper) {
+			var applyAspect = function () {
+				if (video.videoWidth > 0 && video.videoHeight > 0) {
+					playerWrapper.style.setProperty('--avs-video-ar', (video.videoWidth / video.videoHeight).toFixed(5));
+				}
+			};
+			if (video.readyState >= 1) {
+				applyAspect();
+			} else {
+				video.addEventListener('loadedmetadata', applyAspect);
+			}
+		}
+
 		// Scrubber / Progresso
 		if (video && progressFill) {
 			video.addEventListener('timeupdate', function () {
@@ -639,7 +655,7 @@
 
 			card.innerHTML = [
 				'<div class="avs-ambient-bg" style="background-image: url(\'' + escapeHtml(v.poster_url) + '\');" aria-hidden="true"></div>',
-				'<div class="avs-player-wrapper ' + vertClass + '">',
+				'<div class="avs-player-wrapper ' + vertClass + '"' + (v.aspect ? ' style="--avs-video-ar: ' + v.aspect + '"' : '') + '>',
 				'  <video class="avs-video-el" src="' + escapeHtml(v.video_url) + '" poster="' + escapeHtml(v.poster_url) + '" playsinline webkit-playsinline loop preload="none" muted></video>',
 				'  <div class="avs-play-pulse" aria-hidden="true">',
 				'    <span class="material-symbols-rounded icon-play">play_arrow</span>',
@@ -651,12 +667,6 @@
 				'    <span>Toque para ativar o som</span>',
 				'  </button>',
 				'  <div class="avs-short-meta-bottom">',
-				'    <div class="avs-short-creator">',
-				'      <a href="' + escapeHtml(v.creator.channel_url) + '" class="avs-short-avatar" title="' + escapeHtml(v.creator.username) + '">',
-				'        <img src="' + escapeHtml(v.creator.avatar_url) + '" alt="' + escapeHtml(v.creator.username) + '" loading="lazy">',
-				'      </a>',
-				'      <a href="' + escapeHtml(v.creator.channel_url) + '" class="avs-short-username">@' + escapeHtml(v.creator.username) + '</a>',
-				'    </div>',
 				'    <div class="avs-short-title-wrap">',
 				'      <h2 class="avs-short-title">' + escapeHtml(v.title) + '</h2>',
 				(v.description ? '      <p class="avs-short-desc">' + escapeHtml(v.description) + '</p>' : ''),
@@ -704,9 +714,6 @@
 				'        <span class="material-symbols-rounded icon-sound-off" style="' + (!state.isMuted ? 'display:none;' : '') + '">volume_off</span>',
 				'        <span class="material-symbols-rounded icon-sound-on" style="' + (state.isMuted ? 'display:none;' : '') + '">volume_up</span>',
 				'      </button>',
-				'    </div>',
-				'    <div class="avs-music-disc" aria-hidden="true">',
-				'      <img src="' + escapeHtml(v.creator.avatar_url) + '" alt="" class="disc-art">',
 				'    </div>',
 				'  </aside>',
 				'  <div class="avs-short-progress-bar" role="progressbar">',

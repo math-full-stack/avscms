@@ -1123,14 +1123,18 @@ a:hover .thumb-overlay video {
 	transform: none;
 }
 
+/* Chip de tempo/qualidade (duração + HD): vidro fosco estilo macOS sobre a
+   capa — blur forte com saturação, hairline branca e brilho interno. */
 .duration {
-	background: rgba(8, 8, 8, .85) !important;
-	backdrop-filter: blur(4px);
+	background: var(--xb-glass-bg-dark) !important;
+	backdrop-filter: var(--xb-glass-blur-sm);
+	-webkit-backdrop-filter: var(--xb-glass-blur-sm);
+	box-shadow: var(--xb-glass-hl);
 	color: #fff;
-	border-radius: 6px;
+	border-radius: 8px;
 	font-size: 11px;
-	padding: 3px 7px !important;
-	font-weight: 700;
+	padding: 3px 8px !important;
+	font-weight: 600;
 	bottom: 8px !important;
 	right: 8px !important;
 	width: auto !important;
@@ -1143,15 +1147,17 @@ a:hover .thumb-overlay video {
 	text-shadow: none !important;
 	background-image: none !important;
 	filter: none !important;
-	border: none !important;
+	border: 1px solid var(--xb-glass-border) !important;
 	z-index: 4;
 }
 
+/* Selo de qualidade dentro do chip de duração — mesma linguagem de vidro */
 .hd-text-icon {
-	background: linear-gradient(135deg, var(--xb-accent), var(--xb-accent-d));
+	background: rgba(255, 255, 255, .2);
+	border: 1px solid rgba(255, 255, 255, .3);
 	color: #fff;
-	border-radius: 4px;
-	padding: 2px 5px;
+	border-radius: 5px;
+	padding: 1px 5px;
 	font-size: 9px;
 	font-weight: 800;
 	letter-spacing: .5px;
@@ -1188,12 +1194,14 @@ a:hover .thumb-overlay video {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	background: rgba(10, 10, 10, .55);
-	backdrop-filter: blur(6px);
-	-webkit-backdrop-filter: blur(6px);
-	border: 1px solid rgba(255, 255, 255, .09);
+	/* Chip de título/views — vidro fosco macOS (igual ao chip de duração) */
+	background: var(--xb-glass-bg-dark);
+	backdrop-filter: var(--xb-glass-blur-sm);
+	-webkit-backdrop-filter: var(--xb-glass-blur-sm);
+	border: 1px solid var(--xb-glass-border);
+	box-shadow: var(--xb-glass-hl);
 	border-radius: 20px;
-	padding: 3px 9px;
+	padding: 3px 10px;
 	font-size: 10.5px;
 	font-weight: 600;
 	letter-spacing: .3px;
@@ -1453,6 +1461,77 @@ a:hover .xb-thumb-meta {
 .xb-tags-lg a {
 	font-size: 13px;
 	padding: 5px 13px;
+}
+
+/* Tags dos cards de vídeo: faixa de UMA linha com rolagem horizontal (arrastar
+   com o mouse, roda do mouse ou toque). A seta à direita é o único affordance
+   e só aparece quando a faixa realmente estoura (classe .is-scrollable posta
+   pelo js/xb-tags-rail.js). O cloud "Tags populares" da home segue quebrando
+   linha — ele não usa .xb-tags-rail.
+
+   A seta é um item do flex, FORA da faixa rolável: ela empurra a faixa em vez
+   de flutuar por cima, então nunca cobre uma tag. Como fica display:none sem
+   overflow, quando não há o que rolar a faixa ocupa a largura inteira. */
+.xb-tags-rail {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 7px;
+}
+
+.xb-tags-rail .xb-tags {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin-top: 0;
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+.xb-tags-rail .xb-tags::-webkit-scrollbar {
+	display: none;
+}
+
+.xb-tags-rail .xb-tags a {
+	flex: 0 0 auto;
+	white-space: nowrap;
+}
+
+.xb-tags-next {
+	flex: 0 0 auto;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--xb-glass-border);
+	border-radius: 8px;
+	background: var(--xb-glass-bg-dark);
+	backdrop-filter: var(--xb-glass-blur-sm);
+	-webkit-backdrop-filter: var(--xb-glass-blur-sm);
+	box-shadow: var(--xb-glass-hl);
+	color: rgba(255, 255, 255, .85);
+	opacity: .62;
+	cursor: pointer;
+	transition: opacity .2s ease, background .18s ease, border-color .18s ease;
+}
+
+.xb-tags-rail.is-scrollable .xb-tags-next {
+	display: inline-flex;
+}
+
+.xb-tags-next:hover {
+	opacity: 1;
+	background: rgba(255, 255, 255, .18);
+	border-color: rgba(255, 255, 255, .3);
+}
+
+.xb-tags-next .material-symbols-rounded {
+	font-size: 16px;
 }
 
 /* --------------------------------------------------------------------------
@@ -2021,6 +2100,8 @@ a:hover .xb-thumb-meta {
 	width: 100%;
 }
 
+/* Setas de carrossel — vidro fosco macOS, sem cor de marca: o controle é
+   neutro e vive sobre a imagem, como um overlay do sistema. */
 .xb-carousel-arrow {
 	position: absolute;
 	top: 50%;
@@ -2028,16 +2109,17 @@ a:hover .xb-thumb-meta {
 	z-index: 5;
 	width: 36px;
 	height: 54px;
-	border: none;
-	border-radius: 6px;
-	background: rgba(10, 10, 10, .6);
-	backdrop-filter: blur(4px);
-	-webkit-backdrop-filter: blur(4px);
-	color: #fff;
+	border: 1px solid var(--xb-glass-border);
+	border-radius: 11px;
+	background: var(--xb-glass-bg-dark);
+	backdrop-filter: var(--xb-glass-blur);
+	-webkit-backdrop-filter: var(--xb-glass-blur);
+	box-shadow: var(--xb-glass-hl), 0 8px 24px rgba(0, 0, 0, .45);
+	color: rgba(255, 255, 255, .92);
 	font-size: 14px;
 	cursor: pointer;
 	opacity: 0;
-	transition: opacity .2s ease, background .2s ease;
+	transition: opacity .2s ease, background .18s ease, border-color .18s ease;
 }
 
 .xb-carousel:hover .xb-carousel-arrow {
@@ -2045,7 +2127,8 @@ a:hover .xb-thumb-meta {
 }
 
 .xb-carousel-arrow:hover {
-	background: rgba(255, 20, 147, .85);
+	background: rgba(255, 255, 255, .18);
+	border-color: rgba(255, 255, 255, .3);
 }
 
 .xb-carousel-prev {
@@ -2792,7 +2875,7 @@ a:hover .xb-thumb-meta {
 	}
 
 	.xb-topbar-inner .xb-logo img {
-		max-height: 30px;
+		max-height: 36px;
 	}
 
 	/* Cabeçalhos de seção mais compactos */
@@ -2842,7 +2925,7 @@ a:hover .xb-thumb-meta {
 	}
 
 	.xb-topbar-inner .xb-logo img {
-		max-height: 26px;
+		max-height: 32px;
 	}
 
 	.xb-topbar-inner .xb-actions {
@@ -2948,7 +3031,7 @@ a:hover .xb-thumb-meta {
 	}
 
 	.xb-topbar-inner .xb-logo img {
-		max-height: 22px;
+		max-height: 28px;
 	}
 
 	.xb-topbar-inner .xb-actions {
@@ -3067,7 +3150,7 @@ a:hover .xb-thumb-meta {
 }
 
 .xb-shorts-badge-icon {
-	color: #ff1493;
+	color: var(--md-sys-color-primary);
 	font-size: 24px;
 }
 
@@ -3091,144 +3174,59 @@ a:hover .xb-thumb-meta {
 	display: none;
 }
 
-.xb-short-home-card {
+/* Item do shelf: reusa os componentes do card padrão de vídeo (.thumb-overlay,
+   .xb-thumb-meta, .duration, .content-info/.content-title e .xb-tags), então
+   herda radius/bordas/cores/tema de graça. Só o que muda aqui é o box vertical
+   9:16 com UMA capa em cover — o trio 16:9 do card padrão não cabe num quadro
+   vertical e viraria 3 slots esticados. */
+.xb-short-shelf-item {
 	flex: 0 0 175px;
-	height: 295px;
-	border-radius: 16px;
-	overflow: hidden;
-	position: relative;
-	text-decoration: none;
 	scroll-snap-align: start;
-	transition: transform 0.25s ease, box-shadow 0.25s ease;
-	background: #000;
-	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
-	border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.xb-short-home-card:hover {
-	transform: translateY(-5px) scale(1.02);
-	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 20, 147, 0.4);
-	text-decoration: none;
+.xb-short-shelf-item .thumb-overlay {
+	aspect-ratio: 9 / 16;
 }
 
-.xb-short-home-thumb {
-	width: 100%;
+.xb-short-shelf-item .thumb-overlay img {
 	height: 100%;
-	position: relative;
-	overflow: hidden;
-}
-
-.xb-short-home-thumb img {
-	width: 100%;
-	height: 100%;
+	aspect-ratio: auto;
 	object-fit: cover;
-	display: block;
-	transition: transform 0.4s ease;
 }
 
-.xb-short-home-card:hover .xb-short-home-thumb img {
-	transform: scale(1.06);
-}
 
-.xb-short-home-badge {
-	position: absolute;
-	top: 10px;
-	left: 10px;
-	display: flex;
-	align-items: center;
-	gap: 4px;
-	background: rgba(0, 0, 0, 0.55);
-	backdrop-filter: blur(8px);
-	-webkit-backdrop-filter: blur(8px);
-	padding: 3px 8px;
-	border-radius: 12px;
-	color: #fff;
-	font-size: 11px;
-	font-weight: 700;
-	letter-spacing: 0.3px;
-	border: 1px solid rgba(255, 255, 255, 0.15);
-	z-index: 2;
-}
 
-.xb-short-home-badge .material-symbols-rounded {
-	font-size: 14px;
-	color: #ff1493;
-}
-
-.xb-short-home-duration {
-	position: absolute;
-	top: 10px;
-	right: 10px;
-	background: rgba(0, 0, 0, 0.65);
-	backdrop-filter: blur(8px);
-	-webkit-backdrop-filter: blur(8px);
-	padding: 2px 6px;
-	border-radius: 6px;
-	color: #fff;
-	font-size: 10.5px;
-	font-weight: 600;
-	z-index: 2;
-}
-
-.xb-short-home-overlay {
-	position: absolute;
-	left: 0;
-	bottom: 0;
-	width: 100%;
-	padding: 24px 10px 10px 10px;
-	background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 60%, transparent 100%);
-	z-index: 2;
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-}
-
-.xb-short-home-meta {
-	font-size: 11px;
-	color: rgba(255, 255, 255, 0.75);
-	display: flex;
-	align-items: center;
-	gap: 4px;
-}
-
-.xb-short-home-title {
-	font-size: 13px;
-	font-weight: 600;
-	line-height: 1.3;
-	color: #fff;
-	margin: 0;
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
-	text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-}
-
+/* Setas do shelf de Shorts — vidro fosco macOS: canto contínuo, hairline
+   branca, brilho interno e blur forte; o hover clareia em vez de pintar. */
 .xb-shelf-btn {
 	position: absolute;
 	top: 50%;
 	transform: translateY(-50%);
-	width: 38px;
-	height: 38px;
-	border-radius: 50%;
-	background: rgba(18, 18, 26, 0.85);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
-	border: 1px solid rgba(255, 255, 255, 0.15);
-	color: #fff;
+	width: 34px;
+	height: 34px;
+	border-radius: 11px;
+	background: var(--xb-glass-bg-dark);
+	backdrop-filter: var(--xb-glass-blur);
+	-webkit-backdrop-filter: var(--xb-glass-blur);
+	border: 1px solid var(--xb-glass-border);
+	box-shadow: var(--xb-glass-hl), 0 8px 24px rgba(0, 0, 0, .45);
+	color: rgba(255, 255, 255, .92);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
 	z-index: 10;
-	transition: all 0.2s ease;
-	box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+	transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.xb-shelf-btn i {
+	font-size: 12px;
 }
 
 .xb-shelf-btn:hover {
-	background: #ff1493;
-	color: #fff;
-	transform: translateY(-50%) scale(1.1);
+	background: rgba(255, 255, 255, .18);
+	border-color: rgba(255, 255, 255, .3);
+	transform: translateY(-50%) scale(1.06);
 }
 
 .xb-shelf-prev {
@@ -3240,10 +3238,8 @@ a:hover .xb-thumb-meta {
 }
 
 @media (max-width: 767px) {
-	.xb-short-home-card {
+	.xb-short-shelf-item {
 		flex: 0 0 142px;
-		height: 245px;
-		border-radius: 13px;
 	}
 	.xb-shelf-btn {
 		display: none;

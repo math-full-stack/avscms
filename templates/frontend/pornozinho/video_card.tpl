@@ -32,10 +32,17 @@
 			<span class="content-title">{$v.title|escape:'html'}</span>
 		</a>
 		{if $show_tags|default:1 && $v.keywords}
-		<div class="xb-tags">
-			{section name=t loop=$v.keywords max=4}
-				<a href="{$relative}/search/tags/{$v.keywords[t]}">#{$v.keywords[t]}</a>
-			{/section}
+		{* Uma linha só, com rolagem horizontal (arrastar/roda) e uma seta discreta.
+		   O comportamento está em js/xb-tags-rail.js + .xb-tags-rail no CSS. *}
+		<div class="xb-tags-rail">
+			<div class="xb-tags">
+				{section name=t loop=$v.keywords max=4}
+					<a href="{$relative}/search/tags/{$v.keywords[t]}">#{$v.keywords[t]}</a>
+				{/section}
+			</div>
+			<button type="button" class="xb-tags-next" tabindex="-1" aria-hidden="true">
+				<span class="material-symbols-rounded">chevron_right</span>
+			</button>
 		</div>
 		{/if}
 	</div>

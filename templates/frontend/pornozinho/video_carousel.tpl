@@ -158,21 +158,23 @@
     border-radius: 3px;
 }
 .xb-carousel-sec--themed .xb-carousel-arrow {
-    background: rgba(15, 15, 15, 0.9) !important;
-    border: 1px solid rgba(255, 20, 147, 0.3) !important;
-    color: #fff !important;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 20, 147, 0.1) inset;
-    transition: all 0.3s ease;
+    background: var(--xb-glass-bg-dark) !important;
+    border: 1px solid var(--xb-glass-border) !important;
+    border-radius: 11px !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+    backdrop-filter: var(--xb-glass-blur);
+    -webkit-backdrop-filter: var(--xb-glass-blur);
+    box-shadow: var(--xb-glass-hl), 0 8px 24px rgba(0, 0, 0, 0.45);
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 .xb-carousel-sec--themed .xb-carousel-arrow:hover:not(:disabled) {
-    background: rgba(255, 20, 147, 0.25) !important;
-    border-color: rgba(255, 20, 147, 0.6) !important;
-    box-shadow: 0 8px 30px rgba(255, 20, 147, 0.2), 0 0 0 1px rgba(255, 20, 147, 0.2) inset;
-    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.18) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    box-shadow: var(--xb-glass-hl), 0 10px 28px rgba(0, 0, 0, 0.5);
+    transform: scale(1.06);
 }
 .xb-carousel-sec--themed .xb-carousel-arrow:disabled {
-    opacity: 0.3;
+    opacity: 0.35;
 }
 .xb-carousel-sec--themed .xb-carousel-item a {
     border-radius: 16px;

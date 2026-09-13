@@ -940,9 +940,11 @@ a:hover .thumb-overlay {
 	box-shadow: 0 0 12px rgba(255, 20, 147, .35);
 }
 
+/* Chip de título/views: vidro fosco macOS (mesmos tokens do resto do tema) */
 .xb-thumb-meta {
-	background-color: rgba(18, 15, 19, .72);
-	border: 1px solid var(--md-sys-color-outline-variant);
+	background-color: var(--xb-glass-bg-dark);
+	border: 1px solid var(--xb-glass-border);
+	box-shadow: var(--xb-glass-hl);
 	border-radius: var(--md-sys-shape-corner-full);
 }
 

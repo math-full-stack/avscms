@@ -79,6 +79,20 @@ body:has(#avs-shorts-app) {
 	transform: scale(1.05);
 }
 
+/* Logo do site no topo esquerdo — mesma arte + máscara animada do header
+   (classe .xb-logo vem de pornozinho.css). A altura é controlada aqui, porque
+   os tamanhos do header são escopados em .xb-topbar-inner. */
+.avs-shorts-logo {
+	text-decoration: none;
+	/* Folga em relação ao botão de voltar. O topbar do desktop já tem gap:10px,
+	   mas no mobile não há gap nenhum — 4px deixava a logo colada no círculo. */
+	margin-left: 12px;
+}
+
+.avs-shorts-logo img {
+	max-height: 26px;
+}
+
 .avs-shorts-tabs {
 	display: flex;
 	align-items: center;
@@ -89,6 +103,86 @@ body:has(#avs-shorts-app) {
 	padding: 4px 6px;
 	border-radius: 30px;
 	border: 1px solid rgba(255,255,255,0.12);
+}
+
+/* Desktop: as abas ficam no centro REAL da tela (senão a logo, mais larga que
+   o antigo botão de voltar, empurraria o pill para a direita). Como isso tira
+   as abas do fluxo, o topbar passa a ter 3 filhos (voltar, logo, som) e o
+   space-between jogaria a LOGO para o centro — então o grupo da esquerda é
+   alinhado no início e só o som vai para a direita. */
+@media (min-width: 768px) {
+	.avs-shorts-topbar {
+		justify-content: flex-start;
+		gap: 10px;
+	}
+
+	.avs-shorts-top-actions {
+		margin-left: auto;
+	}
+
+	.avs-shorts-tabs {
+		position: absolute;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+}
+
+/* Mobile: voltar + logo + som NÃO cabem na mesma linha das 3 abas. Medido com
+   viewport device-width: em 390px o topbar já estava 100% saturado
+   (38 + 270 + 42 = 350 de 350 úteis) — qualquer logo estoura. Então vira duas
+   linhas: voltar + logo + som em cima, abas centralizadas embaixo (com scroll
+   próprio se a tela for ainda mais estreita). */
+@media (max-width: 767.98px) {
+	.avs-shorts-topbar {
+		height: auto;
+		flex-wrap: wrap;
+		row-gap: 6px;
+		padding: 8px 14px 10px;
+	}
+
+	.avs-shorts-top-actions {
+		margin-left: auto;
+	}
+
+	.avs-shorts-tabs {
+		order: 3;
+		width: 100%;
+		justify-content: center;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.avs-shorts-tabs::-webkit-scrollbar {
+		display: none;
+	}
+
+	.avs-shorts-logo img {
+		max-height: 20px;
+	}
+
+	.avs-shorts-back,
+	.avs-shorts-sound-btn {
+		width: 36px;
+		height: 36px;
+	}
+
+	.avs-shorts-tab {
+		font-size: 12.5px;
+		padding: 5px 12px;
+		white-space: nowrap;
+	}
+
+	/* Aqui o topbar vira duas linhas (108px medidos em 390) e o badge caía
+	   justamente em cima das abas. */
+	.avs-unmute-overlay-badge {
+		top: 132px;
+	}
+}
+
+@media (max-width: 400px) {
+	.avs-shorts-logo img {
+		max-height: 17px;
+	}
 }
 
 .avs-shorts-tab {
@@ -196,11 +290,15 @@ body:has(#avs-shorts-app) {
 	}
 }
 
-/* Wrapper do Player Central */
+/* Wrapper do Player Central.
+   O box acompanha o ASPECTO REAL do vídeo (--avs-video-ar, escrito pelo server
+   a partir de width/height do banco e refinado no loadedmetadata): é isso que
+   garante o quadro inteiro dentro do player, sem corte. Sem a var, assume 9:16. */
 .avs-player-wrapper {
 	position: relative;
-	width: 100%;
-	height: 100%;
+	width: min(100%, calc(100dvh * var(--avs-video-ar, 0.5625)));
+	aspect-ratio: var(--avs-video-ar, 9 / 16);
+	max-height: 100%;
 	background: #000;
 	z-index: 10;
 	display: flex;
@@ -211,26 +309,44 @@ body:has(#avs-shorts-app) {
 
 @media (min-width: 768px) {
 	.avs-player-wrapper {
-		width: min(440px, calc(100dvh * 9 / 16));
-		height: min(100dvh, 880px);
+		width: min(440px, calc(100dvh * var(--avs-video-ar, 0.5625)));
+		max-height: min(100dvh, 880px);
 		border-radius: 16px;
 		box-shadow: 0 15px 50px rgba(0,0,0,0.8), 0 0 40px rgba(124, 77, 255, 0.2);
 		border: 1px solid rgba(255, 255, 255, 0.08);
 	}
 }
 
+
+
 /* Elemento de Vídeo */
 .avs-video-el {
 	width: 100%;
 	height: 100%;
-	object-fit: cover;
+	/* contain (nunca cover): o quadro inteiro sempre aparece. Como o box já tem
+	   o aspecto do vídeo, no caso normal não sobra barra nenhuma. */
+	object-fit: contain;
 	background: #000;
 	display: block;
 	cursor: pointer;
 }
 
-.avs-is-horizontal .avs-video-el {
-	object-fit: contain;
+/* Mobile: o vídeo é FULL-BLEED — cobre a tela inteira, sem tarja preta. O corte
+   lateral é o esperado no celular (padrão Reels/TikTok); no desktop o box segue
+   com o aspecto do vídeo e mostra o quadro inteiro.
+   ARMADILHA: este bloco TEM que vir depois das regras base de
+   .avs-player-wrapper e .avs-video-el — mesma especificidade, vence o último. */
+@media (max-width: 767.98px) {
+	.avs-player-wrapper {
+		width: 100%;
+		height: 100%;
+		aspect-ratio: auto;
+		max-height: none;
+	}
+
+	.avs-video-el {
+		object-fit: cover;
+	}
 }
 
 /* Feedback de Play / Pause Pulsante */
@@ -265,7 +381,8 @@ body:has(#avs-shorts-app) {
 /* Badge Flutuante "Toque para desmutar" */
 .avs-unmute-overlay-badge {
 	position: absolute;
-	top: 80px;
+	/* Fica abaixo do topbar (desktop: 60px de altura). 80px colava na borda. */
+	top: 120px;
 	left: 50%;
 	transform: translateX(-50%);
 	display: flex;
@@ -356,65 +473,9 @@ body:has(#avs-shorts-app) {
 	pointer-events: auto;
 }
 
-.avs-short-creator {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-.avs-short-avatar {
-	width: 38px;
-	height: 38px;
-	border-radius: 50%;
-	overflow: hidden;
-	border: 2px solid #fff;
-	flex-shrink: 0;
-	box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-}
-
-.avs-short-avatar img {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	display: block;
-}
-
-.avs-short-username {
-	color: #fff;
-	font-weight: 700;
-	font-size: 15px;
-	text-decoration: none;
-	text-shadow: 0 1px 4px rgba(0,0,0,0.8);
-	transition: color 0.2s ease;
-}
-
-.avs-short-username:hover {
-	color: var(--shorts-accent);
-	text-decoration: none;
-}
-
-.avs-btn-follow {
-	background: var(--shorts-accent-grad);
-	border: none;
-	color: #fff;
-	font-size: 12px;
-	font-weight: 600;
-	padding: 4px 12px;
-	border-radius: 16px;
-	cursor: pointer;
-	box-shadow: 0 2px 8px rgba(255, 20, 147, 0.4);
-	transition: all 0.2s ease;
-}
-
-.avs-btn-follow:hover {
-	transform: scale(1.05);
-}
-
-.avs-btn-follow.following {
-	background: rgba(255, 255, 255, 0.2);
-	color: rgba(255, 255, 255, 0.85);
-	box-shadow: none;
-}
+/* .avs-short-creator/.avs-short-avatar/.avs-short-username/.avs-btn-follow
+   foram removidos junto com a linha do criador acima do título — o criador
+   (avatar + seguir) segue na barra lateral .avs-action-profile. */
 
 .avs-short-title-wrap {
 	display: flex;
@@ -426,7 +487,7 @@ body:has(#avs-shorts-app) {
 	font-size: 14.5px;
 	line-height: 1.35;
 	font-weight: 500;
-	color: #f5f5f5;
+	color: #fff;
 	margin: 0;
 	text-shadow: 0 1px 3px rgba(0,0,0,0.9);
 	display: -webkit-box;
@@ -613,29 +674,7 @@ body:has(#avs-shorts-app) {
 	100% { transform: scale(1); }
 }
 
-/* Disco de Vinil Giratório */
-.avs-music-disc {
-	width: 44px;
-	height: 44px;
-	border-radius: 50%;
-	background: #111;
-	border: 6px solid #222;
-	box-shadow: 0 2px 10px rgba(0,0,0,0.6);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	overflow: hidden;
-	animation: avsSpin 4s linear infinite;
-	margin-top: 4px;
-}
-
-.avs-music-disc .disc-art {
-	width: 22px;
-	height: 22px;
-	border-radius: 50%;
-	object-fit: cover;
-}
-
+/* @keyframes avsSpin é compartilhado: o spinner de carregamento usa a mesma. */
 @keyframes avsSpin {
 	from { transform: rotate(0deg); }
 	to { transform: rotate(360deg); }
@@ -1085,5 +1124,212 @@ body:has(#avs-shorts-app) {
 	display: flex !important;
 	align-items: center !important;
 	gap: 6px !important;
+}
+
+/* ==========================================================================
+   TEMA CLARO — o feed de shorts segue o tema do site
+   (html[data-theme="light"], definido pelo script inline do header.tpl).
+
+   DECISÃO: quem tem SUPERFÍCIE própria clareia (fundo da página/tela, pílulas
+   do topbar, botões, painel de comentários, toast, loader, estado vazio).
+   Quem é desenhado DIRETO sobre pixels do vídeo continua branco sobre o scrim
+   escuro — título, descrição, faixa de áudio, contadores e a barra lateral de
+   ações: texto escuro sobre frame de vídeo arbitrário é ilegível. O box do
+   player também segue preto nos dois temas.
+
+   Usa os tokens do tema (--xb-*, --md-sys-color-*), publicados pelo bloco
+   light do pornozinho-md3.css.
+   ========================================================================== */
+html[data-theme="light"] body:has(#avs-shorts-app) {
+	background: var(--xb-bg, #FFF8F8) !important;
+}
+
+html[data-theme="light"] .avs-shorts-app {
+	background: var(--xb-bg, #FFF8F8);
+	/* Vidro dos painéis opacos (drawer) virado para o claro */
+	--shorts-glass-bg: rgba(255, 255, 255, .86);
+	--shorts-glass-border: rgba(30, 21, 25, .12);
+}
+
+html[data-theme="light"] .avs-short-card {
+	background: var(--xb-bg, #FFF8F8);
+}
+
+/* Projeção ambient: em vez de escurecer, clareia o poster desfocado */
+html[data-theme="light"] .avs-ambient-bg {
+	filter: blur(45px) brightness(1.25) saturate(1.1);
+	opacity: .5;
+}
+
+html[data-theme="light"] .avs-shorts-topbar {
+	background: linear-gradient(to bottom, rgba(255, 255, 255, .92) 0%, transparent 100%);
+}
+
+html[data-theme="light"] .avs-shorts-back,
+html[data-theme="light"] .avs-shorts-sound-btn,
+html[data-theme="light"] .avs-nav-btn {
+	background: rgba(255, 255, 255, .72);
+	border-color: var(--shorts-glass-border);
+	color: var(--xb-text, #1E1519);
+}
+
+html[data-theme="light"] .avs-shorts-back:hover,
+html[data-theme="light"] .avs-shorts-sound-btn:hover {
+	background: rgba(255, 255, 255, .95);
+	color: var(--xb-text, #1E1519);
+}
+
+html[data-theme="light"] .avs-shorts-tabs {
+	background: rgba(255, 255, 255, .78);
+	border-color: var(--shorts-glass-border);
+}
+
+html[data-theme="light"] .avs-shorts-tab {
+	color: var(--md-sys-color-on-surface-variant, #524346);
+}
+
+html[data-theme="light"] .avs-shorts-tab:hover {
+	color: var(--xb-text, #1E1519);
+}
+
+/* A aba ativa mantém o gradiente da marca (texto branco sobre ele) */
+html[data-theme="light"] .avs-shorts-tab.active {
+	color: #fff;
+}
+
+html[data-theme="light"] .avs-unmute-overlay-badge {
+	background: rgba(255, 255, 255, .82);
+	border-color: var(--shorts-glass-border);
+	color: var(--xb-text, #1E1519);
+}
+
+html[data-theme="light"] .avs-unmute-overlay-badge:hover {
+	background: rgba(255, 255, 255, .96);
+}
+
+html[data-theme="light"] .avs-action-btn {
+	background: rgba(255, 255, 255, .78);
+	border-color: var(--shorts-glass-border);
+	color: var(--xb-text, #1E1519);
+}
+
+/* Hover dos botões de ação continua rosa (estado), como no escuro */
+html[data-theme="light"] .avs-action-btn:hover {
+	background: var(--shorts-accent);
+	color: #fff;
+}
+
+/* Botão “+” de seguir: o anel era branco (sumia no fundo claro) */
+html[data-theme="light"] .avs-action-plus-btn {
+	border-color: rgba(255, 255, 255, .95);
+}
+
+/* --- Painel de comentários (superfície opaca) --- */
+html[data-theme="light"] .avs-drawer-backdrop {
+	background: rgba(30, 21, 25, .35);
+}
+
+html[data-theme="light"] .avs-drawer-content {
+	box-shadow: -10px 0 40px rgba(30, 21, 25, .18);
+}
+
+html[data-theme="light"] .avs-drawer-header,
+html[data-theme="light"] .avs-drawer-footer {
+	border-color: rgba(30, 21, 25, .1);
+}
+
+html[data-theme="light"] .avs-drawer-footer {
+	background: rgba(255, 248, 248, .94);
+}
+
+html[data-theme="light"] .avs-drawer-handle {
+	background: rgba(30, 21, 25, .22);
+}
+
+html[data-theme="light"] .avs-drawer-title,
+html[data-theme="light"] .avs-comment-bubble-author {
+	color: var(--xb-text, #1E1519);
+}
+
+html[data-theme="light"] .avs-drawer-count,
+html[data-theme="light"] .avs-comments-loading,
+html[data-theme="light"] .avs-comments-empty,
+html[data-theme="light"] .avs-comment-login-prompt {
+	color: var(--md-sys-color-on-surface-variant, #524346);
+}
+
+html[data-theme="light"] .avs-drawer-close-btn {
+	color: var(--md-sys-color-on-surface-variant, #524346);
+}
+
+html[data-theme="light"] .avs-drawer-close-btn:hover {
+	color: var(--xb-text, #1E1519);
+	background: rgba(30, 21, 25, .08);
+}
+
+html[data-theme="light"] .avs-comments-empty .material-symbols-rounded {
+	color: rgba(30, 21, 25, .3);
+}
+
+html[data-theme="light"] .avs-comment-bubble-text {
+	color: rgba(30, 21, 25, .88);
+}
+
+html[data-theme="light"] .avs-comment-bubble-time {
+	color: rgba(30, 21, 25, .5);
+}
+
+html[data-theme="light"] .avs-comment-form {
+	background: rgba(30, 21, 25, .05);
+	border-color: rgba(30, 21, 25, .12);
+}
+
+html[data-theme="light"] .avs-comment-form:focus-within {
+	background: rgba(30, 21, 25, .07);
+}
+
+html[data-theme="light"] .avs-comment-input {
+	color: var(--xb-text, #1E1519);
+}
+
+html[data-theme="light"] .avs-comment-input::placeholder {
+	color: rgba(30, 21, 25, .45);
+}
+
+/* --- Loader, estado vazio e toast --- */
+/* O md3 força h1..h6 escuro no claro ("textos legados") e o título é um <h2>
+   desenhado SOBRE o vídeo, sem superfície própria: segue branco com o scrim. */
+html[data-theme="light"] .avs-short-title {
+	color: #fff;
+}
+
+/* Idem para o `a { color: #5A4A4F }` global do tema claro: o botão de login
+   do painel é um <a> sobre o gradiente da marca. */
+html[data-theme="light"] .avs-btn-login-prompt,
+html[data-theme="light"] .avs-btn-login-prompt:hover {
+	color: #fff;
+}
+
+html[data-theme="light"] .avs-shorts-infinite-loader {
+	color: var(--md-sys-color-on-surface-variant, #524346);
+}
+
+html[data-theme="light"] .avs-spinner {
+	border-color: rgba(30, 21, 25, .15);
+}
+
+html[data-theme="light"] .avs-shorts-empty {
+	color: var(--xb-text, #1E1519);
+}
+
+html[data-theme="light"] .avs-shorts-empty .empty-icon {
+	color: rgba(30, 21, 25, .35);
+}
+
+html[data-theme="light"] .avs-shorts-toast {
+	background: rgba(255, 255, 255, .95);
+	border-color: var(--shorts-glass-border);
+	color: var(--xb-text, #1E1519);
+	box-shadow: 0 8px 30px rgba(30, 21, 25, .18);
 }
 

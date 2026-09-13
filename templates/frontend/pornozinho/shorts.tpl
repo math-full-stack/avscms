@@ -5,6 +5,12 @@
 			<span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
 		</a>
 
+		{* Logo do site no topo esquerdo: mesma arte + máscara animada do header
+		   (.xb-logo). A altura é controlada aqui por .avs-shorts-logo img. *}
+		<a class="xb-logo avs-shorts-logo" href="{$baseurl}/" style="--xb-logo-img:url('{$baseurl}/images/logo/logo.png')" title="{$site_name}" aria-label="{$site_name}">
+			<img src="{$baseurl}/images/logo/logo.png" alt="{$site_name}">
+		</a>
+
 		<nav class="avs-shorts-tabs" role="tablist" aria-label="Abas de Shorts">
 			<a href="{$baseurl}/shorts?tab=foryou" class="avs-shorts-tab {if $active_tab == 'foryou'}active{/if}" data-tab="foryou">Para Você</a>
 			<a href="{$baseurl}/shorts?tab=trending" class="avs-shorts-tab {if $active_tab == 'trending'}active{/if}" data-tab="trending">Em Alta</a>
@@ -29,7 +35,7 @@
 					<div class="avs-ambient-bg" style="background-image: url('{$v.poster_url}');" aria-hidden="true"></div>
 
 					<!-- Container Central do Vídeo -->
-					<div class="avs-player-wrapper {if $v.is_vertical}avs-is-vertical{else}avs-is-horizontal{/if}">
+					<div class="avs-player-wrapper {if $v.is_vertical}avs-is-vertical{else}avs-is-horizontal{/if}"{if $v.aspect} style="--avs-video-ar: {$v.aspect}"{/if}>
 						<video class="avs-video-el" 
 							   src="{$v.video_url}" 
 							   poster="{$v.poster_url}" 
@@ -57,18 +63,8 @@
 
 						<!-- Metadados Inferiores do Vídeo -->
 						<div class="avs-short-meta-bottom">
-							<!-- Criador -->
-							<div class="avs-short-creator">
-								<a href="{$v.creator.channel_url}" class="avs-short-avatar" title="{$v.creator.username|escape:'html'}">
-									<img src="{$v.creator.avatar_url}" alt="{$v.creator.username|escape:'html'}" loading="lazy">
-								</a>
-								<a href="{$v.creator.channel_url}" class="avs-short-username">@{$v.creator.username|escape:'html'}</a>
-								{if isset($smarty.session.uid) && $smarty.session.uid != $v.creator.uid}
-									<button type="button" class="avs-btn-follow {if $v.creator.is_subscribed}following{/if}" data-uid="{$v.creator.uid}" title="Seguir criador">
-										{if $v.creator.is_subscribed}Seguindo{else}Seguir{/if}
-									</button>
-								{/if}
-							</div>
+							{* A linha do criador (avatar + @username + Seguir) saiu daqui: ela
+							   já vive na barra lateral de ações (.avs-action-profile). *}
 
 							<!-- Título & Descrição -->
 							<div class="avs-short-title-wrap">
@@ -139,10 +135,6 @@
 								</button>
 							</div>
 
-							<!-- Disco de Vinil Giratório -->
-							<div class="avs-music-disc" aria-hidden="true">
-								<img src="{$v.creator.avatar_url}" alt="" class="disc-art">
-							</div>
 						</aside>
 
 						<!-- Barra de Progresso Fina (Scrubber) -->

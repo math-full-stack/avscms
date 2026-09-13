@@ -1152,4 +1152,27 @@ function get_video_sources($video, $mykey = null, $iv = null)
 
     return $sources;
 }
+
+/**
+ * Aspecto real do vídeo (largura/altura) para dimensionar o player.
+ * Prefere as medidas HD e cai para as SD (há vídeo com HD zerado).
+ * Devolve 0 quando não há medida confiável — quem chama decide o default.
+ */
+function video_aspect_ratio($row)
+{
+    $pairs = array(
+        array('width_hd', 'height_hd'),
+        array('width_sd', 'height_sd'),
+    );
+
+    foreach ($pairs as $pair) {
+        $w = isset($row[$pair[0]]) ? (int) $row[$pair[0]] : 0;
+        $h = isset($row[$pair[1]]) ? (int) $row[$pair[1]] : 0;
+        if ($w > 0 && $h > 0) {
+            return round($w / $h, 5);
+        }
+    }
+
+    return 0;
+}
 ?>

@@ -71,6 +71,7 @@
     <script type="text/javascript" src="{$relative_tpl}/js/jquery.main.js"></script>	
     <script type="text/javascript" src="{$relative_tpl}/js/jquery.easy-autocomplete.min.js"></script>
     <script type="text/javascript" src="{$relative_tpl}/js/md3-ripple.js"></script>
+    <script type="text/javascript" src="{$relative_tpl}/js/xb-tags-rail.js?ver=1.0.0"></script>
 <script>
 	{literal}
 		$(document).ready(function() {
@@ -546,7 +547,7 @@
 	<script type="text/javascript" src="{$baseurl}/media/player/mediabunny/avs-mini.js?ver=2.1.0"></script>
 	<script type="text/javascript" src="{$relative_tpl}/js/avs-disguise.js?ver=1.0.0"></script>
 	{if isset($shorts_page) && $shorts_page}
-	<script type="text/javascript" src="{$relative_tpl}/js/avs-shorts.js?ver=1.0.0"></script>
+	<script type="text/javascript" src="{$relative_tpl}/js/avs-shorts.js?ver=1.0.3"></script>
 	{/if}
 	{include file='../../../templates/backend/default/analytics/analytics.tpl'}
 </body>

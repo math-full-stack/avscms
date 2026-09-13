@@ -12,6 +12,9 @@ require_once $config['BASE_DIR'] . '/include/dbconn.php';
 require_once $config['BASE_DIR'] . '/include/function_video.php';
 require_once $config['BASE_DIR'] . '/include/function_thumbs.php';
 require_once $config['BASE_DIR'] . '/include/function_server.php';
+// video_rotate_cover()/video_apply_cover_rotation() — capas escolhidas pelo
+// admin em thumbnails_opt. O arquivo tem guard de carregamento único.
+require_once $config['BASE_DIR'] . '/include/function_global.php';
 
 $filter = new VFilter();
 $tab = isset($_REQUEST['tab']) ? strtolower($filter->get('tab', 'STRING')) : 'foryou';
@@ -134,8 +137,9 @@ function build_short_item($row, $conn, $config, $uid, $default_res = 'high') {
         }
     }
 
-    // Thumbnail / Capa
-    $thumb_num = max(1, intval($row['thumb']));
+    // Thumbnail / Capa: usa as capas escolhidas pelo admin em thumbnails_opt
+    // (varia a cada request), com fallback para `thumb`.
+    $thumb_num = video_rotate_cover($row);
     $poster_url = get_video_thumb_src($vid, $thumb_num);
 
     // Foto do criador
@@ -217,6 +221,8 @@ function build_short_item($row, $conn, $config, $uid, $default_res = 'high') {
         'video_url' => $video_url,
         'orientation' => $orientation,
         'is_vertical' => $is_vertical,
+        // Aspecto real (width/height do banco) para o box do player no feed.
+        'aspect' => video_aspect_ratio($row),
         'is_liked' => $is_liked,
         'is_fav' => $is_fav,
         'tags' => $tags,
@@ -225,7 +231,9 @@ function build_short_item($row, $conn, $config, $uid, $default_res = 'high') {
     );
 }
 
-$duration_cond = " AND v.duration > 0 AND v.duration < 60";
+// Shorts: só os VERTICAIS (o feed é vertical) e com menos de 1 minuto.
+// A referência é `video.orientation` (enum portrait/landscape/square).
+$shorts_cond = " AND v.duration > 0 AND v.duration < 60 AND v.orientation = 'portrait'";
 
 $videos_out = array();
 
@@ -233,7 +241,7 @@ $videos_out = array();
 if ($page === 1 && $initial_vid > 0 && !isset($exclude_vids[$initial_vid])) {
     $sql_init = "SELECT v.*, u.username, u.photo, u.gender, u.fname 
                  FROM video AS v, signup AS u 
-                 WHERE v.VID = " . $initial_vid . " AND v.UID = u.UID" . $active_cond . $duration_cond . " LIMIT 1";
+                 WHERE v.VID = " . $initial_vid . " AND v.UID = u.UID" . $active_cond . $shorts_cond . " LIMIT 1";
     $rs_init = $conn->execute($sql_init);
     if ($rs_init && !$rs_init->EOF) {
         $item = build_short_item($rs_init->fields, $conn, $config, $uid, $default_res);
@@ -260,8 +268,11 @@ switch ($tab) {
         break;
     case 'foryou':
     default:
-        // Priorizar modo retrato (portrait) e alto engajamento / recentes
-        $order_by = "ORDER BY (v.orientation = 'portrait') DESC, (v.rate * 10 + v.likes * 2 + v.viewnumber) DESC, v.VID DESC";
+        // Recência + audiência no MESMO score (estilo Hacker News): as views
+        // ganham peso que decai com a idade, então um vídeo novo com poucas
+        // views ainda bate um antigo muito visto. `addtime` é um timestamp
+        // unix guardado em varchar. Mesma ordenação de shorts.php.
+        $order_by = "ORDER BY (v.viewnumber / POW(TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(CAST(v.addtime AS UNSIGNED)), NOW()) + 2, 1.5)) DESC, v.addtime DESC, v.VID DESC";
         break;
 }
 
@@ -269,7 +280,7 @@ $fetch_limit = $limit - count($videos_out);
 if ($fetch_limit > 0) {
     $sql = "SELECT v.*, u.username, u.photo, u.gender, u.fname 
             FROM video AS v, signup AS u 
-            WHERE v.UID = u.UID" . $active_cond . $duration_cond . $not_in_sql . " 
+            WHERE v.UID = u.UID" . $active_cond . $shorts_cond . $not_in_sql . " 
             " . $order_by . " 
             LIMIT " . intval($fetch_limit);
             
@@ -297,7 +308,7 @@ if (count($videos_out) < $limit && !empty($exclude_vids)) {
     $curr_not_in = (!empty($current_batch_ids)) ? " AND v.VID NOT IN (" . implode(',', $current_batch_ids) . ")" : "";
     $sql_recycle = "SELECT v.*, u.username, u.photo, u.gender, u.fname 
                     FROM video AS v, signup AS u 
-                    WHERE v.UID = u.UID" . $active_cond . $duration_cond . $curr_not_in . " 
+                    WHERE v.UID = u.UID" . $active_cond . $shorts_cond . $curr_not_in . " 
                     " . $order_by . " 
                     LIMIT " . intval($needed);
     $rs_rec = $conn->execute($sql_recycle);

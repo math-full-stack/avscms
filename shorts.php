@@ -93,8 +93,9 @@ function shorts_select_url($sources, $default_res = 'high') {
     return $files[count($files) - 1]['url'];
 }
 
-// Shorts só com menos de 1 minuto (duration < 60)
-$duration_cond = " AND v.duration > 0 AND v.duration < 60";
+// Shorts: só os VERTICAIS (o feed é vertical) e com menos de 1 minuto.
+// A referência é `video.orientation` (enum portrait/landscape/square).
+$shorts_cond = " AND v.duration > 0 AND v.duration < 60 AND v.orientation = 'portrait'";
 
 // Carregar lote inicial de vídeos server-side (até 6 vídeos) para FCP imediato
 $initial_videos = array();
@@ -104,7 +105,7 @@ $exclude_vids = array();
 if ($initial_vid > 0) {
     $sql_init = "SELECT v.*, u.username, u.photo, u.gender, u.fname 
                  FROM video AS v, signup AS u 
-                 WHERE v.VID = " . $initial_vid . " AND v.UID = u.UID" . $active_cond . $duration_cond . " LIMIT 1";
+                 WHERE v.VID = " . $initial_vid . " AND v.UID = u.UID" . $active_cond . $shorts_cond . " LIMIT 1";
     $rs_init = $conn->execute($sql_init);
     if ($rs_init && !$rs_init->EOF) {
         $row = $rs_init->fields;
@@ -112,7 +113,9 @@ if ($initial_vid > 0) {
         $vurl = shorts_select_url($sources, $default_res);
 
         if (!empty($vurl)) {
-            $thumb_num = max(1, intval($row['thumb']));
+            // Capa: respeita as capas escolhidas pelo admin em thumbnails_opt
+            // (varia a cada request), com fallback para `thumb`.
+            $thumb_num = video_rotate_cover($row);
             $gender = isset($row['gender']) ? $row['gender'] : 'm';
             $photo = (empty($row['photo'])) ? 'nopic-' . $gender . '.gif' : $row['photo'];
             
@@ -140,6 +143,7 @@ if ($initial_vid > 0) {
                 'poster_url' => get_video_thumb_src($initial_vid, $thumb_num),
                 'video_url' => $vurl,
                 'is_vertical' => (isset($row['orientation']) && $row['orientation'] === 'portrait'),
+                'aspect' => video_aspect_ratio($row),
                 'is_liked' => false,
                 'is_fav' => false,
                 'share_url' => $config['BASE_URL'] . '/shorts?v=' . $initial_vid
@@ -159,7 +163,11 @@ switch ($tab) {
         break;
     case 'foryou':
     default:
-        $order_by = "ORDER BY (v.orientation = 'portrait') DESC, (v.rate * 10 + v.likes * 2 + v.viewnumber) DESC, v.VID DESC";
+        // Recência + audiência no MESMO score (estilo Hacker News): as views
+        // ganham peso que decai com a idade, então um vídeo novo com poucas
+        // views ainda bate um antigo muito visto. `addtime` é um timestamp
+        // unix guardado em varchar.
+        $order_by = "ORDER BY (v.viewnumber / POW(TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(CAST(v.addtime AS UNSIGNED)), NOW()) + 2, 1.5)) DESC, v.addtime DESC, v.VID DESC";
         break;
 }
 
@@ -170,7 +178,7 @@ $not_in_sql = (!empty($exclude_vids)) ? " AND v.VID NOT IN (" . implode(',', $ex
 if ($needed > 0) {
     $sql = "SELECT v.*, u.username, u.photo, u.gender, u.fname 
             FROM video AS v, signup AS u 
-            WHERE v.UID = u.UID" . $active_cond . $duration_cond . $not_in_sql . " 
+            WHERE v.UID = u.UID" . $active_cond . $shorts_cond . $not_in_sql . " 
             " . $order_by . " 
             LIMIT " . intval($needed);
     $rs = $conn->execute($sql);
@@ -182,7 +190,8 @@ if ($needed > 0) {
             $vurl = shorts_select_url($sources, $default_res);
 
             if (!empty($vurl)) {
-                $thumb_num = max(1, intval($row['thumb']));
+                // Capa rotativa entre as escolhidas pelo admin (thumbnails_opt).
+                $thumb_num = video_rotate_cover($row);
                 $gender = isset($row['gender']) ? $row['gender'] : 'm';
                 $photo = (empty($row['photo'])) ? 'nopic-' . $gender . '.gif' : $row['photo'];
 
@@ -210,6 +219,7 @@ if ($needed > 0) {
                     'poster_url' => get_video_thumb_src($vid, $thumb_num),
                     'video_url' => $vurl,
                     'is_vertical' => (isset($row['orientation']) && $row['orientation'] === 'portrait'),
+                    'aspect' => video_aspect_ratio($row),
                     'is_liked' => false,
                     'is_fav' => false,
                     'share_url' => $config['BASE_URL'] . '/shorts?v=' . $vid
