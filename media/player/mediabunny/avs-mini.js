@@ -386,6 +386,7 @@
             video.currentTime = Math.min(state.time || 0, video.duration || 0);
         } catch (e) { /* keep 0 */ }
         syncTimes();
+        video.muted = true;
         syncVolume();
         attemptPlay();
     }, { once: true });
