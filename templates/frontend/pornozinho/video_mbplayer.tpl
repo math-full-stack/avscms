@@ -33,11 +33,7 @@
 			<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M16.5 8l4 8M20.5 8l-4 8"/>
 		</symbol>
 		<symbol id="avs-i-settings" viewBox="0 0 24 24">
-			<circle cx="12" cy="12" r="3.2"/>
-			<g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-				<path d="M12 2.5v3.2M12 18.3v3.2M2.5 12h3.2M18.3 12h3.2"/>
-				<path d="M5 5l2.3 2.3M16.7 16.7 19 19M5 19l2.3-2.3M16.7 7.3 19 5"/>
-			</g>
+			<path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
 		</symbol>
 		<symbol id="avs-i-download" viewBox="0 0 24 24">
 			<path fill="currentColor" d="M5 20h14v-2H5zM19 9h-4V3H9v6H5l7 7 7-7z"/>
@@ -65,14 +61,14 @@
 			</g>
 		</symbol>
 		<symbol id="avs-i-rw10" viewBox="0 0 24 24">
-			<path fill="currentColor" d="M10.5 8.4 6.6 12l3.9 3.6z"/>
-			<path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M14.8 8.4v7.2"/>
-			<circle cx="18.2" cy="12" r="2.1" fill="none" stroke="currentColor" stroke-width="1.6"/>
+			<path fill="currentColor" d="M11 18V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2zm2-13.5c-2.48 0-4.5 2.02-4.5 4.5s2.02 4.5 4.5 4.5 4.5-2.02 4.5-4.5-2.02-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+			<path fill="currentColor" d="M7 13.5c0 1.38 1.12 2.5 2.5 2.5.9 0 1.72-.48 2.2-1.23l-2.2-2.2C7.48 12.02 7 12.78 7 13.5zm4.5-6c1.38 0 2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5c-.9 0-1.72-.48-2.2-1.23l2.2-2.2C13.52 11.98 14 11.22 14 10.5zm0 0"/>
+			<text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="8" font-weight="bold" fill="currentColor">10</text>
 		</symbol>
 		<symbol id="avs-i-fw10" viewBox="0 0 24 24">
-			<path fill="currentColor" d="M6.4 12l3.9-3.6v7.2z"/>
-			<path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M14.2 8.4v7.2"/>
-			<circle cx="17.6" cy="12" r="2.1" fill="none" stroke="currentColor" stroke-width="1.6"/>
+			<path fill="currentColor" d="M13 6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3zm-2 13.5c-2.48 0-4.5-2.02-4.5-4.5s2.02-4.5 4.5-4.5 4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5zm0-7c-1.38 0-2.5 1.12-2.5 2.5s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5-1.12-2.5-2.5-2.5z"/>
+			<path fill="currentColor" d="M17 10.5c0-1.38-1.12-2.5-2.5-2.5-.9 0-1.72.48-2.2 1.23l2.2 2.2C16.52 11.98 17 11.22 17 10.5zm-4.5 6c1.38 0 2.5-1.12 2.5-2.5s-1.12-2.5-2.5-2.5c-.9 0-1.72.48-2.2 1.23l-2.2 2.2C10.48 12.02 11 12.78 11 13.5zm0 0"/>
+			<text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="8" font-weight="bold" fill="currentColor">10</text>
 		</symbol>
 		
 	</svg>

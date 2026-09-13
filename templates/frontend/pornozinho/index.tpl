@@ -37,6 +37,7 @@
 					{if isset($hero_main.orientation) && $hero_main.orientation == 'portrait'}{insert name=video_trio vid=$hero_main.VID thumb=$hero_main.thumb thumbs=$hero_main.thumbs opt=$hero_main.thumbnails_opt title=$hero_main.title type=$hero_main.type}{else}<img src="{insert name=thumb_path vid=$hero_main.VID}/{$hero_main.thumb}.jpg" title="{$hero_main.title|escape:'html'}" alt="{$hero_main.title|escape:'html'}" {if $hero_main.vthumbs == '0'}id="rotate_{$hero_main.VID}_{$hero_main.thumbs}_{$hero_main.thumb}_viewed"{/if} class="img-responsive {if $hero_main.type == 'private'}img-private{/if}"/>{/if}
 					{/if}
 					{if $hero_main.type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
+					{if $hero_main.featured=='yes'}<div class="xb-featured-corner"><i class="fas fa-star"></i></div>{/if}
 					<div class="duration">
 						{if $hero_main.hd==1}<span class="hd-text-icon">HD</span>{/if}
 						{insert name=duration assign=duration duration=$hero_main.duration}
@@ -62,6 +63,7 @@
 						<div class="thumb-overlay{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'} xb-portrait{/if}" {if $hero_videos[h].vthumbs == '1'} id="playvthumb_{$hero_videos[h].VID}"{/if}>
 							{if isset($hero_videos[h].orientation) && $hero_videos[h].orientation == 'portrait'}{insert name=video_trio vid=$hero_videos[h].VID thumb=$hero_videos[h].thumb thumbs=$hero_videos[h].thumbs opt=$hero_videos[h].thumbnails_opt title=$hero_videos[h].title type=$hero_videos[h].type}{else}<img src="{insert name=thumb_path vid=$hero_videos[h].VID}/{$hero_videos[h].thumb}.jpg" title="{$hero_videos[h].title|escape:'html'}" alt="{$hero_videos[h].title|escape:'html'}" {if $hero_videos[h].vthumbs == '0'}id="rotate_{$hero_videos[h].VID}_{$hero_videos[h].thumbs}_{$hero_videos[h].thumb}_viewed"{/if} class="img-responsive {if $hero_videos[h].type == 'private'}img-private{/if}"/>{/if}
 							{if $hero_videos[h].type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
+							{if $hero_videos[h].featured=='yes'}<div class="xb-featured-corner"><i class="fas fa-star"></i></div>{/if}
 							<div class="duration">
 								{if $hero_videos[h].hd==1}<span class="hd-text-icon">HD</span>{/if}
 								{insert name=duration assign=duration duration=$hero_videos[h].duration}

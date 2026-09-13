@@ -256,10 +256,10 @@ if ( $total_related > 32 ) {
 }
 $pagination     = new Pagination(8, 'p_related_videos_' .$video['VID']. '_');
 $limit          = $pagination->getLimit($total_related);
-$sql            = "SELECT v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.hd, v.keyword, v.orientation, u.username FROM video AS v, signup AS u
-                   WHERE v.UID = u.UID AND v.active = '1' AND v.channel = '" .$video['channel']. "' AND v.VID != " .$vid. "
-                   AND ( v.title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")
-                   ORDER BY v.addtime DESC LIMIT " .$limit;
+$sql            = "SELECT v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.hd, v.keyword, v.orientation, v.featured, u.username FROM video AS v, signup AS u
+                    WHERE v.UID = u.UID AND v.active = '1' AND v.channel = '" .$video['channel']. "' AND v.VID != " .$vid. "
+                    AND ( v.title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")
+                    ORDER BY v.addtime DESC LIMIT " .$limit;
 $rs             = $conn->execute($sql);
 $videos         = $rs->getrows();
 
@@ -351,6 +351,7 @@ $smarty->assign('messages',$messages);
 $smarty->assign('menu', 'videos');
 $smarty->assign('submenu', '');
 $smarty->assign('view', true);
+$smarty->assign('video_page', true);
 $smarty->assign('player_width',$player_width);
 $smarty->assign('video_width',$video_width);
 $smarty->assign('video_height',$video_height);

@@ -3,9 +3,10 @@
    Único place de markup do grid — qualquer ajuste vale para todos os grids de uma vez. *}
 <div class="{if $card_cols}{$card_cols}{else}col-6 col-sm-6 col-md-4 col-lg-3{/if}">
 	<a href="{$relative}/video/{$v.VID}/{$v.title|clean}">
-		<div class="thumb-overlay{if isset($v.orientation) && $v.orientation == 'portrait'} xb-portrait{/if}" {if $v.vthumbs == '1'} id="playvthumb_{$v.VID}"{/if}>
+<div class="thumb-overlay{if isset($v.orientation) && $v.orientation == 'portrait'} xb-portrait{/if}" {if $v.vthumbs == '1'} id="playvthumb_{$v.VID}"{/if}>
 			{if isset($v.orientation) && $v.orientation == 'portrait'}{insert name=video_trio vid=$v.VID thumb=$v.thumb thumbs=$v.thumbs opt=$v.thumbnails_opt title=$v.title type=$v.type}{else}<img src="{insert name=thumb_path vid=$v.VID}/{$v.thumb}.jpg" title="{$v.title|escape:'html'}" alt="{$v.title|escape:'html'}" {if $v.vthumbs == '0'}id="rotate_{$v.VID}_{$v.thumbs}_{$v.thumb}_viewed"{/if} class="img-responsive {if $v.type == 'private'}img-private{/if}"/>{/if}
 			{if $v.type == 'private'}<div class="label-private">{t c='global.PRIVATE'}</div>{/if}
+			{if $v.featured=='yes'}<div class="xb-featured-corner"><i class="fas fa-star"></i></div>{/if}
 			<span class="xb-thumb-meta">
 				{insert name=views assign=s_views views=$v.viewnumber text='0'}
 				{insert name=views assign=s_views_w views=$v.viewnumber text='w'}
@@ -19,12 +20,11 @@
 					</span>
 				</span>
 			</span>
-<div class="duration">
-			{if $v.hd==1}<span class="hd-text-icon">HD</span>{/if}
-			{if $v.featured=='yes'}<span class="xb-featured-badge"><i class="fas fa-star"></i> {t c='global.featured'}</span>{/if}
-			{insert name=duration assign=duration duration=$v.duration}
-			{$duration}
-		</div>
+			<div class="duration">
+				{if $v.hd==1}<span class="hd-text-icon">HD</span>{/if}
+				{insert name=duration assign=duration duration=$v.duration}
+				{$duration}
+			</div>
 		</div>
 	</a>
 	<div class="content-info">

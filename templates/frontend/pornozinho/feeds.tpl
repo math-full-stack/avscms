@@ -62,6 +62,7 @@
 										<div class="thumb-overlay{if isset($feeds[i].data.orientation) && $feeds[i].data.orientation == 'portrait'} xb-portrait{/if}" {if $feeds[i].data.vthumbs == '1'} id="playvthumb_{$feeds[i].data.VID}"{/if}>
 											{if isset($feeds[i].data.orientation) && $feeds[i].data.orientation == 'portrait'}{insert name=video_trio vid=$feeds[i].data.VID thumb=$feeds[i].data.thumb thumbs=$feeds[i].data.thumbs opt=$feeds[i].data.thumbnails_opt title=$feeds[i].data.title type=$feeds[i].data.type}{else}<img src="{insert name=thumb_path vid=$feeds[i].data.VID}/{$feeds[i].data.thumb}.jpg" title="{$feeds[i].data.title|escape:'html'}" alt="{$feeds[i].data.title|escape:'html'}" {if $feeds[i].data.vthumbs == '0'}id="rotate_{$feeds[i].data.VID}_{$feeds[i].data.thumbs}_{$feeds[i].data.thumb}_viewed"{/if} class="img-responsive"/>{/if}
 											<div class="label-date">{$feeds[i].time|date_format}</div>
+											{if $feeds[i].data.featured=='yes'}<div class="xb-featured-corner"><i class="fas fa-star"></i></div>{/if}
 											<div class="duration">
 												{if $feeds[i].data.hd==1}<span class="hd-text-icon">HD</span>{/if}
 												{insert name=duration assign=duration duration=$feeds[i].data.duration}

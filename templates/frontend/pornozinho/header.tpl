@@ -25,7 +25,7 @@
     <title>{if isset($self_title) && $self_title != ''}{$self_title|escape:'html'}{else}{$site_name}{/if}</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="{if (isset($index) && $index) || (isset($video_listing) && $video_listing)}width=device-width, initial-scale=1{else}width=1280, initial-scale=1, maximum-scale=1, user-scalable=no{/if}">	
+    <meta name="viewport" content="{if (isset($index) && $index) || (isset($video_listing) && $video_listing) || (isset($video_page) && $video_page)}width=device-width, initial-scale=1{else}width=1280, initial-scale=1, maximum-scale=1, user-scalable=no{/if}">	
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="robots" content="index, follow" />
     <meta name="revisit-after" content="1 days" />
@@ -96,7 +96,7 @@
 	<link rel="stylesheet" href="{$relative_tpl}/css/easy-autocomplete.themes.min.css">	
 	
 	<link href="{$relative_tpl}/css/style.css" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.17" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.18" rel="stylesheet">
 	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
 	<!-- Material Design 3 -->
@@ -104,7 +104,7 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.15" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.16" rel="stylesheet">
 	<link href="{$relative_tpl}/css/avs-disguise.css?ver=1.0.2" rel="stylesheet">
 
 	<!-- Tema claro/escuro: aplica antes da 1ª pintura (evita flash) e persiste em avs_theme -->
@@ -388,7 +388,7 @@
 			<li class="xb-nav-item"><a href="{$relative}/videos?o=mr" class="xb-nav-link">Novos</a></li>
 			{if $video_module == '1'}
 			<li class="xb-nav-item xb-nav-dropdown {if $menu == 'videos'}active{/if}">
-				<a href="{$relative}/videos" class="xb-nav-link xb-nav-dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
+				<a href="{$relative}/videos" class="xb-nav-link xb-nav-dropdown-toggle" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
 					{translate c='menu.videos'} <span class="material-symbols-rounded xb-nav-caret" aria-hidden="true">expand_more</span>
 				</a>
 				<div class="xb-dropdown-menu">
@@ -532,7 +532,7 @@
 			</li>
 			{/if}
 			<li class="xb-nav-item xb-nav-dropdown {if $menu == 'categories'}active{/if}">
-				<a href="{$relative}/categories" class="xb-nav-link xb-nav-dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
+				<a href="{$relative}/categories" class="xb-nav-link xb-nav-dropdown-toggle" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
 					{translate c='menu.categories'} <span class="material-symbols-rounded xb-nav-caret" aria-hidden="true">expand_more</span>
 				</a>
 				<div class="xb-dropdown-menu">
@@ -569,7 +569,7 @@
 			</li>
 			<li class="xb-nav-item"><a href="{$relative}/users" class="xb-nav-link">Creators</a></li>
 			<li class="xb-nav-item xb-nav-dropdown {if $menu == 'tags'}active{/if}">
-				<a href="{$relative}/tags" class="xb-nav-link xb-nav-dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
+				<a href="{$relative}/tags" class="xb-nav-link xb-nav-dropdown-toggle" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
 					{translate c='menu.tags'} <span class="material-symbols-rounded xb-nav-caret" aria-hidden="true">expand_more</span>
 				</a>
 				<div class="xb-dropdown-menu">
