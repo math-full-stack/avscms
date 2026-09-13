@@ -930,6 +930,24 @@ a:hover .thumb-overlay {
 	border-radius: var(--md-sys-shape-corner-full);
 }
 
+.xb-featured-badge {
+	background: linear-gradient(135deg, var(--xb-grad), var(--xb-grad-v));
+	color: var(--md-sys-color-on-primary-container);
+	border-radius: var(--md-sys-shape-corner-small);
+	padding: 2px 6px;
+	font-size: 8.5px;
+	font-weight: 700;
+	letter-spacing: .3px;
+	margin-right: 5px;
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.xb-featured-badge i {
+	font-size: 8px;
+}
+
 /* --------------------------------------------------------------------------
    Menus — M3 dropdown menu
    -------------------------------------------------------------------------- */

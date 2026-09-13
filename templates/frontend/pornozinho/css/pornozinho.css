@@ -1152,6 +1152,24 @@ a:hover .thumb-overlay video {
 	margin-right: 5px;
 }
 
+.xb-featured-badge {
+	background: linear-gradient(135deg, #ffd700, #ffb300);
+	color: #1a1a1a;
+	border-radius: 4px;
+	padding: 2px 6px;
+	font-size: 8.5px;
+	font-weight: 800;
+	letter-spacing: .3px;
+	margin-right: 5px;
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.xb-featured-badge i {
+	font-size: 8px;
+}
+
 /* Meta dentro da thumb — chip futurista minimalista (ícone + valor) */
 .thumb-overlay {
 	container-type: inline-size;

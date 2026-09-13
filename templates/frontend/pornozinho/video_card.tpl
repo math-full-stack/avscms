@@ -19,11 +19,12 @@
 					</span>
 				</span>
 			</span>
-			<div class="duration">
-				{if $v.hd==1}<span class="hd-text-icon">HD</span>{/if}
-				{insert name=duration assign=duration duration=$v.duration}
-				{$duration}
-			</div>
+<div class="duration">
+			{if $v.hd==1}<span class="hd-text-icon">HD</span>{/if}
+			{if $v.featured=='yes'}<span class="xb-featured-badge"><i class="fas fa-star"></i> {t c='global.featured'}</span>{/if}
+			{insert name=duration assign=duration duration=$v.duration}
+			{$duration}
+		</div>
 		</div>
 	</a>
 	<div class="content-info">
