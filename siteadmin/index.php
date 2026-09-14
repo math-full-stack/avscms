@@ -23,6 +23,7 @@ $module_template    = 'index.tpl';
 $modules_allowed    = array('dashboard', 'admin', 'main', 'check', 'mail', 'modules', 'static', 'media', 'encoding', 'encodingadd', 'encodingedit', 'miscellaneous', 'permissions', 'sessions', 'bandwidth',
                             'bans', 'emails', 'emailadd', 'emailedit', 'advgroups', 'advs', 'advadd', 'advgroupedit', 'advedit',
 							'advpause', 'advtext', 'advpauseadd', 'advtextadd', 'advtextedit', 'advpauseedit', 'player', 'playeradd', 'playeredit', 'userpermisions', 'socialsignin', 'captcha', 'logo', 'playerlogo', 'analytics', 'advvastvpaid', 'advvastvpaidadd', 'advvastvpaidedit',
+							'advplayer', 'advplayeradd', 'advplayeredit', 'tsstats', 'adsources',
 							'update', 'update-step1', 'update-step2', 'update-step3');
 if ( in_array($module, $modules_allowed) ) {
     $module_template = ( $module == 'dashboard' ) ? 'index.tpl' : 'index_' .$module. '.tpl';
@@ -42,7 +43,7 @@ if ( in_array($module, array('dashboard')) ) {
 	$sub_menu = 'security';
 } elseif ( in_array($module, array('emails', 'emailadd', 'emailedit')) ) {
 	$sub_menu = 'email-templates';
-} elseif ( in_array($module, array('advgroups', 'advs', 'advadd', 'advgroupedit', 'advedit', 'advpause', 'advtext', 'advpauseadd', 'advtextadd', 'advtextedit', 'advpauseedit', 'advvastvpaid', 'advvastvpaidadd', 'advvastvpaidedit',)) ) {
+} elseif ( in_array($module, array('advgroups', 'advs', 'advadd', 'advgroupedit', 'advedit', 'advpause', 'advtext', 'advpauseadd', 'advtextadd', 'advtextedit', 'advpauseedit', 'advvastvpaid', 'advvastvpaidadd', 'advvastvpaidedit', 'advplayer', 'advplayeradd', 'advplayeredit', 'tsstats', 'adsources',)) ) {
 	$sub_menu = 'advertising-settings';
 } elseif ( in_array($module, array('player', 'playeradd', 'playeredit', 'playerlogo')) ) {
 	$sub_menu = 'player-settings';

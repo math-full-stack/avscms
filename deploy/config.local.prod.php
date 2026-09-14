@@ -64,7 +64,7 @@ $config['users_per_page'] = '15';
 $config['blogs_per_page'] = '10';
 $config['watched_per_page'] = '18';
 $config['recent_per_page'] = '30';
-$config['items_per_front_page'] = '24';
+$config['items_per_front_page'] = '12';
 
 // --- Upload ---
 $config['max_img_size'] = '200';

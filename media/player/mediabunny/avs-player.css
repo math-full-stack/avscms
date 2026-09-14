@@ -964,6 +964,23 @@
     display: none;
 }
 
+/* --- 9.4.5 Smart ads (adv_player) --------------------------------------- */
+.avs-smart-corner {
+    pointer-events: auto;
+}
+.avs-smart-corner video,
+.avs-smart-corner img {
+    display: block;
+}
+.avs-smart-html {
+    color: #fff;
+    font-size: 13px;
+}
+.avs-smart-html a {
+    color: #ff1493;
+}
+
+/* --- Autoplay overlay --- */
 /* ============================================================
    Overlay "próximo vídeo" (fim do vídeo) — redesenhado 13/09:
    painel "Mais vídeos" à esquerda (cards padrão do site: trio de

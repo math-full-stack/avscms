@@ -1,7 +1,7 @@
 <?php
 define('_VALID', true);
 require 'include/config.php';
-require 'include/function_server.php';
+require_once 'include/function_server.php';
 
 // Streaming longo: evita corte por max_execution_time.
 @set_time_limit(0);

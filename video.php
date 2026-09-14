@@ -3,7 +3,7 @@ define('_VALID', true);
 require 'include/config.php';
 require 'include/function_global.php';
 require 'include/function_smarty.php';
-require 'include/function_thumbs.php';
+require_once 'include/function_thumbs.php';
 require 'classes/pagination.class.php';
 require 'include/function_user.php';
 

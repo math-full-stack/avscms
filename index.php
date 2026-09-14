@@ -65,13 +65,12 @@ $sql_add       .= $sql_delim. " v.active = '1'";
 $video_select   = "v.VID, v.title, v.duration, v.addtime, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.viewnumber, v.rate, v.likes, v.dislikes, v.type, v.hd, v.keyword, v.UID, v.orientation, v.featured, u.username";
 $video_from     = " FROM video AS v, signup AS u WHERE v.UID = u.UID" .$sql_add;
 
-$sql            = "SELECT " .$video_select. $video_from. " ORDER BY v.viewtime DESC LIMIT " .$config['watched_per_page'];
+// Feed único da home (Para Você): recência + audiência no MESMO score do feed
+// de shorts (foryou). A primeira página usa $config['items_per_front_page'] e o
+// scroll infinito pede as seguintes em include/ajax/home_feed.php (LIMIT igual).
+$sql            = "SELECT " .$video_select. $video_from. " ORDER BY (v.viewnumber / POW(TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(CAST(v.addtime AS UNSIGNED)), NOW()) + 2, 1.5)) DESC, v.addtime DESC, v.VID DESC LIMIT " .intval($config['items_per_front_page']);
 $rs             = $conn->execute($sql);
-$viewed_videos  = $rs->getrows();
-$viewed_total   = count($viewed_videos);
-$sql            = "SELECT " .$video_select. $video_from. " ORDER BY v.addtime DESC LIMIT " .$config['recent_per_page'];
-$rs             = $conn->execute($sql);
-$recent_videos  = $rs->getrows();
+$home_feed_videos = $rs->getrows();
 
 // Hero da home: destaques (mais vistos)
 $hero_select = $video_select. ", v.server, v.formats, v.iphone, v.embed_code";
@@ -104,8 +103,7 @@ foreach ( $hero_videos as $k => $v ) {
 }
 
 // Rotação de capas (frames marcados em thumbnails_opt)
-video_apply_cover_rotation($viewed_videos);
-video_apply_cover_rotation($recent_videos);
+video_apply_cover_rotation($home_feed_videos);
 video_apply_cover_rotation($hero_videos);
 
 // Creators: usuários com mais vídeos
@@ -134,11 +132,8 @@ $smarty->assign('random_category', $random_category[0] ?? null);
 $smarty->assign('random_cat_videos', $random_cat_videos);
 
 // Normaliza keywords para arrays (mesmo formato da página do vídeo)
-foreach ( $viewed_videos as $k => $v ) {
-    $viewed_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
-}
-foreach ( $recent_videos as $k => $v ) {
-    $recent_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
+foreach ( $home_feed_videos as $k => $v ) {
+    $home_feed_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
 }
 foreach ( $hero_videos as $k => $v ) {
     $hero_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
@@ -159,9 +154,7 @@ $smarty->assign('errors',$errors);
 $smarty->assign('messages',$messages);
 $smarty->assign('menu', 'home');
 $smarty->assign('index', true);
-$smarty->assign('viewed_total', $viewed_total);
-$smarty->assign('viewed_videos', $viewed_videos);
-$smarty->assign('recent_videos', $recent_videos);
+$smarty->assign('home_feed_videos', $home_feed_videos);
 $smarty->assign('hero_videos', $hero_videos);
 $smarty->assign('shorts_videos', $shorts_videos);
 $smarty->assign('creators', $creators);

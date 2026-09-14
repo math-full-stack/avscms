@@ -52,24 +52,27 @@ CREATE TABLE `adv_group` (
 --
 
 INSERT INTO `adv_group` (`advgrp_id`, `advgrp_name`, `total_advs`, `advgrp_rotate`, `advgrp_status`, `adv_width`, `adv_height`) VALUES
-(1, 'albums_right', 0, '1', '1', 300, 0),
-(2, 'albums_bottom', 0, '1', '1', 0, 0),
-(3, 'blog_bottom', 0, '1', '1', 0, 0),
-(4, 'blogs_right', 0, '1', '1', 300, 0),
-(5, 'blogs_bottom', 0, '1', '1', 0, 0),
-(6, 'categories_right', 0, '1', '1', 300, 0),
-(7, 'categories_bottom', 0, '1', '1', 0, 0),
-(8, 'community_bottom', 0, '1', '1', 0, 0),
+(1, 'albums_right', 0, '1', '1', 300, 250),
+(2, 'albums_bottom', 0, '1', '1', 728, 90),
+(3, 'blog_bottom', 0, '1', '1', 728, 90),
+(4, 'blogs_right', 0, '1', '1', 300, 250),
+(5, 'blogs_bottom', 0, '1', '1', 728, 90),
+(6, 'categories_right', 0, '1', '1', 300, 250),
+(7, 'categories_bottom', 0, '1', '1', 728, 90),
+(8, 'community_bottom', 0, '1', '1', 728, 90),
 (9, 'index_right', 0, '1', '1', 300, 300),
-(10, 'index_bottom', 0, '1', '1', 0, 0),
-(11, 'photo_right', 0, '1', '1', 300, 0),
-(12, 'photo_bottom', 0, '1', '1', 0, 0),
-(13, 'users_bottom', 0, '1', '1', 0, 0),
-(14, 'video_right', 0, '1', '1', 300, 0),
-(15, 'video_player_bottom', 0, '1', '1', 0, 0),
-(16, 'video_bottom', 0, '1', '1', 0, 0),
-(17, 'videos_right', 0, '1', '1', 300, 0),
-(18, 'videos_bottom', 0, '1', '1', 0, 0);
+(10, 'index_bottom', 0, '1', '1', 728, 90),
+(11, 'photo_right', 0, '1', '1', 300, 250),
+(12, 'photo_bottom', 0, '1', '1', 728, 90),
+(13, 'users_bottom', 0, '1', '1', 728, 90),
+(14, 'video_right', 0, '1', '1', 300, 250),
+(15, 'video_player_bottom', 0, '1', '1', 728, 90),
+(16, 'video_bottom', 0, '1', '1', 728, 90),
+(17, 'videos_right', 0, '1', '1', 300, 250),
+(18, 'videos_bottom', 0, '1', '1', 728, 90),
+(19, 'index_feed', 0, '1', '1', 0, 0),
+(20, 'videos_feed', 0, '1', '1', 0, 0),
+(21, 'shorts_feed', 0, '1', '1', 0, 0);
 
 -- --------------------------------------------------------
 

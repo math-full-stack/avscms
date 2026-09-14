@@ -49,10 +49,14 @@
 						<a href="javascript:;"><span class="title">Advertising Settings</span><span class="arrow {if $sub_menu == 'advertising-settings'}open{/if}"></span></a>
 						<ul class="sub-menu" {if $sub_menu == 'advertising-settings'}style="overflow: hidden; display: block;"{/if}>
 							<li class="{if $module == 'advgroups'}active{/if}"><a href="index.php?m=advgroups&all=1">Ad Zones (Groups)</a></li>
+							<li class="{if $module == 'adsources'}active{/if}"><a href="index.php?m=adsources">Ad Sources</a></li>
+							<li class="{if $module == 'tsstats'}active{/if}"><a href="index.php?m=tsstats">TrafficStars</a></li>
 							<li class="{if $module == 'advs'}active{/if}"><a href="index.php?m=advs&all=1">Banner Ads</a></li>
+							<li class="{if $module == 'advplayer'}active{/if}"><a href="index.php?m=advplayer&all=1">Player Ads (Preroll/Midroll/Pause/Postroll/Overlay)</a></li>
 							<li class="{if $module == 'advpause'}active{/if}"><a href="index.php?m=advpause&all=1">Player Pause Ads</a></li>
 							<li class="{if $module == 'advvastvpaid'}active{/if}"><a href="index.php?m=advvastvpaid&all=1">Player Vast-Vpaid Ads</a></li>
 							<li class="{if $module == 'advadd'}active{/if}"><a href="index.php?m=advadd">Add Banner Ad</a></li>
+							<li class="{if $module == 'advplayeradd'}active{/if}"><a href="index.php?m=advplayeradd">Add Player Ad</a></li>
 							<li class="{if $module == 'advpauseadd'}active{/if}"><a href="index.php?m=advpauseadd">Add Player Pause Ad</a></li>							
 							<li class="{if $module == 'advvastvpaidadd'}active{/if}"><a href="index.php?m=advvastvpaidadd">Add Player Vast-Vpaid Ad</a></li>
 						</ul>						

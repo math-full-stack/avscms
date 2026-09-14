@@ -30,9 +30,44 @@
 		{if $initial_videos}
 			{section name=i loop=$initial_videos}
 				{assign var="v" value=$initial_videos[i]}
+				{if $v.is_ad}
+				<article class="avs-short-card avs-ad-card" data-index="{$smarty.section.i.index}" data-ad="1">
+					<!-- Projeção Ambient Blur (Desktop) — fundo usa o poster do próximo short -->
+					<div class="avs-ambient-bg" style="background-image: url('{$v.next_short.poster_url}');" aria-hidden="true"></div>
+
+					<!-- Banner Central -->
+					<div class="avs-ad-stage">
+						<span class="avs-ad-tag">Anúncio</span>
+						<div class="avs-ad-slot">{$v.adv_html}</div>
+					</div>
+
+					<!-- Teaser do Próximo Vídeo (clique avança para o próximo short) -->
+					<a class="avs-ad-next" data-action="ad-next" role="button" aria-label="Próximo vídeo">
+						<span class="avs-ad-next-thumb" style="background-image: url('{$v.next_short.poster_url}');"></span>
+						<span class="avs-ad-next-meta">
+							<span class="avs-ad-next-label">Próximo vídeo</span>
+							<span class="avs-ad-next-title">{$v.next_short.title|escape:'html'}</span>
+						</span>
+						<span class="material-symbols-rounded avs-ad-next-icon" aria-hidden="true">skip_next</span>
+					</a>
+
+					<!-- Lock de 3s: segura o usuário no anúncio antes de avançar -->
+					<div class="avs-ad-lock" aria-hidden="true">
+						<span class="material-symbols-rounded">timer</span>
+						<b class="avs-ad-lock-count">3</b>
+					</div>
+				</article>
+				{else}
 				<article class="avs-short-card" id="short-{$v.vid}" data-vid="{$v.vid}" data-index="{$smarty.section.i.index}" data-title="{$v.title|escape:'html'}" data-author="{$v.creator.username|escape:'html'}" data-share-url="{$v.share_url}">
 					<!-- Projeção Ambient Blur (Desktop) -->
 					<div class="avs-ambient-bg" style="background-image: url('{$v.poster_url}');" aria-hidden="true"></div>
+
+					<!-- Companheiros laterais do anúncio (desktop, enquanto couber).
+					     Mesma peça do grupo; só renderizam quando ad_meta existe. -->
+					{if $v.ad_meta}
+						<div class="avs-ad-side avs-ad-side-left">{$v.ad_meta}</div>
+						<div class="avs-ad-side avs-ad-side-right">{$v.ad_meta}</div>
+					{/if}
 
 					<!-- Container Central do Vídeo -->
 					<div class="avs-player-wrapper {if $v.is_vertical}avs-is-vertical{else}avs-is-horizontal{/if}"{if $v.aspect} style="--avs-video-ar: {$v.aspect}"{/if}>
@@ -66,22 +101,22 @@
 							{* A linha do criador (avatar + @username + Seguir) saiu daqui: ela
 							   já vive na barra lateral de ações (.avs-action-profile). *}
 
-							<!-- Título & Descrição -->
+							<!-- Título & Descrição / Faixa do anúncio -->
+							{if $v.ad_meta}
+								<div class="avs-ad-meta-band">
+									<span class="avs-ad-tag avs-ad-tag-sm">Anúncio</span>
+									{$v.ad_meta}
+								</div>
+							{else}
 							<div class="avs-short-title-wrap">
 								<h2 class="avs-short-title">{$v.title|escape:'html'}</h2>
 								{if $v.description}
 									<p class="avs-short-desc">{$v.description|escape:'html'}</p>
 								{/if}
 							</div>
+							{/if}
 
-							<!-- Áudio / Trilha Sonora -->
-							<div class="avs-short-music">
-								<span class="material-symbols-rounded music-note-icon" aria-hidden="true">music_note</span>
-								<div class="avs-music-marquee">
-									<span>Áudio original — @{$v.creator.username|escape:'html'} • {$v.title|escape:'html'}</span>
-								</div>
 							</div>
-						</div>
 
 						<!-- Barra Lateral de Ações (Estilo Reels / TikTok) -->
 						<aside class="avs-short-actions" aria-label="Ações do vídeo">
@@ -153,6 +188,7 @@
 						</button>
 					</div>
 				</article>
+				{/if}
 			{/section}
 		{else}
 			<div class="avs-shorts-empty">

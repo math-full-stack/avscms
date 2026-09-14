@@ -867,12 +867,29 @@ a:hover .thumb-overlay {
 .xb-cat-card {
 	border-radius: var(--md-sys-shape-corner-medium);
 	border: 1px solid var(--md-sys-color-outline-variant);
-	transition: border-color .2s ease, box-shadow .2s ease;
+	transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
 }
 
 .xb-cat-card:hover {
 	border-color: var(--md-sys-color-primary);
-	box-shadow: var(--xb-glow-soft);
+	box-shadow: 0 0 0 1px var(--md-sys-color-primary), var(--xb-glow-soft);
+}
+
+.xb-cat-info {
+	background: var(--md-sys-color-surface-container-low);
+}
+
+.xb-cat-name {
+	color: var(--md-sys-color-on-surface);
+}
+
+.xb-cat-videos {
+	color: var(--md-sys-color-on-surface-variant);
+}
+
+.xb-cat-count-badge {
+	background: var(--md-sys-color-surface-container-high);
+	border-color: var(--md-sys-color-outline-variant);
 }
 
 .xb-creator-card .xb-avatar-lg {

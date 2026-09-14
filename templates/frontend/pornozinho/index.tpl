@@ -55,85 +55,6 @@
 	</script>
 	{/if}
 
-	<div class="xb-section">
-		<span class="xb-section-bar"></span>
-		<h2><i class="fas fa-bolt"></i>Novos vídeos</h2>
-		<a class="xb-section-link" href="{$relative}/videos?o=mr">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
-	</div>
-
-	{if $recent_videos}
-	<div class="row content-row">
-		{section name=i loop=$recent_videos}
-			{include file='video_card.tpl' v=$recent_videos[i]}
-		{/section}
-	</div>
-	{else}
-	<div class="well well-sm">
-		<span class="text-danger">{t c='videos.no_videos_found'}.</span>
-	</div>
-	{/if}
-
-	{* Seção Destaques (hero) removida a pedido. O CSS .xb-hero-* ficou dormente
-	   em pornozinho.css e a query $hero_videos segue em index.php sem consumidor. *}
-	<div class="xb-section">
-		<span class="xb-section-bar"></span>
-		<h2><i class="fas fa-fire"></i>Em alta</h2>
-		<a class="xb-section-link" href="{$relative}/videos?o=bw">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
-	</div>
-
-	{if $viewed_videos}
-	<div class="row content-row">
-		{section name=i loop=$viewed_videos}
-			{include file='video_card.tpl' v=$viewed_videos[i]}
-		{/section}
-	</div>
-	{else}
-	<div class="well well-sm">
-		<span class="text-danger">{t c='videos.no_videos_found'}.</span>
-	</div>
-	{/if}
-
-	{if $random_category && $random_cat_videos}
-	{assign var=random_cat_link value=$relative|cat:"/videos/"|cat:$random_category.slug}
-	{include file='video_carousel.tpl' videos=$random_cat_videos title=$random_category.name icon='fa-dice' link=$random_cat_link auto_scroll=true}
-	{/if}
-
-	{if $creators}
-	<div class="xb-section">
-		<span class="xb-section-bar"></span>
-		<h2><i class="fas fa-user-circle"></i>Creators</h2>
-		<a class="xb-section-link" href="{$relative}/users">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
-	</div>
-	<div class="xb-creators">
-		{section name=c loop=$creators}
-		<a class="xb-creator-card" href="{$relative}/user/{$creators[c].username}">
-			<img class="xb-avatar-lg" src="{$relative}/media/users/{if $creators[c].photo != ''}{$creators[c].photo}{else}nopic-{$creators[c].gender}.gif{/if}" alt="{$creators[c].username}">
-			<span class="xb-creator-name">{$creators[c].username}</span>
-			<span class="xb-creator-meta">{$creators[c].total_videos} {t c='global.videos'}</span>
-		</a>
-		{/section}
-	</div>
-	{/if}
-
-	{if $categories_sm}
-	<div class="xb-section">
-		<span class="xb-section-bar"></span>
-		<h2><i class="fas fa-th-large"></i>Categorias</h2>
-		<a class="xb-section-link" href="{$relative}/categories">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
-	</div>
-	<div class="xb-cats">
-		{section name=c loop=$categories_sm}
-		<a class="xb-cat-card" href="{$relative}/videos/{$categories_sm[c].slug}">
-			<img src="{$categories_sm[c].cover_url}" title="{$categories_sm[c].name|escape:'html'}" alt="{$categories_sm[c].name|escape:'html'}">
-			<span class="xb-cat-overlay">
-				<span class="xb-cat-name">{$categories_sm[c].name|escape:'html'}</span>
-				<span class="xb-cat-count">{$categories_sm[c].total_videos}</span>
-			</span>
-		</a>
-		{/section}
-	</div>
-	{/if}
-
 	{if $tags_sm}
 	<div class="xb-section">
 		<span class="xb-section-bar"></span>
@@ -147,13 +68,88 @@
 	</div>
 	{/if}
 
+	{* Seção Destaques (hero) removida a pedido. O CSS .xb-hero-* ficou dormente
+   em pornozinho.css e a query $hero_videos segue em index.php sem consumidor. *}
+<div class="xb-section">
+		<span class="xb-section-bar"></span>
+		<h2><i class="fas fa-thumbs-up"></i>Para Você</h2>
+		<a class="xb-section-link" href="{$relative}/videos">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
+	</div>
+
+	{if $home_feed_videos}
+	<div class="row content-row" id="home-feed">
+		{section name=i loop=$home_feed_videos}
+			{include file='video_card.tpl' v=$home_feed_videos[i] card_cols='col-6 col-sm-6 col-md-4 col-lg-3' show_tags=1}
+			{if $smarty.section.i.iteration is div by 8}
+			{include file='ad_feed.tpl' group='index_feed'}
+			{/if}
+		{/section}
+	</div>
+	<div class="xb-feed-more-wrap">
+		<button type="button" id="home-feed-more" class="xb-feed-more-btn">
+			<span class="material-symbols-rounded" aria-hidden="true">expand_more</span>
+			<span class="xb-feed-more-label">Exibir mais</span>
+		</button>
+	</div>
+	{else}
+	<div class="well well-sm">
+		<span class="text-danger">{t c='videos.no_videos_found'}.</span>
+	</div>
+	{/if}
+
+	{if $random_category && $random_cat_videos}
+	{assign var=random_cat_link value=$relative|cat:"/videos/"|cat:$random_category.slug}
+	{include file='video_carousel.tpl' videos=$random_cat_videos title=$random_category.name icon='fa-dice' link=$random_cat_link auto_scroll=true}
+	{/if}
+
+	{* Seção Creators removida a pedido. O CSS .xb-creators/.xb-creator-card ficou
+	   dormente em pornozinho.css e a query $creators segue em index.php sem
+	   consumidor (como o hero acima). *}
+	{if $categories_sm}
+	<div class="xb-section">
+		<span class="xb-section-bar"></span>
+		<h2><i class="fas fa-th-large"></i>Categorias</h2>
+		<a class="xb-section-link" href="{$relative}/categories">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
+	</div>
+	<div class="xb-cats">
+		{section name=c loop=$categories_sm}
+		<a class="xb-cat-card" href="{$relative}/videos/{$categories_sm[c].slug}">
+			<div class="xb-cat-thumb">
+				<img src="{$categories_sm[c].cover_url}" title="{$categories_sm[c].name|escape:'html'}" alt="{$categories_sm[c].name|escape:'html'}" loading="lazy">
+				<span class="xb-cat-count-badge"><i class="fas fa-play"></i> {$categories_sm[c].total_videos}</span>
+			</div>
+			<div class="xb-cat-info">
+				<span class="xb-cat-name">{$categories_sm[c].name|escape:'html'}</span>
+				<span class="xb-cat-videos">{$categories_sm[c].total_videos} {t c='global.videos'}</span>
+			</div>
+		</a>
+		{/section}
+	</div>
+	<script>
+	{literal}
+	document.querySelectorAll('.xb-cat-thumb > img').forEach(function(img){
+		function check(){
+			if(img.naturalWidth && img.naturalHeight){
+				if(img.naturalHeight > img.naturalWidth * 1.1){
+					var wrap=document.createElement('div');wrap.className='xb-trio xb-cat-trio';
+					for(var i=0;i<3;i++){var c=img.cloneNode(true);c.removeAttribute('title');wrap.appendChild(c);}
+					img.replaceWith(wrap);
+				}
+			} else { img.addEventListener('load',check,{once:true}); }
+		}
+		check();
+	});
+	{/literal}
+	</script>
+	{/if}
+
 	{insert name=adv assign=adv group='index_bottom'}
 	{if $adv.ad}
-	<div class="ad-content">
+	<div class="ad-content ad-bottom">
 		{$adv.ad}
 	</div>	
 	{elseif $adv.help}		
-		<div class="ad-body">
+		<div class="ad-body ad-bottom">
 			<p class="ad-title"><span>{t c='global.sponsors'}</span><span class="ad-group">INDEX BOTTOM</span></p>
 			<p class="ad-size">Auto &times; Auto</p>
 		</div>			

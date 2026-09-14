@@ -30,6 +30,18 @@ if (!in_array($tab, array('foryou', 'trending', 'recent'))) {
 $uid = isset($_SESSION['uid']) ? intval($_SESSION['uid']) : 0;
 $active_cond = ($config['approve'] == '1') ? " AND v.active = '1'" : "";
 
+// Anúncio reutilizado nos CARDS de vídeo: faixa no lugar do título/descrição +
+// companheiros laterais (desktop). UMA resolução por request para TODOS os
+// cards (mesmo grupo 'shorts_feed'); '' desliga quando o config de anúncios
+// estiver off. Também é o que vale para o card full-screen entre shorts (que
+// leva uma segunda chamada própria, para poder variar a peça).
+$adv_card_html = '';
+$adv_card_res = insert_adv(array('group' => 'shorts_feed'));
+if ($adv_card_res) {
+    $adv_card_html = !empty($adv_card_res['ad']) ? $adv_card_res['ad']
+        : '<div class="avs-ad-slot-hint"><span>PATROCINADORES</span><span class="avs-ad-slot-size">Auto &times; Auto</span></div>';
+}
+
 // Função para formatar contadores de shorts
 function shorts_fmt_num($num) {
     $num = intval($num);
@@ -146,7 +158,8 @@ if ($initial_vid > 0) {
                 'aspect' => video_aspect_ratio($row),
                 'is_liked' => false,
                 'is_fav' => false,
-                'share_url' => $config['BASE_URL'] . '/shorts?v=' . $initial_vid
+                'share_url' => $config['BASE_URL'] . '/shorts?v=' . $initial_vid,
+                'ad_meta' => $adv_card_html
             );
             $exclude_vids[$initial_vid] = $initial_vid;
         }
@@ -219,12 +232,51 @@ if ($rs) {
                 'aspect' => video_aspect_ratio($row),
                 'is_liked' => false,
                 'is_fav' => false,
-                'share_url' => $config['BASE_URL'] . '/shorts?v=' . $vid
+                'share_url' => $config['BASE_URL'] . '/shorts?v=' . $vid,
+                'ad_meta' => $adv_card_html
             );
             $exclude_vids[$vid] = $vid;
         }
         $rs->MoveNext();
     }
+}
+
+// Anúncios intercalados no feed (card híbrido full-screen): um banner do grupo
+// 'shorts_feed' + thumbnail do PRÓXIMO short como teaser. Cadência ALEATÓRIA
+// (~30% após cada short elegível), nunca dois anúncios consecutivos. Incrementa
+// adv_views a cada request — o mesmo mecanismo das faixas da home/videos.
+$adv_feed = insert_adv(array('group' => 'shorts_feed'));
+if ($adv_feed) {
+    if (!empty($adv_feed['ad'])) {
+        $adv_html = $adv_feed['ad'];
+    } else {
+        $adv_html = '<div class="avs-ad-slot-hint"><span>PATROCINADORES</span><span class="avs-ad-slot-size">Auto &times; Auto</span></div>';
+    }
+
+    $interleaved = array();
+    $cnt = count($initial_videos);
+    $prev_ad = false;
+    for ($i = 0; $i < $cnt; $i++) {
+        $interleaved[] = $initial_videos[$i];
+
+        if ($i >= 1 && !$prev_ad && isset($initial_videos[$i + 1]) && mt_rand(1, 100) <= 30) {
+            $next = $initial_videos[$i + 1];
+            $interleaved[] = array(
+                'is_ad' => true,
+                'adv_html' => $adv_html,
+                'next_short' => array(
+                    'vid' => $next['vid'],
+                    'poster_url' => $next['poster_url'],
+                    'title' => $next['title'],
+                    'username' => $next['creator']['username']
+                )
+            );
+            $prev_ad = true;
+        } else {
+            $prev_ad = false;
+        }
+    }
+    $initial_videos = $interleaved;
 }
 
 $smarty->assign('shorts_page', true);

@@ -19,23 +19,18 @@
 		<div class="content-left mt-3">
 		{if $section == "a" &&  $photo_module == '1'}
             {if $categories}
-			<div class="row content-row">
+			<div class="xb-cats">
             {section name=i loop=$categories}
-				<div class="{if $min_col == '2'}col-6{/if} col-sm-6 col-md-4 col-lg-4 col-xl-4 m-b-20">
-					<a href="{$relative}/albums/{$categories[i].slug}">
-						<div class="thumb-overlay">
-							<img src="{$categories[i].cover_url}" title="{$categories[i].name|escape:'html'}" alt="{$categories[i].name|escape:'html'}" class="img-responsive"/>
-							<div class="category-title">
-								<div class="float-left title-truncate">
-									{$categories[i].name|escape:'html'}
-								</div>
-								<div class="float-right">
-									{$categories[i].total}
-								</div>
-							</div>							
-						</div>
-					</a>
-				</div>			
+				<a class="xb-cat-card" href="{$relative}/albums/{$categories[i].slug}">
+					<div class="xb-cat-thumb">
+						<img src="{$categories[i].cover_url}" title="{$categories[i].name|escape:'html'}" alt="{$categories[i].name|escape:'html'}" loading="lazy">
+						<span class="xb-cat-count-badge"><i class="fas fa-images"></i> {$categories[i].total}</span>
+					</div>
+					<div class="xb-cat-info">
+						<span class="xb-cat-name">{$categories[i].name|escape:'html'}</span>
+						<span class="xb-cat-videos">{$categories[i].total} {t c='global.albums'}</span>
+					</div>
+				</a>
             {/section}
 			</div>
             {/if}
@@ -43,23 +38,18 @@
 
 		{if $section == "v" &&  $video_module == '1'}
             {if $categories}
-			<div class="row content-row">
+			<div class="xb-cats">
             {section name=i loop=$categories}
-				<div class="{if $min_col == '2'}col-6{/if} col-sm-6 col-md-4 col-lg-4 col-xl-4 m-b-20">
-					<a href="{$relative}/videos/{$categories[i].slug}">
-						<div class="thumb-overlay">
-							<img src="{$categories[i].cover_url}" title="{$categories[i].name|escape:'html'}" alt="{$categories[i].name|escape:'html'}" class="img-responsive"/>
-							<div class="category-title">
-								<div class="float-left title-truncate">
-									{$categories[i].name|escape:'html'}
-								</div>
-								<div class="float-right">
-									{$categories[i].total}
-								</div>
-							</div>							
-						</div>
-					</a>
-				</div>			
+				<a class="xb-cat-card" href="{$relative}/videos/{$categories[i].slug}">
+					<div class="xb-cat-thumb">
+						<img src="{$categories[i].cover_url}" title="{$categories[i].name|escape:'html'}" alt="{$categories[i].name|escape:'html'}" loading="lazy">
+						<span class="xb-cat-count-badge"><i class="fas fa-play"></i> {$categories[i].total}</span>
+					</div>
+					<div class="xb-cat-info">
+						<span class="xb-cat-name">{$categories[i].name|escape:'html'}</span>
+						<span class="xb-cat-videos">{$categories[i].total} {t c='global.videos'}</span>
+					</div>
+				</a>
             {/section}
 			</div>
             {/if}

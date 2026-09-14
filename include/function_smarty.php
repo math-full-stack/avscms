@@ -268,7 +268,48 @@ function insert_adv( $options )
         $adv_group  	= $rs->fields['advgrp_id'];
 		$adv['help'] 	= true;		
 		$adv['width'] 	= $rs->fields['adv_width'];
-		$adv['height'] 	= $rs->fields['adv_height'];		
+		$adv['height'] 	= $rs->fields['adv_height'];
+
+        // Fontes de anúncio (injeção automática em TODOS os grupos).
+        // Ativa (share > 0, html não vazio), a fonte toma `share`% das
+        // impressões do grupo; o restante segue pelos anúncios manuais.
+        static $sources = NULL;
+        if ( $sources === NULL ) {
+            $sources = array();
+            $rs_src  = $conn->execute("SELECT id, share, html FROM adv_source WHERE active = '1' ORDER BY share DESC, id ASC");
+            if ( $conn->Affected_Rows() > 0 ) {
+                foreach ( $rs_src->getrows() as $src ) {
+                    if ( trim($src['html']) != '' && intval($src['share']) > 0 ) {
+                        $sources[] = $src;
+                    }
+                }
+            }
+        }
+        if ( !empty($sources) ) {
+            $total_share = 0;
+            foreach ( $sources as $src ) {
+                $total_share += intval($src['share']);
+            }
+            $total_share = min($total_share, 100);
+            $pick_source = rand(1, 100) <= $total_share;
+            if ( $pick_source ) {
+                $rand  = rand(1, $total_share);
+                $acc   = 0;
+                $chosen = $sources[0];
+                foreach ( $sources as $src ) {
+                    $acc += intval($src['share']);
+                    if ( $rand <= $acc ) {
+                        $chosen = $src;
+                        break;
+                    }
+                }
+                $adv['ad']  = $chosen['html'];
+                $sql        = "UPDATE adv_source SET impressions = impressions+1 WHERE id = " .intval($chosen['id']). " LIMIT 1";
+                $conn->execute($sql);
+                return $adv;
+            }
+        }
+
         if ( $adv_rotate == '1' ) {
             $sql    = "SELECT adv_id, adv_text FROM adv WHERE adv_group = " .intval($adv_group). "
                        AND adv_status = '1' ORDER BY adv_addtime ASC";

@@ -15,6 +15,9 @@ require_once $config['BASE_DIR'] . '/include/function_server.php';
 // video_rotate_cover()/video_apply_cover_rotation() — capas escolhidas pelo
 // admin em thumbnails_opt. O arquivo tem guard de carregamento único.
 require_once $config['BASE_DIR'] . '/include/function_global.php';
+// insert_adv() — resolução do grupo de anúncio 'shorts_feed'. Só funções, sem
+// estado global, então o require é seguro aqui.
+require_once $config['BASE_DIR'] . '/include/function_smarty.php';
 
 $filter = new VFilter();
 $tab = isset($_REQUEST['tab']) ? strtolower($filter->get('tab', 'STRING')) : 'foryou';
@@ -237,6 +240,16 @@ $shorts_cond = " AND v.duration > 0 AND v.duration < 100 AND v.orientation = 'po
 
 $videos_out = array();
 
+// Anúncio reutilizado nos CARDS de vídeo (faixa no lugar do título/descrição +
+// companheiros laterais no desktop) — mesma resolução única por request que o
+// shorts.php. '' = anúncios desligados no config.
+$adv_card_html = '';
+$adv_card_res = insert_adv(array('group' => 'shorts_feed'));
+if ($adv_card_res) {
+    $adv_card_html = !empty($adv_card_res['ad']) ? $adv_card_res['ad']
+        : '<div class="avs-ad-slot-hint"><span>PATROCINADORES</span><span class="avs-ad-slot-size">Auto &times; Auto</span></div>';
+}
+
 // Se for a primeira página e houver initial_vid requisitado, buscá-lo prioritariamente
 if ($page === 1 && $initial_vid > 0 && !isset($exclude_vids[$initial_vid])) {
     $sql_init = "SELECT v.*, u.username, u.photo, u.gender, u.fname 
@@ -246,6 +259,7 @@ if ($page === 1 && $initial_vid > 0 && !isset($exclude_vids[$initial_vid])) {
     if ($rs_init && !$rs_init->EOF) {
         $item = build_short_item($rs_init->fields, $conn, $config, $uid, $default_res);
         if ($item) {
+            $item['ad_meta'] = $adv_card_html;
             $videos_out[] = $item;
             $exclude_vids[$initial_vid] = $initial_vid;
         }
@@ -288,11 +302,48 @@ if ($rs) {
         $row = $rs->fields;
         $item = build_short_item($row, $conn, $config, $uid, $default_res);
         if ($item) {
+            $item['ad_meta'] = $adv_card_html;
             $videos_out[] = $item;
             $exclude_vids[$item['vid']] = $item['vid'];
         }
         $rs->MoveNext();
     }
+}
+
+// Espelhar o interleave do shorts.php: anúncios em posição ALEATÓRIA (card
+// híbrido 'shorts_feed' + próximo short). Sem grupo/banner ativo, fica só vídeo.
+$adv_feed = insert_adv(array('group' => 'shorts_feed'));
+if ($adv_feed) {
+    if (!empty($adv_feed['ad'])) {
+        $adv_html = $adv_feed['ad'];
+    } else {
+        $adv_html = '<div class="avs-ad-slot-hint"><span>PATROCINADORES</span><span class="avs-ad-slot-size">Auto &times; Auto</span></div>';
+    }
+
+    $interleaved = array();
+    $cnt = count($videos_out);
+    $prev_ad = false;
+    for ($i = 0; $i < $cnt; $i++) {
+        $interleaved[] = $videos_out[$i];
+
+        if ($i >= 1 && !$prev_ad && isset($videos_out[$i + 1]) && mt_rand(1, 100) <= 30) {
+            $next = $videos_out[$i + 1];
+            $interleaved[] = array(
+                'is_ad' => true,
+                'adv_html' => $adv_html,
+                'next_short' => array(
+                    'vid' => $next['vid'],
+                    'poster_url' => $next['poster_url'],
+                    'title' => $next['title'],
+                    'username' => $next['creator']['username']
+                )
+            );
+            $prev_ad = true;
+        } else {
+            $prev_ad = false;
+        }
+    }
+    $videos_out = $interleaved;
 }
 
 header('Content-Type: application/json; charset=utf-8');

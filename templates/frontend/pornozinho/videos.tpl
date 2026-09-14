@@ -86,6 +86,9 @@
 			{capture name=videos_cols}{if $min_col == '2'}col-6 {/if}col-sm-6 col-md-4 col-lg-4{if $max_col == '5'} col-xl-3{/if}{/capture}
             {section name=i loop=$videos}
 				{include file='video_card.tpl' v=$videos[i] card_cols=$smarty.capture.videos_cols show_tags=0}
+				{if $smarty.section.i.iteration is div by 8}
+				{include file='ad_feed.tpl' group='videos_feed'}
+				{/if}
             {/section}
 			
 			</div>

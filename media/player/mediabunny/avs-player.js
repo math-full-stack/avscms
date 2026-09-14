@@ -382,6 +382,9 @@ import {
         sourceW:     parseInt(player.dataset.sourceW || '0', 10) || 0,
         sourceH:     parseInt(player.dataset.sourceH || '0', 10) || 0,
         duration:    parseFloat(window.video_duration || 0) || 0,
+        smartAds:    (typeof window.player_ads_json !== 'undefined' && Array.isArray(window.player_ads_json)) ? window.player_ads_json : [],
+        smartPerHour: parseInt(window.player_ads_per_hour || '0', 10) || 0,
+        smartMinDur: parseInt(window.player_ads_min_duration || '0', 10) || 0,
         related:     (typeof window.related_videos_data !== 'undefined' && Array.isArray(window.related_videos_data)) ? window.related_videos_data : [],
         baseUrl:     (typeof window.base_url !== 'undefined') ? window.base_url : '',
         videoId:     (typeof window.video_id !== 'undefined') ? window.video_id : '',
@@ -555,6 +558,20 @@ import {
     };
 
     const beginPlayback = () => {
+        /* Smart preroll (adv_player) — before legacy VAST */
+        if (!adPlayed) {
+            const smartPre = smartPick('preroll');
+            if (smartPre) {
+                adPlayed = true;
+                smartShowBlocking(smartPre, () => {
+                    void readyPromise.then(() => {
+                        if (fallbackVideo) void fallbackVideo.play().catch(() => {});
+                        else void play();
+                    });
+                });
+                return;
+            }
+        }
         if (!adPlayed) {
             void playAd().then(() => {
                 void readyPromise.then(() => {
@@ -692,7 +709,7 @@ import {
         }
     };
     render();
-    setInterval(() => { render(false); renderBuffer(); }, 500);
+    setInterval(() => { render(false); renderBuffer(); smartMidrollTick(); }, 500);
 
     const updateNextFrame = async () => {
         const id = asyncId;
@@ -1742,6 +1759,12 @@ import {
 
     const showPauseAd = () => {
         if (adPauseEl) return;
+        /* Smart pause (adv_player) — before legacy iframe */
+        const smartPause = smartPick('pause');
+        if (smartPause) {
+            smartShowBlocking(smartPause, () => { hidePauseAd(); });
+            return;
+        }
         if (!cfg.pauseAdv || !cfg.aid) return;
 
         adPauseEl = document.createElement('div');
@@ -2170,6 +2193,241 @@ import {
         player.classList.remove('avs-ad-playing');
     };
 
+    // --- 9.4.5 Smart ads (adv_player / player_ads_assign) ------------------
+    // Programmatic player ads served via player_ads_json.  Picked by
+    // type/device/cap.  image/html/video get a custom overlay;  vast creative
+    // reuses loadAdTag+parseVast+fireBeacons.  Blocking types (preroll/pause/
+    // midroll/postroll) add class avs-ad-playing (reuses existing guards).
+    // Corner overlay (type=overlay) is non-blocking.  Cap/hour via localStorage.
+    // Beacons: player_ad_view / player_ad_click (ajax.php).
+    const smartAdsArr = cfg.smartAds;
+    const smartCapKey = 'avs_player_ad_caps';
+    const smartCapMs  = 3600000;
+
+    const smartDevice = () => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ? 'm' : 'd';
+
+    const smartCapOf = (id) => {
+        try {
+            const m = JSON.parse(localStorage.getItem(smartCapKey) || '{}');
+            return (m[id] || []).filter((t) => Date.now() - t < smartCapMs).length;
+        } catch (e) { return 0; }
+    };
+
+    const smartCapHit = (ad) => {
+        const cap = parseInt(ad.cap_per_hour || '0', 10) || cfg.smartPerHour;
+        return cap > 0 && smartCapOf(ad.id) >= cap;
+    };
+
+    const smartMark = (id) => {
+        try {
+            const m   = JSON.parse(localStorage.getItem(smartCapKey) || '{}');
+            const now = Date.now();
+            m[id] = (m[id] || []).filter((t) => now - t < smartCapMs);
+            m[id].push(now);
+            localStorage.setItem(smartCapKey, JSON.stringify(m));
+        } catch (e) { /* ok */ }
+    };
+
+    const smartBeacon = (mod, id) => {
+        try {
+            void fetch(cfg.baseUrl + '/ajax.php?module=' + mod + '&id=' + encodeURIComponent(id),
+                { method: 'POST', credentials: 'same-origin', keepalive: true }).catch(() => {});
+        } catch (e) { /* ok */ }
+    };
+
+    const smartPick = (type) => {
+        if (!smartAdsArr.length) return null;
+        const dev = smartDevice();
+        for (const ad of smartAdsArr) {
+            if (String(ad.type) !== type) continue;
+            if (String(ad.status) !== '1') continue;
+            if (String(ad.device) !== 'dm' && String(ad.device) !== dev) continue;
+            if (smartCapHit(ad)) continue;
+            return ad;
+        }
+        return null;
+    };
+
+    /* --- smart overlay state --- */
+    let smartOverlay  = null;
+    let smartRAF      = null;
+    let smartTimer    = null;
+    let smartBlocking = false;
+    let smartMidFired = {};
+
+    const smartHide = () => {
+        if (smartRAF) { cancelAnimationFrame(smartRAF); smartRAF = null; }
+        if (smartTimer) { clearTimeout(smartTimer); smartTimer = null; }
+        if (smartOverlay && smartOverlay.parentNode) smartOverlay.parentNode.removeChild(smartOverlay);
+        smartOverlay = null;
+        if (smartBlocking) { smartBlocking = false; player.classList.remove('avs-ad-playing'); }
+    };
+
+    const smartShowBlocking = (ad, onDone) => {
+        smartHide();
+        smartBlocking = true;
+        player.classList.add('avs-ad-playing');
+        smartMark(ad.id);
+        smartBeacon('player_ad_view', ad.id);
+
+        const dur  = parseInt(ad.duration || '0', 10) || 5;
+        const skip = parseInt(ad.skip_after || '0', 10) || 0;
+
+        /* VAST — reuses loadAdTag + parseVast */
+        if (String(ad.creative) === 'vast' && ad.code) {
+            smartHide();
+            smartBlocking = false;
+            player.classList.remove('avs-ad-playing');
+            void loadAdTag(ad.code, cfg.vastCancel).then((xml) => {
+                const v = parseVast(xml);
+                if (!v || !v.mediaUrl) { if (onDone) onDone(); return; }
+                const ov = document.createElement('div');
+                ov.className = 'avs-ad';
+                ov.style.cssText = 'position:absolute;inset:0;z-index:7;background:#000;display:flex;align-items:center;justify-content:center';
+                const vid   = document.createElement('video');
+                vid.src     = v.mediaUrl;
+                vid.autoplay = true;
+                vid.playsInline = true;
+                vid.controls = true;
+                vid.style.cssText = 'max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;background:#000';
+                ov.appendChild(vid);
+                const sb = document.createElement('button');
+                sb.className = 'avs-ad-skip';
+                sb.textContent = 'Pular an\u00fancio';
+                sb.style.display = 'none';
+                ov.appendChild(sb);
+                const sTime = v.skipOffset > 0 ? v.skipOffset : 5;
+                const iv = setInterval(() => {
+                    if (vid.currentTime >= sTime) { clearInterval(iv); sb.style.display = ''; }
+                }, 250);
+                sb.onclick  = () => { clearInterval(iv); ov.remove(); if (onDone) onDone(); };
+                vid.onended = () => { clearInterval(iv); ov.remove(); if (onDone) onDone(); };
+                fireBeacons(v.impression);
+                player.appendChild(ov);
+            }).catch(() => { if (onDone) onDone(); });
+            return;
+        }
+
+        /* image / html / video creative */
+        const wrap = document.createElement('div');
+        wrap.className = 'avs-ad';
+        wrap.style.cssText = 'position:absolute;inset:0;z-index:7;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column';
+
+        if (String(ad.creative) === 'video' && ad.media_url) {
+            const v = document.createElement('video');
+            v.src = ad.media_url; v.autoplay = true; v.playsInline = true; v.controls = false;
+            v.style.cssText = 'max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;background:#000';
+            wrap.appendChild(v);
+            v.onended = () => { smartHide(); if (onDone) onDone(); };
+        } else if (String(ad.creative) === 'image' && ad.media_url) {
+            const img = document.createElement('img');
+            img.src = ad.media_url; img.alt = ad.name || 'An\u00fancio';
+            img.style.cssText = 'max-width:100%;max-height:80vh;object-fit:contain';
+            wrap.appendChild(img);
+        } else if (String(ad.creative) === 'html' && ad.code) {
+            const h = document.createElement('div');
+            h.className = 'avs-smart-html'; h.innerHTML = ad.code;
+            h.style.cssText = 'max-width:90vw;max-height:80vh;overflow:auto;color:#fff';
+            wrap.appendChild(h);
+        }
+
+        /* Skip */
+        const canSkip  = skip > 0;
+        const skipBtn  = document.createElement('button');
+        skipBtn.className   = 'avs-ad-skip';
+        skipBtn.textContent = 'Pular an\u00fancio';
+        skipBtn.style.cssText = 'position:absolute;right:12px;bottom:48px;z-index:8;display:none';
+        let skipReady = false;
+        const showSkip = () => {
+            if (skipReady) return;
+            skipReady = true;
+            skipBtn.style.display = '';
+            skipBtn.onclick = () => { smartHide(); if (onDone) onDone(); };
+        };
+        setTimeout(showSkip, Math.max(0, canSkip ? skip : dur) * 1000);
+        wrap.appendChild(skipBtn);
+
+        /* Fake progress */
+        if (String(ad.fake_progress) === '1' && dur > 0) {
+            const bar = document.createElement('div');
+            bar.style.cssText = 'position:absolute;bottom:0;left:0;height:3px;background:linear-gradient(90deg,#7c4dff,#ff1493);z-index:9;width:0%';
+            wrap.appendChild(bar);
+            const t0 = Date.now();
+            const tick = () => {
+                const pct = Math.min(100, ((Date.now() - t0) / 1000 / dur) * 100);
+                bar.style.width = pct + '%';
+                if (pct < 100) { smartRAF = requestAnimationFrame(tick); }
+                else { showSkip(); if (!canSkip) { smartHide(); if (onDone) onDone(); } }
+            };
+            smartRAF = requestAnimationFrame(tick);
+        } else if (!canSkip) {
+            setTimeout(() => { smartHide(); if (onDone) onDone(); }, (dur || 5) * 1000);
+        }
+
+        /* Click-through (image) */
+        if (String(ad.creative) === 'image' && ad.media_url) {
+            const lnk = document.createElement('a');
+            lnk.href = ad.media_url; lnk.target = '_blank'; lnk.rel = 'noopener';
+            lnk.style.cssText = 'position:absolute;inset:0;z-index:6;display:block';
+            lnk.onclick = () => smartBeacon('player_ad_click', ad.id);
+            wrap.appendChild(lnk);
+        }
+
+        smartOverlay = wrap;
+        player.appendChild(wrap);
+    };
+
+    const smartShowCorner = (ad) => {
+        smartHide();
+        smartMark(ad.id);
+        smartBeacon('player_ad_view', ad.id);
+        const dur = parseInt(ad.duration || '5', 10) || 5;
+        const pos = String(ad.position || 'bottom-right').split('-');
+        const vP  = pos[0] === 'top' ? 'top' : 'bottom';
+        const hP  = pos[1] === 'left' ? 'left' : 'right';
+        const wrap = document.createElement('div');
+        wrap.className = 'avs-smart-corner';
+        wrap.style.cssText = 'position:absolute;z-index:7;' + vP + ':12px;' + hP + ':12px;width:min(320px,40vw);background:#111;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.6)';
+        if (String(ad.creative) === 'video' && ad.media_url) {
+            const v = document.createElement('video');
+            v.src = ad.media_url; v.autoplay = true; v.muted = true; v.playsInline = true;
+            v.style.cssText = 'width:100%;display:block';
+            wrap.appendChild(v);
+            v.onended = () => smartHide();
+        } else if (String(ad.creative) === 'image' && ad.media_url) {
+            const img = document.createElement('img');
+            img.src = ad.media_url; img.style.cssText = 'width:100%;display:block';
+            wrap.appendChild(img);
+        } else if (String(ad.creative) === 'html' && ad.code) {
+            const h = document.createElement('div');
+            h.innerHTML = ad.code; h.style.cssText = 'padding:8px;color:#fff;font-size:13px';
+            wrap.appendChild(h);
+        } else { smartHide(); return; }
+        const cls = document.createElement('button');
+        cls.textContent = '\u00d7';
+        cls.style.cssText = 'position:absolute;top:4px;right:8px;background:none;border:none;color:#fff;font-size:18px;cursor:pointer;z-index:1';
+        cls.onclick = () => smartHide();
+        wrap.appendChild(cls);
+        smartTimer = setTimeout(() => smartHide(), dur * 1000);
+        smartOverlay = wrap;
+        player.appendChild(wrap);
+    };
+
+    const smartMidrollTick = () => {
+        if (smartBlocking || !playing) return;
+        const ad = smartPick('midroll');
+        if (!ad) return;
+        const pct   = cfg.duration > 0 ? (video.currentTime / cfg.duration) * 100 : 0;
+        const marks = (ad.schedule || '').split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => n > 0);
+        for (const m of marks) {
+            if (pct >= m && !smartMidFired[ad.id + '_' + m]) {
+                smartMidFired[ad.id + '_' + m] = true;
+                smartShowBlocking(ad, () => { if (playing) void play(); });
+                return;
+            }
+        }
+    };
+
     // --- 9.5 Autoplay next overlay + sidebar card ------------------------
     // Port of the video-js-events.js block: track watched videos, populate the
     // autoplay-card and show a 3s countdown overlay on ended.
@@ -2507,6 +2765,16 @@ import {
     };
 
     const onEnded = () => {
+        /* Smart postroll (adv_player) — before autoplay-next */
+        const smartPost = smartPick('postroll');
+        if (smartPost) {
+            smartShowBlocking(smartPost, () => {
+                markWatched();
+                showAutoplayNext();
+                miniClear();
+            });
+            return;
+        }
         markWatched();
         showAutoplayNext();
         miniClear();

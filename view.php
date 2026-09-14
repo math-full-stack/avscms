@@ -3,7 +3,7 @@ define('_VALID', true);
 require 'include/config.php';
 require 'include/function_global.php';
 require 'include/function_smarty.php';
-require 'include/function_thumbs.php';
+require_once 'include/function_thumbs.php';
 
 if (isset($_GET['VID']) && $_GET['VID'] != '') {
 	$vid = intval($_GET['VID']);

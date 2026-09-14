@@ -1,8 +1,8 @@
 <?php
 define('_VALID', true);
 require 'include/config.php';
-require 'include/function_server.php';
-require 'include/function_thumbs.php';
+require_once 'include/function_server.php';
+require_once 'include/function_thumbs.php';
 
 // Proxy de thumbnails/miniclips: o bucket GCS é HNS/UBLA com acesso por IAM,
 // então nada é público. O V4 signed-URL está quebrado para esta Service Account

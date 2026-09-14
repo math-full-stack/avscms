@@ -96,7 +96,7 @@
 	<link rel="stylesheet" href="{$relative_tpl}/css/easy-autocomplete.themes.min.css">	
 	
 	<link href="{$relative_tpl}/css/style.css" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.28" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.31" rel="stylesheet">
 	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
 	<!-- Material Design 3 -->
@@ -107,7 +107,7 @@
 	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.21" rel="stylesheet">
 	<link href="{$relative_tpl}/css/avs-disguise.css?ver=1.0.2" rel="stylesheet">
 	{if isset($shorts_page) && $shorts_page}
-	<link href="{$relative_tpl}/css/avs-shorts.css?ver=1.0.8" rel="stylesheet">
+	<link href="{$relative_tpl}/css/avs-shorts.css?ver=1.0.12" rel="stylesheet">
 	{/if}
 
 	<!-- Tema claro/escuro: aplica antes da 1ª pintura (evita flash) e persiste em avs_theme -->
@@ -571,7 +571,6 @@
 					</div>
 				</div>
 			</li>
-			<li class="xb-nav-item"><a href="{$relative}/users" class="xb-nav-link"><span class="material-symbols-rounded xb-nav-icon" aria-hidden="true">group</span> Creators</a></li>
 			<li class="xb-nav-item xb-nav-dropdown {if $menu == 'tags'}active{/if}">
 				<a href="{$relative}/tags" class="xb-nav-link xb-nav-dropdown-toggle" data-hover="dropdown" aria-haspopup="true" aria-expanded="false">
 					<span class="material-symbols-rounded xb-nav-icon" aria-hidden="true">sell</span> {translate c='menu.tags'} <span class="material-symbols-rounded xb-nav-caret" aria-hidden="true">expand_more</span>
@@ -597,9 +596,6 @@
 			{/if}
 			{if $blog_module == '1'}
 				<li class="xb-nav-item {if $menu == 'blogs'}active{/if}"><a href="{$relative}/blogs" class="xb-nav-link"><span class="material-symbols-rounded xb-nav-icon" aria-hidden="true">article</span> {translate c='menu.blogs'}</a></li>
-			{/if}
-			{if $community_module == '1'}
-				<li class="xb-nav-item {if $menu == 'community'}active{/if}"><a href="{$relative}/community" class="xb-nav-link"><span class="material-symbols-rounded xb-nav-icon" aria-hidden="true">forum</span> {translate c='menu.community'}</a></li>
 			{/if}
 		</ul>
 	</div>

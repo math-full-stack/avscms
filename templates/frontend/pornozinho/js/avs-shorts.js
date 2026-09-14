@@ -25,6 +25,9 @@
 		hasMore: false, // Sem infinite scroll - todos carregados no server-side
 		seenVids: new Set(window.__AVS_EXCLUDE_VIDS || []),
 		wheelCooldown: false,
+		adLockUntil: 0,
+		adLockIndex: -1,
+		touchStartY: 0,
 		lastTapTime: 0,
 		tapTimeout: null,
 		activeCommentsVid: 0,
@@ -101,11 +104,11 @@
 	var cardObserver = new IntersectionObserver(function (entries) {
 		entries.forEach(function (entry) {
 			var card = entry.target;
-			var video = card.querySelector('video');
-			if (!video) return;
 
 			if (entry.isIntersecting) {
-				// Pausar vídeo anterior se for outro
+				// Pausar vídeo anterior se for outro. Precisa acontecer ANTES de
+				// checar vídeo: um card de anúncio (sem <video>) tem que parar o
+				// que tocava atrás — senão o áudio do short continua sob o anúncio.
 				if (state.activeCard && state.activeCard !== card) {
 					var prevVideo = state.activeCard.querySelector('video');
 					if (prevVideo) {
@@ -122,6 +125,14 @@
 					var newUrl = baseUrl + '/shorts?v=' + vid;
 					window.history.replaceState({ vid: vid }, '', newUrl);
 				}
+
+				var video = card.querySelector('video');
+
+				// Lock de anúncio entre shorts: um card de anúncio ativo marca
+				// 3s de espera (o avanço fica bloqueado até expirar).
+				syncAdLock(card);
+
+				if (!video) return; // anúncio: sem reprodução
 
 				// Tocar vídeo ativo
 				video.muted = state.isMuted;
@@ -164,7 +175,10 @@
 				}
 			} else {
 				// Pausar se saiu do viewport
-				video.pause();
+				var video = card.querySelector('video');
+				if (video) {
+					video.pause();
+				}
 			}
 		});
 	}, observerOptions);
@@ -500,11 +514,60 @@
 		return String(num);
 	}
 
+	// --- Lock de anúncio (3s) ---
+	// Marca/limpa a janela de bloqueio quando o card ativo é um anúncio (o pill
+	// de contagem vem no markup do próprio card, servidor ou AJAX).
+	function syncAdLock(card) {
+		if (card && card.getAttribute('data-ad') === '1') {
+			if (state.adLockUntil <= 0 || state.adLockIndex !== state.activeIndex) {
+				state.adLockUntil = Date.now() + 3000;
+				state.adLockIndex = state.activeIndex;
+			}
+		} else {
+			clearAdLock();
+		}
+	}
+
+	function clearAdLock() {
+		state.adLockUntil = 0;
+		state.adLockIndex = -1;
+		if (state.activeCard) {
+			var pill = state.activeCard.querySelector('.avs-ad-lock');
+			if (pill) pill.parentNode.removeChild(pill);
+		}
+	}
+
+	// Tick único do countdown: atualiza o número do pill e libera quando o lock
+	// expira ou quando o card ativo deixa de ser o anúncio correspondente.
+	setInterval(function () {
+		if (!state.adLockUntil) return;
+
+		var remain = state.adLockUntil - Date.now();
+		var active = state.activeCard;
+		if (remain <= 0 || !active || active.getAttribute('data-ad') !== '1') {
+			clearAdLock();
+			return;
+		}
+
+		var pill = active.querySelector('.avs-ad-lock');
+		if (!pill) return;
+		var b = pill.querySelector('.avs-ad-lock-count');
+		if (b) b.textContent = String(Math.max(1, Math.ceil(remain / 1000)));
+	}, 200);
+
 	// Navegação entre cards (offset: +1 ou -1) com loop infinito
 	function scrollCard(offset) {
 		var cards = stream.querySelectorAll('.avs-short-card');
 		if (!cards.length) return;
-		
+
+		// Lock de anúncio ENTRE shorts: durante os primeiros 3s do anúncio ativo
+		// não deixa AVANÇAR (offset > 0). Voltar segue liberado. Todos os caminhos
+		// de avanço (teclado, wheel, botões desktop, teaser ad-next) passam por aqui.
+		if (offset > 0 && state.adLockUntil && Date.now() < state.adLockUntil
+			&& cards[state.activeIndex] && cards[state.activeIndex].getAttribute('data-ad') === '1') {
+			return;
+		}
+
 		var targetIndex = state.activeIndex + offset;
 		
 		// Loop infinito: último -> primeiro, primeiro -> último
@@ -540,6 +603,35 @@
 			}, 360);
 		}
 	}, { passive: false });
+
+	// Swipe nativo (mobile): quando o anúncio entre shorts está no lock de 3s,
+	// deslizar PARA FRENTE (dy < 0) fica bloqueado no touchmove — o snap do
+	// scroll nativo não passa por scrollCard. Para trás continua livre.
+	stream.addEventListener('touchstart', function (e) {
+		state.touchStartY = e.touches[0].clientY;
+	}, { passive: true });
+
+	stream.addEventListener('touchmove', function (e) {
+		if (!state.adLockUntil || Date.now() >= state.adLockUntil) return;
+		var active = state.activeCard;
+		if (!active || active.getAttribute('data-ad') !== '1') return;
+		var dy = e.touches[0].clientY - (state.touchStartY || e.touches[0].clientY);
+		if (dy < 0) e.preventDefault();
+	}, { passive: false });
+
+	// Clique no teaser "Próximo vídeo" do card de anúncio (delegado no stream:
+	// cobre os cards do servidor e os injetados pelo AJAX). Vale para todos os
+	// cards de anúncio, então usa o data-index do card atual para avançar.
+	stream.addEventListener('click', function (e) {
+		var next = e.target.closest('[data-action="ad-next"]');
+		if (!next) return;
+		e.preventDefault();
+		var adCard = next.closest('.avs-short-card');
+		if (adCard) {
+			state.activeIndex = parseInt(adCard.getAttribute('data-index') || '0', 10);
+		}
+		scrollCard(1);
+	});
 
 	// Atalhos de Teclado
 	window.addEventListener('keydown', function (e) {
@@ -581,6 +673,7 @@
 				e.preventDefault();
 				if (state.activeCard) {
 					var vid = state.activeCard.getAttribute('data-vid');
+					if (!vid) return; // anúncio: sem ações de vídeo
 					triggerLike(state.activeCard, vid);
 				}
 				break;
@@ -589,6 +682,7 @@
 				e.preventDefault();
 				if (state.activeCard) {
 					var vid = state.activeCard.getAttribute('data-vid');
+					if (!vid) return; // anúncio: sem ações de vídeo
 					toggleComments(vid);
 				}
 				break;
@@ -653,6 +747,42 @@
 		var startIndex = allCards.length;
 
 		videos.forEach(function (v, idx) {
+			// Card de anúncio (híbrido: banner + próximo vídeo): vem do server
+			// com is_ad — não conta como vídeo visto nem carrega <video>.
+			if (v.is_ad) {
+				var adIndex = startIndex + idx;
+				var adEl = document.createElement('article');
+				adEl.className = 'avs-short-card avs-ad-card';
+				adEl.setAttribute('data-index', adIndex);
+				adEl.setAttribute('data-ad', '1');
+				adEl.innerHTML = [
+					'<div class="avs-ambient-bg" style="background-image: url(\'' + escapeHtml(v.next_short.poster_url) + '\');" aria-hidden="true"></div>',
+					'<div class="avs-ad-stage">',
+					'  <span class="avs-ad-tag">Anúncio</span>',
+					'  <div class="avs-ad-slot">' + v.adv_html + '</div>',
+					'</div>',
+					'<a class="avs-ad-next" data-action="ad-next" role="button" aria-label="Próximo vídeo">',
+					'  <span class="avs-ad-next-thumb" style="background-image: url(\'' + escapeHtml(v.next_short.poster_url) + '\');"></span>',
+					'  <span class="avs-ad-next-meta">',
+					'    <span class="avs-ad-next-label">Próximo vídeo</span>',
+					'    <span class="avs-ad-next-title">' + escapeHtml(v.next_short.title) + '</span>',
+					'  </span>',
+					'  <span class="material-symbols-rounded avs-ad-next-icon" aria-hidden="true">skip_next</span>',
+					'</a>',
+					'<div class="avs-ad-lock" aria-hidden="true">',
+					'  <span class="material-symbols-rounded">timer</span>',
+					'  <b class="avs-ad-lock-count">3</b>',
+					'</div>'
+				].join('');
+				var loaderAd = document.getElementById('avs-shorts-infinite-loader');
+				if (loaderAd) {
+					stream.insertBefore(adEl, loaderAd);
+				} else {
+					stream.appendChild(adEl);
+				}
+				return;
+			}
+
 			if (state.seenVids.has(v.vid)) return;
 			state.seenVids.add(v.vid);
 
@@ -675,6 +805,8 @@
 
 			card.innerHTML = [
 				'<div class="avs-ambient-bg" style="background-image: url(\'' + escapeHtml(v.poster_url) + '\');" aria-hidden="true"></div>',
+				(v.ad_meta ? '<div class="avs-ad-side avs-ad-side-left">' + v.ad_meta + '</div>'
+					+ '<div class="avs-ad-side avs-ad-side-right">' + v.ad_meta + '</div>' : ''),
 				'<div class="avs-player-wrapper ' + vertClass + '"' + (v.aspect ? ' style="--avs-video-ar: ' + v.aspect + '"' : '') + '>',
 				'  <video class="avs-video-el" src="' + escapeHtml(v.video_url) + '" poster="' + escapeHtml(v.poster_url) + '" playsinline webkit-playsinline loop preload="none" muted></video>',
 				'  <div class="avs-play-pulse" aria-hidden="true">',
@@ -687,14 +819,12 @@
 				'    <span>Toque para ativar o som</span>',
 				'  </button>',
 				'  <div class="avs-short-meta-bottom">',
-				'    <div class="avs-short-title-wrap">',
-				'      <h2 class="avs-short-title">' + escapeHtml(v.title) + '</h2>',
-				(v.description ? '      <p class="avs-short-desc">' + escapeHtml(v.description) + '</p>' : ''),
-				'    </div>',
-				'    <div class="avs-short-music">',
-				'      <span class="material-symbols-rounded music-note-icon" aria-hidden="true">music_note</span>',
-				'      <div class="avs-music-marquee"><span>Áudio original — @' + escapeHtml(v.creator.username) + ' • ' + escapeHtml(v.title) + '</span></div>',
-				'    </div>',
+				(v.ad_meta
+					? '    <div class="avs-ad-meta-band"><span class="avs-ad-tag avs-ad-tag-sm">Anúncio</span>' + v.ad_meta + '</div>'
+					: '    <div class="avs-short-title-wrap">'
+						+ '      <h2 class="avs-short-title">' + escapeHtml(v.title) + '</h2>'
+						+ (v.description ? '      <p class="avs-short-desc">' + escapeHtml(v.description) + '</p>' : '')
+						+ '    </div>'),
 				'  </div>',
 				'  <aside class="avs-short-actions" aria-label="Ações do vídeo">',
 				'    <div class="avs-action-item avs-action-profile">',

@@ -192,7 +192,10 @@ $modules_allowed    = array(
 	'mediabunny_pending' => 1,
 	'mediabunny_complete' => 1,
 	'mediabunny_serve' => 1,
-	'shorts_feed' => 1
+	'shorts_feed' => 1,
+	'home_feed' => 1,
+	'player_ad_view' => 1,
+	'player_ad_click' => 1
 );
   
 if ( isset($modules_allowed[$module]) && $modules_allowed[$module] === 1 ) {

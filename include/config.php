@@ -58,7 +58,7 @@ if (file_exists(__DIR__ . '/config.local.php')) {
     $config['blogs_per_page'] = '10';
     $config['watched_per_page'] = '18';
     $config['recent_per_page'] = '30';
-    $config['items_per_front_page'] = '24';
+    $config['items_per_front_page'] = '12';
     $config['max_img_size']   = '200';
     $config['img_max_width']  = '1920';
     $config['img_max_height'] = '1080';
@@ -505,16 +505,11 @@ if (defined('_ADMIN')) {
 	video_apply_cover_rotation($mm_videos_favs);
 	$smarty->assign('mm_videos_favs', $mm_videos_favs);
 
-	$sql            = "SELECT * FROM channel ORDER BY total_videos DESC LIMIT 8";
+	$sql            = "SELECT * FROM channel WHERE total_videos > 0 ORDER BY total_videos DESC LIMIT 8";
 	$rs             = $conn->execute($sql);
 	$categories_sm  = $rs->getrows();
 	foreach ($categories_sm as $k => $v) {
-		$imgPath = $config['BASE_DIR'] . '/media/categories/video/' . intval($v['CHID']) . '.jpg';
-		if (file_exists($imgPath) && is_file($imgPath)) {
-			$categories_sm[$k]['cover_url'] = $config['BASE_URL'] . '/media/categories/video/' . intval($v['CHID']) . '.jpg';
-		} else {
-			$categories_sm[$k]['cover_url'] = $config['BASE_URL'] . '/media/categories/default.jpg';
-		}
+		$categories_sm[$k]['cover_url'] = getCategoryCoverUrl('video', $v['CHID']);
 	}
 	$smarty->assign('categories_sm', $categories_sm);
 	

@@ -20,17 +20,24 @@ if ($s == "a") {
 	foreach ( $alb as $album ) {
 		$cat[$album['category']]++;
 	}
+	$filtered = array();
 	foreach ($categories as $k => $v) {
-		$categories[$k]['total'] = 0;
+		$total = 0;
 		foreach ($cat as $key => $cat_val) {
 			if ($key == $v['CID']) {
-				$categories[$k]['total'] = $cat_val;
+				$total = $cat_val;
 			}
 		}
-		$categories[$k]['cover_url'] = getCategoryCoverUrl('album', $v['CID']);
-		$sql            = "UPDATE `album_categories` SET `total_albums`=".$categories[$k]['total']." WHERE CID = ".$categories[$k]['CID']."";
-		$rs             = $conn->execute($sql);		
+		if ($total == 0) {
+			continue;
+		}
+		$v['total'] = $total;
+		$v['cover_url'] = getCategoryCoverUrl('album', $v['CID']);
+		$sql            = "UPDATE `album_categories` SET `total_albums`=".$total." WHERE CID = ".$v['CID']."";
+		$rs             = $conn->execute($sql);
+		$filtered[] = $v;
 	}
+	$categories = $filtered;
 	
 } else {
 	$sql            = "SELECT CHID, name, slug FROM channel ORDER BY name ASC";
@@ -46,17 +53,24 @@ if ($s == "a") {
 	foreach ( $vid as $video ) {
 		$cat[$video['channel']]++;
 	}
+	$filtered = array();
 	foreach ($categories as $k => $v) {
-		$categories[$k]['total'] = 0;		
+		$total = 0;
 		foreach ($cat as $key => $cat_val) {
 			if ($key == $v['CHID']) {
-				$categories[$k]['total'] = $cat_val;
+				$total = $cat_val;
 			}
 		}
-		$categories[$k]['cover_url'] = getCategoryCoverUrl('video', $v['CHID']);
-		$sql            = "UPDATE `channel` SET `total_videos`=".$categories[$k]['total']." WHERE CHID = ".$categories[$k]['CHID']."";
-		$rs             = $conn->execute($sql);		
+		if ($total == 0) {
+			continue;
+		}
+		$v['total'] = $total;
+		$v['cover_url'] = getCategoryCoverUrl('video', $v['CHID']);
+		$sql            = "UPDATE `channel` SET `total_videos`=".$total." WHERE CHID = ".$v['CHID']."";
+		$rs             = $conn->execute($sql);
+		$filtered[] = $v;
 	}
+	$categories = $filtered;
 }
 
 if ($s == "a") {
