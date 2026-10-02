@@ -12,8 +12,8 @@ set -euo pipefail
 
 ZONE="${GCLOUD_ZONE:-southamerica-east1-c}"
 INSTANCE="${GCLOUD_INSTANCE:-pornozinho-vm}"
-PROJECT="${GCLOUD_PROJECT:-novinhasbr}"
-SQL_INSTANCE="${GCLOUD_SQL_INSTANCE:-novinhasbr:southamerica-east1:pornozinho-sql}"
+PROJECT="${GCLOUD_PROJECT:-pornozinho-510422}"
+SQL_INSTANCE="${GCLOUD_SQL_INSTANCE:-pornozinho-510422:southamerica-east1:pornozinho-sql}"
 LOCAL_PORT="${TUNNEL_LOCAL_PORT:-3307}"
 REMOTE_PORT="${TUNNEL_REMOTE_PORT:-3306}"
 PID_FILE="/tmp/avscms-tunnel.pid"
