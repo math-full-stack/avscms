@@ -1,5 +1,9 @@
 name: Deploy to Cloud Run (pornozinho)
 
+# Cada push em `main` builda a imagem (Cloud Build) e publica no Cloud Run.
+# Env vars não-secretas vêm de deploy/cloudrun.env; segredos vêm dos Secrets
+# do repositório (GCP_SA_KEY, DB_PASSWORD, ADMIN_PASS).
+
 on:
   push:
     branches: [main]
@@ -16,12 +20,13 @@ env:
   REGION: southamerica-east1
   SERVICE: pornozinho
   SQL_INSTANCE: pornozinho-510422:southamerica-east1:pornozinho-sql
+  RUNTIME_SA: pornozinho-cloudrun@pornozinho-510422.iam.gserviceaccount.com
 
 jobs:
   deploy:
     name: Deploy to Cloud Run
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     permissions:
       contents: read
       id-token: write
@@ -41,8 +46,14 @@ jobs:
         with:
           version: '>= 490.0.0'
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+      - name: Build env vars (não-secretas + segredos)
+        run: |
+          cp deploy/cloudrun.env /tmp/cr-env.yaml
+          printf 'DB_PASSWORD: "%s"\n' "$DB_PASSWORD" >> /tmp/cr-env.yaml
+          printf 'ADMIN_PASS: "%s"\n' "$ADMIN_PASS" >> /tmp/cr-env.yaml
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
 
       - name: Build and deploy to Cloud Run
         if: ${{ !inputs.no_build }}
@@ -51,15 +62,16 @@ jobs:
             --source=. \
             --region=${{ env.REGION }} \
             --project=${{ env.PROJECT_ID }} \
-            --add-cloudsql-instances=${{ env.SQL_INSTANCE }} \
-            --service-account=pornozinho-cloudrun@pornozinho-510422.iam.gserviceaccount.com \
-            --min-instances=0 \
-            --max-instances=5 \
+            --set-cloudsql-instances=${{ env.SQL_INSTANCE }} \
+            --service-account=${{ env.RUNTIME_SA }} \
+            --allow-unauthenticated \
+            --min-instances=1 \
+            --max-instances=10 \
             --cpu=1 \
             --memory=512Mi \
             --timeout=600 \
             --concurrency=80 \
-            --set-env-vars="DB_HOST=127.0.0.1,DB_PORT=3306,DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},DB_NAME=${{ secrets.DB_NAME }},ADMIN_PASS=${{ secrets.ADMIN_PASS }},ADMIN_USER=${{ secrets.ADMIN_USER }},SITE_NAME=${{ secrets.SITE_NAME }},SITE_TITLE=${{ secrets.SITE_TITLE }},NOREPLY_EMAIL=${{ secrets.NOREPLY_EMAIL }},ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }},PHP_PATH=/usr/bin/php,FFMPEG_PATH=/usr/bin/ffmpeg,FFPROBE_PATH=/usr/bin/ffprobe,META_DESC=${{ secrets.META_DESC }},META_KEYWORDS=${{ secrets.META_KEYWORDS }},GCS_KEY_JSON=${{ secrets.GCS_KEY_JSON }},GCS_BUCKET=${{ secrets.GCS_BUCKET }},GCS_STREAMING_URL=${{ secrets.GCS_STREAMING_URL }},R2_ENDPOINT=${{ secrets.R2_ENDPOINT }},R2_BUCKET=${{ secrets.R2_BUCKET }},R2_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }},R2_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }},R2_REGION=${{ secrets.R2_REGION }},TS_API_KEY=${{ secrets.TS_API_KEY }}" \
+            --env-vars-file=/tmp/cr-env.yaml \
             --quiet
 
       - name: Redeploy last image (no build)
@@ -70,37 +82,21 @@ jobs:
             --format="value(spec.template.spec.containers[0].image)")
           gcloud run services update ${{ env.SERVICE }} \
             --region=${{ env.REGION }} --project=${{ env.PROJECT_ID }} \
-            --image="$IMAGE" --quiet
+            --image="$IMAGE" \
+            --env-vars-file=/tmp/cr-env.yaml \
+            --quiet
 
       - name: Smoke test
         run: |
-          URL="https://${{ env.SERVICE }}.run.app"
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL/" 2>/dev/null || echo "000")
-          echo "Cloud Run: $URL/ -> $HTTP_CODE"
-          
-          DOMAIN_URL="https://pornozinho.com"
-          HTTP_CODE2=$(curl -s -o /dev/null -w "%{http_code}" "$DOMAIN_URL/" 2>/dev/null || echo "000")
-          echo "Domain: $DOMAIN_URL/ -> $HTTP_CODE2"
-
-      - name: Verify R2 config
-        run: |
-          echo "Verificando se variáveis R2 estão configuradas no serviço..."
-          gcloud run services describe ${{ env.SERVICE }} \
+          URL=$(gcloud run services describe ${{ env.SERVICE }} \
             --region=${{ env.REGION }} --project=${{ env.PROJECT_ID }} \
-            --format="value(spec.template.spec.containers[0].env[].name)" \
-            | grep -E 'R2_' || echo "AVISO: Variáveis R2 não encontradas no serviço"
-
-  notify:
-    name: Notify (optional)
-    needs: deploy
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Status
-        run: |
-          if [[ "${{ needs.deploy.result }}" == "success" ]]; then
-            echo "✅ Deploy concluído com sucesso"
-          else
-            echo "❌ Deploy falhou"
-            exit 1
-          fi
+            --format="value(status.url)")
+          echo "Cloud Run: $URL/"
+          for i in 1 2 3 4 5; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$URL/" || echo 000)
+            echo "tentativa $i -> $CODE"
+            [ "$CODE" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "Smoke test falhou"
+          exit 1

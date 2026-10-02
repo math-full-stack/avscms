@@ -1,8 +1,8 @@
 name: Deploy to VM (Self-hosted Runner)
 
+# DESATIVADO: o deploy migrou para Cloud Run (deploy-cloudrun.yml).
+# Mantido o arquivo apenas como referencia do deploy antigo via VM.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 env:
@@ -27,6 +27,7 @@ jobs:
             --exclude='setup-deploy.sh' \
             --exclude='cache' \
             --exclude='tmp' \
+            --exclude='tmp/transcribe' \
             --exclude='logs' \
             ${{ runner.workspace }}/avscms/ ${{ env.DEPLOY_PATH }}/
 
@@ -37,6 +38,15 @@ jobs:
           sudo find . -type d -exec chmod 755 {} \;
           sudo find . -type f -exec chmod 644 {} \;
           chmod +x *.sh 2>/dev/null || true
+
+      - name: Ensure transcription runtime dirs (outside webroot)
+        run: |
+          # Venv + cache do faster-whisper ficam FORA do webroot (/etc/avscms),
+          # imunes ao rsync --delete acima. O venv é instalado à mão na VM
+          # (ver header de scripts/transcribe_worker.py); se ainda não existir,
+          # o cron de transcrição apenas não inicia jobs — o deploy não falha.
+          sudo mkdir -p /etc/avscms/whisper-models
+          sudo chown -R www-data:www-data /etc/avscms
 
       - name: Pre-deploy backup (timestamped)
         run: |
