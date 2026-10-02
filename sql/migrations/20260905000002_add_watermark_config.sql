@@ -8,10 +8,10 @@
 
 SET @col := (SELECT COUNT(*) FROM information_schema.columns
              WHERE table_schema = DATABASE() AND table_name = 'grabber_sources' AND column_name = 'watermark_config');
-SET @sql := IF(@col = 0, 'ALTER TABLE `grabber_sources` ADD COLUMN `watermark_config` TEXT NOT NULL DEFAULT '''' AFTER `delay_seconds`', 'SELECT 1');
+SET @sql := IF(@col = 0, 'ALTER TABLE `grabber_sources` ADD COLUMN `watermark_config` TEXT NOT NULL DEFAULT ('''') AFTER `delay_seconds`', 'SELECT 1');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @col := (SELECT COUNT(*) FROM information_schema.columns
              WHERE table_schema = DATABASE() AND table_name = 'video' AND column_name = 'watermark_cfg');
-SET @sql := IF(@col = 0, 'ALTER TABLE `video` ADD COLUMN `watermark_cfg` TEXT NOT NULL DEFAULT '''' AFTER `source_url`', 'SELECT 1');
+SET @sql := IF(@col = 0, 'ALTER TABLE `video` ADD COLUMN `watermark_cfg` TEXT NOT NULL DEFAULT ('''') AFTER `source_url`', 'SELECT 1');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

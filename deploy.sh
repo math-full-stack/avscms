@@ -23,13 +23,34 @@ SERVICE="${GCLOUD_SERVICE:-pornozinho}"
 SQL_INST="${GCLOUD_SQL_INST:-novinhasbr:southamerica-east1:pornozinho-sql}"
 
 # Credenciais vêm do .env local (gitignored) ou de env vars — nunca hardcode.
-DB_HOST="${DB_HOST:-$(grep -E '^DB_HOST=' .env 2>/dev/null | head -1 | cut -d= -f2-)}"
-DB_USER="${DB_USER:-$(grep -E '^DB_USER=' .env 2>/dev/null | head -1 | cut -d= -f2-)}"
-DB_PASSWORD="${DB_PASSWORD:-$(grep -E '^DB_PASSWORD=' .env 2>/dev/null | head -1 | cut -d= -f2-)}"
-DB_NAME="${DB_NAME:-$(grep -E '^DB_NAME=' .env 2>/dev/null | head -1 | cut -d= -f2-)}"
+get_env() { grep -E "^$1=" .env 2>/dev/null | head -1 | cut -d= -f2-; }
+
+DB_HOST="${DB_HOST:-$(get_env DB_HOST)}"
+DB_PORT="${DB_PORT:-$(get_env DB_PORT)}"
+DB_USER="${DB_USER:-$(get_env DB_USER)}"
+DB_PASSWORD="${DB_PASSWORD:-$(get_env DB_PASSWORD)}"
+DB_NAME="${DB_NAME:-$(get_env DB_NAME)}"
+ADMIN_PASS="${ADMIN_PASS:-$(get_env ADMIN_PASS)}"
+GCS_KEY_JSON="${GCS_KEY_JSON:-$(get_env GCS_KEY_JSON)}"
+GCS_KEY_PATH="${GCS_KEY_PATH:-$(get_env GCS_KEY_PATH)}"
+GCS_BUCKET="${GCS_BUCKET:-$(get_env GCS_BUCKET)}"
+GCS_STREAMING_URL="${GCS_STREAMING_URL:-$(get_env GCS_STREAMING_URL)}"
+R2_ENDPOINT="${R2_ENDPOINT:-$(get_env R2_ENDPOINT)}"
+R2_BUCKET="${R2_BUCKET:-$(get_env R2_BUCKET)}"
+R2_ACCESS_KEY_ID="${R2_ACCESS_KEY_ID:-$(get_env R2_ACCESS_KEY_ID)}"
+R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY:-$(get_env R2_SECRET_ACCESS_KEY)}"
+R2_REGION="${R2_REGION:-$(get_env R2_REGION)}"
+TS_API_KEY="${TS_API_KEY:-$(get_env TS_API_KEY)}"
+SITE_NAME="${SITE_NAME:-$(get_env SITE_NAME)}"
+SITE_TITLE="${SITE_TITLE:-$(get_env SITE_TITLE)}"
+NOREPLY_EMAIL="${NOREPLY_EMAIL:-$(get_env NOREPLY_EMAIL)}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-$(get_env ADMIN_EMAIL)}"
+
 : "${DB_HOST:=127.0.0.1}"
+: "${DB_PORT:=3306}"
 : "${DB_USER:=avs_app}"
 : "${DB_NAME:=avs}"
+: "${R2_REGION:=auto}"
 if [[ -z "$DB_PASSWORD" ]]; then
     echo "ERROR: DB_PASSWORD não definido. Exporte a variável ou coloque-a no .env local (gitignored)." >&2
     exit 1
@@ -50,7 +71,7 @@ if [[ "${1:-}" != "--no-build" ]]; then
         --region="$REGION" \
         --project="$PROJECT" \
         --add-cloudsql-instances="$SQL_INST" \
-        --set-env-vars="DB_HOST=${DB_HOST},DB_USER=${DB_USER},DB_PASSWORD=${DB_PASSWORD},DB_NAME=${DB_NAME}" \
+        --set-env-vars="DB_HOST=${DB_HOST},DB_PORT=${DB_PORT},DB_USER=${DB_USER},DB_PASSWORD=${DB_PASSWORD},DB_NAME=${DB_NAME},ADMIN_PASS=${ADMIN_PASS},GCS_KEY_JSON=${GCS_KEY_JSON},GCS_KEY_PATH=${GCS_KEY_PATH},GCS_BUCKET=${GCS_BUCKET},GCS_STREAMING_URL=${GCS_STREAMING_URL},R2_ENDPOINT=${R2_ENDPOINT},R2_BUCKET=${R2_BUCKET},R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID},R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY},R2_REGION=${R2_REGION},TS_API_KEY=${TS_API_KEY},SITE_NAME=${SITE_NAME},SITE_TITLE=${SITE_TITLE},NOREPLY_EMAIL=${NOREPLY_EMAIL},ADMIN_EMAIL=${ADMIN_EMAIL}" \
         --quiet
 else
     step "Redeploying last image (no build)..."

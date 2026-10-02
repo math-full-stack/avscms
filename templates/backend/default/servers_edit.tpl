@@ -30,11 +30,13 @@
 										<label class="col-lg-4 control-label">Tipo de Servidor</label>
 										<div class="col-lg-8">
 											<p class="form-control-static">
-												{if $server.server_type == 'gcs'}
-													<span class="label label-info"><i class="fa fa-cloud"></i> Google Cloud Storage</span>
-												{else}
-													<span class="label label-inverse"><i class="fa fa-plug"></i> FTP</span>
-												{/if}
+											{if $server.server_type == 'gcs'}
+												<span class="label label-info"><i class="fa fa-cloud"></i> Google Cloud Storage</span>
+											{elseif $server.server_type == 'r2'}
+												<span class="label label-success"><i class="fa fa-cloud-download"></i> Cloudflare R2</span>
+											{else}
+												<span class="label label-inverse"><i class="fa fa-plug"></i> FTP</span>
+											{/if}
 											</p>
 										</div>
 										<div class="clearfix"></div>
@@ -135,6 +137,64 @@
 									</div>
 									{/if}
 
+									<!-- ========== R2 / S3 FIELDS ========== -->
+									{if $server.server_type == 'r2'}
+									<div id="fields_r2">
+
+										<div class="form-group">
+											<label class="col-lg-4 control-label">Endpoint (S3)</label>
+											<div class="col-lg-8">
+												<input class="form-control" name="s3_endpoint" id="srv_s3_endpoint" type="text" value="{$server.s3_endpoint|escape:'html'}" required>
+												<span class="help">Endpoint S3 do R2 — pode colar só o <b>account id</b> que a URL padrão é montada sozinha.</span>
+											</div>
+											<div class="clearfix"></div>
+										</div>
+
+										<div class="form-group">
+											<label class="col-lg-4 control-label">Bucket Name</label>
+											<div class="col-lg-8">
+												<input class="form-control" name="s3_bucket" id="srv_s3_bucket" type="text" value="{$server.s3_bucket|escape:'html'}" required>
+											</div>
+											<div class="clearfix"></div>
+										</div>
+
+										<div class="form-group">
+											<label class="col-lg-4 control-label">Access Key ID</label>
+											<div class="col-lg-8">
+												<input class="form-control" name="s3_access_key" id="srv_s3_access_key" type="text" value="{$server.s3_access_key|escape:'html'}" required autocomplete="off">
+											</div>
+											<div class="clearfix"></div>
+										</div>
+
+										<div class="form-group">
+											<label class="col-lg-4 control-label">Secret Access Key</label>
+											<div class="col-lg-8">
+												<input class="form-control" name="s3_secret_key" id="srv_s3_secret_key" type="password" value="" placeholder="••••••••" autocomplete="new-password">
+												<span class="help">Deixe em branco para manter a chave atual.</span>
+											</div>
+											<div class="clearfix"></div>
+										</div>
+
+										<div class="form-group">
+											<label class="col-lg-4 control-label">Região</label>
+											<div class="col-lg-8">
+												<input class="form-control" name="s3_region" id="srv_s3_region" type="text" value="{if $server.s3_region}{$server.s3_region|escape:'html'}{else}auto{/if}">
+											</div>
+											<div class="clearfix"></div>
+										</div>
+
+										<div class="form-group">
+											<label class="col-lg-4 control-label">Video Streaming URL</label>
+											<div class="col-lg-8">
+												<input class="form-control" name="video_url" id="srv_s3_public" type="text" value="{$server.video_url|escape:'html'}" required>
+												<span class="help">Base pública do bucket (ex: <code>https://pub-xxxxxxxx.r2.dev</code>): o player monta <code>{base}/h264/...</code> e as capas <code>{base}/thumbs/...</code>.</span>
+											</div>
+											<div class="clearfix"></div>
+										</div>
+
+									</div>
+									{/if}
+
 									<!-- Status -->
 									<div class="form-group">
 										<label class="col-lg-4 control-label">Status</label>
@@ -154,7 +214,7 @@
 										<div class="col-lg-8 col-lg-offset-4">
 											<button type="button" id="btn_test_ftp" class="btn btn-info btn-cons">
 												<i class="fa fa-plug"></i> <span id="btn_test_ftp_text">
-													{if $server.server_type == 'gcs'}Testar Conexão GCS{else}Testar Conexão FTP{/if}
+													{if $server.server_type == 'gcs'}Testar Conexão GCS{elseif $server.server_type == 'r2'}Testar Conexão R2{else}Testar Conexão FTP{/if}
 												</span>
 											</button>
 										</div>
@@ -240,6 +300,52 @@
 						error: function(xhr, status, error) {
 							$('#btn_test_ftp').prop('disabled', false);
 							$('#btn_test_ftp_text').text('Testar Conexão GCS');
+							$('#test_ftp_alert').removeClass('alert-info alert-success alert-warning')
+								.addClass('alert-danger')
+								.html('<i class="fa fa-times-circle"></i> Erro na requisição AJAX: ' + error);
+						}
+					});
+				} else if (serverType === 'r2') {
+					// Teste do R2/S3: valida credenciais (list) + escrita + CORS da base
+					// pública. Campo vazio cai para o valor já salvo (server_id).
+					$('#btn_test_ftp').prop('disabled', true);
+					$('#btn_test_ftp_text').text('Testando...');
+					$('#test_ftp_alert').removeClass('alert-success alert-warning alert-danger')
+						.addClass('alert-info')
+						.html('<i class="fa fa-spinner fa-spin"></i> Conectando ao bucket R2...')
+						.slideDown();
+
+					$.ajax({
+						url: base_url + '/ajax.php?module=admin_test_r2',
+						type: 'POST',
+						dataType: 'json',
+						data: {
+							server_id:     '{$server.server_id}',
+							s3_endpoint:   $.trim($('#srv_s3_endpoint').val()),
+							s3_bucket:     $.trim($('#srv_s3_bucket').val()),
+							s3_access_key: $.trim($('#srv_s3_access_key').val()),
+							s3_secret_key: $.trim($('#srv_s3_secret_key').val()),
+							s3_region:     $.trim($('#srv_s3_region').val()),
+							video_url:     $.trim($('#srv_s3_public').val())
+						},
+						success: function(res) {
+							$('#btn_test_ftp').prop('disabled', false);
+							$('#btn_test_ftp_text').text('Testar Conexão R2');
+
+							if (res && res.status == 1) {
+								$('#test_ftp_alert').removeClass('alert-info alert-danger alert-warning')
+									.addClass('alert-success')
+									.html('<i class="fa fa-check-circle"></i> <b>Sucesso!</b> ' + res.message);
+							} else {
+								var msg = (res && res.message) ? res.message : 'Erro ao conectar no R2.';
+								$('#test_ftp_alert').removeClass('alert-info alert-success alert-warning')
+									.addClass('alert-danger')
+									.html('<i class="fa fa-times-circle"></i> <b>Falha:</b> ' + msg);
+							}
+						},
+						error: function(xhr, status, error) {
+							$('#btn_test_ftp').prop('disabled', false);
+							$('#btn_test_ftp_text').text('Testar Conexão R2');
 							$('#test_ftp_alert').removeClass('alert-info alert-success alert-warning')
 								.addClass('alert-danger')
 								.html('<i class="fa fa-times-circle"></i> Erro na requisição AJAX: ' + error);

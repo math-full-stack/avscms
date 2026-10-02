@@ -3,6 +3,11 @@ defined('_VALID') or die('Restricted Access!');
 
 function getServerURL()
 {
+    global $config;
+    if (!empty($config['BASE_URL'])) {
+        return $config['BASE_URL'];
+    }
+
     $serverName = NULL;
     if ( isset($_SERVER['SERVER_NAME']) ) {
         $serverName = $_SERVER['SERVER_NAME'];

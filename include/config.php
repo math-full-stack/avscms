@@ -311,6 +311,38 @@ if (!isset($config['worker_role']) || !in_array($config['worker_role'], array('c
 	$config['worker_role'] = 'web';
 }
 
+// Transcrição (faster-whisper) — defaults fail-closed. O que manda é o valor de
+// cada host em config.local.*; estes defaults só garantem comportamento seguro
+// (desligado) quando a chave não existe. transcribe_executor escolhe onde a
+// transcrição DEVE rodar; o gate real é executor x worker_role no cron.
+if (!isset($config['transcribe_enabled'])) {
+	$config['transcribe_enabled'] = '0';
+}
+if (!isset($config['transcribe_executor'])) {
+	$config['transcribe_executor'] = 'server';
+}
+if (!isset($config['transcribe_model'])) {
+	$config['transcribe_model'] = 'small';
+}
+if (!isset($config['transcribe_lang'])) {
+	$config['transcribe_lang'] = 'auto';
+}
+if (!isset($config['transcribe_python'])) {
+	$config['transcribe_python'] = '/etc/avscms/whisper-venv/bin/python';
+}
+if (!isset($config['transcribe_cache_dir'])) {
+	$config['transcribe_cache_dir'] = '/etc/avscms/whisper-models';
+}
+if (!isset($config['transcribe_max_duration'])) {
+	$config['transcribe_max_duration'] = '3600';
+}
+if (!isset($config['transcribe_job_timeout'])) {
+	$config['transcribe_job_timeout'] = '3600';
+}
+if (!isset($config['transcribe_max_attempts'])) {
+	$config['transcribe_max_attempts'] = '3';
+}
+
 if($config['conversion_q'] == '1') {
 	require_once $config['BASE_DIR'].'/include/function_queue.php'; 
 	if (queue_should_process()) {

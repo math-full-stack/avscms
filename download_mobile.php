@@ -24,7 +24,8 @@ if ($new_permisions['mobile_downloads'] == 1) {
 	}
 
 	// GCS: object is private — just redirect to the short-lived signed URL
-	if ($sources['server_type'] == 'gcs') {
+	// GCS/R2: a fonte é uma URL de bucket pública — redireciona direto.
+	if (in_array($sources['server_type'], array('gcs', 'r2'), true)) {
 		$conn->execute("UPDATE video SET download_num = download_num+1 WHERE VID = ".$vid." LIMIT 1");
 		header('Location: '.$file);
 		exit();

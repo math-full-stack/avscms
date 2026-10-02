@@ -38,6 +38,23 @@ $config['thumbs_tool'] = 'ffmpeg';
 $config['processor']   = 'ffmpeg';
 $config['worker_role'] = 'web';
 
+// --- Transcrição (faster-whisper): VM (worker_role='web') só processa se
+// transcribe_executor='server'. Desligado por padrão — antes de ligar via
+// siteadmin, criar o venv e o cache FORA do webroot (imunes ao rsync --delete):
+//   sudo python3 -m venv /etc/avscms/whisper-venv
+//   sudo /etc/avscms/whisper-venv/bin/pip install -U faster-whisper
+//   sudo mkdir -p /etc/avscms/whisper-models && sudo chown -R www-data:www-data /etc/avscms
+// O primeiro job baixa o modelo escolhido para /etc/avscms/whisper-models.
+$config['transcribe_enabled']      = '0';
+$config['transcribe_executor']     = 'server';
+$config['transcribe_model']        = 'small';
+$config['transcribe_lang']         = 'auto';
+$config['transcribe_python']       = '/etc/avscms/whisper-venv/bin/python';
+$config['transcribe_cache_dir']    = '/etc/avscms/whisper-models';
+$config['transcribe_max_duration'] = '3600';
+$config['transcribe_job_timeout']  = '3600';
+$config['transcribe_max_attempts'] = '3';
+
 // --- Performance / conversão ---
 $config['vbitrate']   = '500';
 $config['sbitrate']   = '22050';

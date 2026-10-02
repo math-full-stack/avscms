@@ -32,7 +32,7 @@ if (file_exists($tmp_thumb_dir)) {
 
 // Fonte única de verdade: bucket GCS para vídeos remotos, local caso contrário.
 $gcs_base = get_video_thumb_base($vid);
-$is_gcs   = (strpos($gcs_base, 'gcs_thumbs.php') !== false);
+$is_gcs   = video_thumb_base_is_remote($gcs_base);
 
 for ($i = 1; $i <= $count; $i++) {
 	if ($is_gcs) {

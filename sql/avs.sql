@@ -711,10 +711,15 @@ CREATE TABLE `servers` (
   `last_used` datetime DEFAULT NULL,
   `current_used` enum('0','1') NOT NULL DEFAULT '0',
   `status` enum('0','1') NOT NULL DEFAULT '1',
-  `server_type` enum('ftp','gcs') NOT NULL DEFAULT 'ftp',
+  `server_type` enum('ftp','gcs','r2') NOT NULL DEFAULT 'ftp',
   `gcs_key_path` varchar(500) NOT NULL DEFAULT '',
   `gcs_bucket` varchar(255) NOT NULL DEFAULT '',
-  `gcs_signed_ttl` int(11) NOT NULL DEFAULT 21600
+  `gcs_signed_ttl` int(11) NOT NULL DEFAULT 21600,
+  `s3_endpoint` varchar(255) NOT NULL DEFAULT '',
+  `s3_bucket` varchar(255) NOT NULL DEFAULT '',
+  `s3_access_key` varchar(255) NOT NULL DEFAULT '',
+  `s3_secret_key` varchar(255) NOT NULL DEFAULT '',
+  `s3_region` varchar(64) NOT NULL DEFAULT 'auto'
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------

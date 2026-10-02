@@ -1038,7 +1038,7 @@ function get_video_sources($video, $mykey = null, $iv = null)
 
     $serverType = 'local';
     if ($server) {
-        $serverType = (isset($server['server_type']) && $server['server_type'] === 'gcs') ? 'gcs' : 'ftp';
+        $serverType = server_is_remote_storage($server) ? $server['server_type'] : 'ftp';
     }
     $sources['server_type'] = $serverType;
 
@@ -1100,7 +1100,7 @@ function get_video_sources($video, $mykey = null, $iv = null)
     $vid = intval($video['VID']);
     $makeUrl = function ($object) use ($sign, $videoRoot, $config, $vid) {
         if ($sign) {
-            return gcs_media_proxy_url($vid, $object);
+            return rtrim($config['gcs_streaming_url'], '/') . '/' . ltrim($object, '/');
         }
         return $videoRoot . '/' . ltrim($object, '/');
     };
@@ -1121,7 +1121,7 @@ function get_video_sources($video, $mykey = null, $iv = null)
         }
 
         $file   = $vid . '_' . $f[1] . '.' . $f[2]; // legacy flat name (info only)
-        $object = ($sources['server_type'] === 'gcs')
+        $object = (in_array($sources['server_type'], array('gcs', 'r2'), true))
                 ? 'h264/' . $vid . '/' . $f[1] . '.' . $f[2]
                 : 'h264/' . $file;
         $url    = $makeUrl($object);

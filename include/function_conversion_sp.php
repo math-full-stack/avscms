@@ -550,12 +550,12 @@ function postConversion($vid,$src) {
 	// parcialmente), a fonte local é a única cópia restante para reprocessar.
 	if ($config['del_original_video'] == 1) {
 		$canDelete = true;
-		if ($transferServer && isset($transferServer['server_type']) && $transferServer['server_type'] === 'gcs') {
+		if ($transferServer && isset($transferServer['server_type']) && in_array($transferServer['server_type'], array('gcs', 'r2'), true)) {
 			$canDelete = gcs_video_has_formats($vid, $transferServer);
 		}
 		// Se nao for servidor GCS, ou se for GCS e os formatos confirmados no bucket,
 		// entao pode deletar o original local. Se for GCS sem confirmacao, mantem local.
-		if (!$transferServer || ($transferServer['server_type'] === 'gcs' && $canDelete)) {
+		if (!$transferServer || (in_array($transferServer['server_type'], array('gcs', 'r2'), true) && $canDelete)) {
 			if ($canDelete) {
 				@chmod($src, 0777);
 				@unlink($src);
@@ -572,7 +572,7 @@ function postConversion($vid,$src) {
 	// Evita remover arquivos locais antes do upload GCS ser confirmado.
 	if ($config['del_original_video'] == 1 && !empty($formats)) {
 		$transferOk = false;
-		if ($transferServer && isset($transferServer['server_type']) && $transferServer['server_type'] === 'gcs') {
+		if ($transferServer && isset($transferServer['server_type']) && in_array($transferServer['server_type'], array('gcs', 'r2'), true)) {
 			$transferOk = gcs_video_has_formats($vid, $transferServer);
 		} else {
 			// Sem multi-server GCS: remove locais se a flag estiver ativa

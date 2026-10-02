@@ -289,7 +289,7 @@ function delete_video_ftp( $video_id, $srv )
     $server 	= get_vid_server($srv);
 
     // Servidor do tipo Google Cloud Storage (GCS)? Nesse caso apaga os objetos no bucket
-    if ( isset($server['server_type']) && $server['server_type'] === 'gcs' ) {
+    if ( isset($server['server_type']) && in_array($server['server_type'], array('gcs', 'r2'), true) ) {
         require_once $config['BASE_DIR']. '/include/function_server.php';
         delete_video_gcs($video_id, $server);
         return;

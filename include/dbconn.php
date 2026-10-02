@@ -6,8 +6,10 @@ $last_error = '';
 
 // Cloud Run: Cloud SQL Auth Proxy listens on a Unix socket
 // Path format: /cloudsql/PROJECT:REGION:INSTANCE
+// DB_INSTANCE vem do ambiente (Cloud Run) para nunca amarrar a projeto antigo.
 if (isset($_ENV['K_SERVICE'])) {
-    $socket_path = '/cloudsql/novinhasbr:southamerica-east1:pornozinho-sql';
+    $db_instance = getenv('DB_INSTANCE') ?: 'pornozinho-510422:southamerica-east1:pornozinho-sql';
+    $socket_path = '/cloudsql/' . $db_instance;
     $mysqli = @new \mysqli('localhost', $config['db_user'], $config['db_pass'], $config['db_name'], 0, $socket_path);
     if ($mysqli->connect_error) {
         $last_error = 'mysqli: ' . $mysqli->connect_error;

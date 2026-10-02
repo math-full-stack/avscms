@@ -65,7 +65,7 @@ function upload_video_formats($vid, $formats, $server)
 
     $serverType = isset($server['server_type']) ? $server['server_type'] : 'ftp';
 
-    if ($serverType === 'gcs') {
+    if (server_is_remote_storage($server)) {
         return upload_video_formats_gcs($vid, $formats, $server);
     }
 
@@ -175,9 +175,67 @@ function upload_video_formats_ftp($vid, $formats, $server)
  * @param array $server Linha da tabela servers (server_type = 'gcs')
  * @return GCS|false
  */
+/**
+ * O servidor entrega mídia de um bucket remoto (GCS ou R2) em vez de FTP/local?
+ *
+ * Fonte única do teste: antes cada ponto comparava com 'gcs' na mão, o que
+ * jogaria a mídia guardada no R2 no fluxo FTP por engano.
+ *
+ * @param array $server Linha da tabela servers
+ * @return bool
+ */
+function server_is_remote_storage($server)
+{
+    if (!is_array($server) || empty($server['server_type'])) {
+        return false;
+    }
+
+    return in_array($server['server_type'], array('gcs', 'r2'), true);
+}
+
+/**
+ * Resolve o cliente S3-compatível (Cloudflare R2) de uma linha de servidor.
+ *
+ * As credenciais vêm da própria linha; quando a linha está vazia cai para as
+ * env vars R2_* (Cloud Run / Secret Manager), então o segredo pode viver fora
+ * do banco. O endpoint aceita tanto a URL completa quanto só o account id.
+ *
+ * @param array $server Linha da tabela servers (server_type = 'r2')
+ * @return S3|false
+ */
+function s3_get_client($server)
+{
+    global $config;
+
+    $endpoint = !empty($server['s3_endpoint'])   ? $server['s3_endpoint']   : getenv('R2_ENDPOINT');
+    $bucket   = !empty($server['s3_bucket'])     ? $server['s3_bucket']     : getenv('R2_BUCKET');
+    $access   = !empty($server['s3_access_key']) ? $server['s3_access_key'] : getenv('R2_ACCESS_KEY_ID');
+    $secret   = !empty($server['s3_secret_key']) ? $server['s3_secret_key'] : getenv('R2_SECRET_ACCESS_KEY');
+    $region   = !empty($server['s3_region'])     ? $server['s3_region']     : (getenv('R2_REGION') ?: 'auto');
+
+    if (empty($endpoint) || empty($bucket) || empty($access) || empty($secret)) {
+        return false;
+    }
+
+    if (strpos($endpoint, '://') === false) {
+        $endpoint = 'https://' . trim($endpoint, '.') . '.r2.cloudflarestorage.com';
+    }
+
+    require_once $config['BASE_DIR'] . '/classes/s3.class.php';
+
+    return new S3($endpoint, $bucket, $access, $secret, $region,
+                  isset($server['video_url']) ? $server['video_url'] : '');
+}
+
 function gcs_get_client($server)
 {
     global $config;
+
+    // R2/S3: credenciais próprias (Access Key); a leitura é pública, sem
+    // assinatura — daí não depender de chave de service account.
+    if (isset($server['server_type']) && $server['server_type'] === 'r2') {
+        return s3_get_client($server);
+    }
 
     if (empty($server['gcs_bucket'])) {
         return false;
@@ -212,6 +270,22 @@ function gcs_get_client($server)
 }
 
 /**
+ * Nome do bucket de um servidor de mídia remota, independente do backend
+ * (GCS usa gcs_bucket; R2/S3 usa s3_bucket). Usado nos logs e validações.
+ *
+ * @param array $server Linha da tabela servers
+ * @return string
+ */
+function storage_bucket_name($server)
+{
+    if (isset($server['server_type']) && $server['server_type'] === 'r2') {
+        return isset($server['s3_bucket']) ? (string) $server['s3_bucket'] : '';
+    }
+
+    return isset($server['gcs_bucket']) ? (string) $server['gcs_bucket'] : '';
+}
+
+/**
  * Resolve a linha do servidor GCS vinculada a um vídeo.
  *
  * Fonte única do padrão "query server do vídeo + get_server_by_video_url +
@@ -236,7 +310,7 @@ function gcs_get_server_by_vid($vid)
     }
 
     $server = get_server_by_video_url(trim($rs->fields['server']));
-    if (!$server || !isset($server['server_type']) || $server['server_type'] !== 'gcs') {
+    if (!$server || !server_is_remote_storage($server)) {
         return false;
     }
 
@@ -295,10 +369,40 @@ function gcs_object_read_url($server, $object)
 function gcs_read_token($server)
 {
     $gcs = gcs_get_client($server);
-    if (!$gcs) {
+    if (!$gcs || !method_exists($gcs, 'getReadAccessToken')) {
+        // R2/S3 não tem token de leitura: o objeto é público (ver
+        // storage_get_download_source()).
         return false;
     }
     return $gcs->getReadAccessToken();
+}
+
+/**
+ * Resolve COMO ler um objeto do bucket: [url, headers].
+ *
+ * Fonte única usada pelos downloads server-side. Ordem:
+ *   1. R2/S3 — objeto público, sem assinatura;
+ *   2. GCS com token de leitura (OAuth2 Bearer + alt=media);
+ *   3. GCS público sem token — URL direta.
+ *
+ * @param array  $server Linha da tabela servers
+ * @param string $object Caminho do objeto no bucket
+ * @return array [string $url, array $headers]
+ */
+function storage_get_download_source($server, $object)
+{
+    $publicUrl = rtrim(isset($server['video_url']) ? $server['video_url'] : '', '/') . '/' . ltrim($object, '/');
+
+    if (isset($server['server_type']) && $server['server_type'] === 'r2') {
+        return array($publicUrl, array());
+    }
+
+    $token = gcs_read_token($server);
+    if ($token === false) {
+        return array($publicUrl, array());
+    }
+
+    return array(gcs_object_read_url($server, $object), array('Authorization: Bearer ' . $token));
 }
 
 /**
@@ -310,15 +414,15 @@ function gcs_read_token($server)
  */
 function gcs_fetch_object($server, $object)
 {
-    $token = gcs_read_token($server);
-    if ($token === false) {
+    list($url, $headers) = storage_get_download_source($server, $object);
+    if ($url === '') {
         return array(0, false, false);
     }
 
-    $ch = curl_init(gcs_object_read_url($server, $object));
+    $ch = curl_init($url);
     curl_setopt_array($ch, array(
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => array('Authorization: Bearer ' . $token),
+        CURLOPT_HTTPHEADER     => $headers,
         CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_TIMEOUT        => 60
     ));
@@ -342,8 +446,8 @@ function gcs_fetch_object($server, $object)
  */
 function gcs_download_object_to_file($server, $object, $target)
 {
-    $token = gcs_read_token($server);
-    if ($token === false) {
+    list($url, $headers) = storage_get_download_source($server, $object);
+    if ($url === '') {
         return false;
     }
 
@@ -352,11 +456,11 @@ function gcs_download_object_to_file($server, $object, $target)
         return false;
     }
 
-    $ch = curl_init(gcs_object_read_url($server, $object));
+    $ch = curl_init($url);
     curl_setopt_array($ch, array(
         CURLOPT_RETURNTRANSFER => false,
         CURLOPT_FILE           => $fp,
-        CURLOPT_HTTPHEADER     => array('Authorization: Bearer ' . $token),
+        CURLOPT_HTTPHEADER     => $headers,
         CURLOPT_CONNECTTIMEOUT => 15,
         CURLOPT_TIMEOUT        => 0
     ));
@@ -393,6 +497,15 @@ function gcs_stream_object($server, $object)
 {
     $token = gcs_read_token($server);
     if ($token === false) {
+        // Bucket público (R2 sempre; o GCS deste projeto também): não há o que
+        // assinar — manda o cliente direto para o objeto. Mantém viva qualquer
+        // URL antiga de /gcs_video.php ainda em cache/HTML de bot.
+        $publicUrl = rtrim(isset($server['video_url']) ? $server['video_url'] : '', '/')
+                   . '/' . ltrim($object, '/');
+        if (filter_var($publicUrl, FILTER_VALIDATE_URL)) {
+            header('Location: ' . $publicUrl, true, 302);
+            exit;
+        }
         return false;
     }
 
@@ -504,7 +617,7 @@ function gcs_download_h264_source($vid, $target)
     }
 
     $server = get_server_by_video_url($serverUrl);
-    if (!$server || !isset($server['server_type']) || $server['server_type'] !== 'gcs') {
+    if (!$server || !server_is_remote_storage($server)) {
         return false;
     }
 
@@ -535,16 +648,19 @@ function upload_video_formats_gcs($vid, $formats, $server)
 {
     global $config, $conn;
 
-    $bucket = isset($server['gcs_bucket']) ? $server['gcs_bucket'] : '';
+    $bucket = storage_bucket_name($server);
+    $isR2   = server_is_remote_storage($server) && $server['server_type'] === 'r2';
 
-    if (empty($server['gcs_key_path']) || empty($bucket)) {
-        echo "\n[Multi-Server-GCS] Configuração incompleta: key_path ou bucket não definidos.\n";
+    // R2 se autentica por Access Key (a base pública de leitura é outra); GCS
+    // exige o caminho da chave da Service Account.
+    if ($bucket === '' || (!$isR2 && empty($server['gcs_key_path']))) {
+        echo "\n[Multi-Server] Configuração incompleta: chave/credenciais ou bucket não definidos.\n";
         return false;
     }
 
     $gcs = gcs_get_client($server);
     if (!$gcs) {
-        echo "\n[Multi-Server-GCS] Arquivo de chave não encontrado: " . $server['gcs_key_path'] . "\n";
+        echo "\n[Multi-Server] Cliente de storage não pôde ser criado (credenciais ausentes ou inválidas).\n";
         return false;
     }
 
@@ -577,10 +693,13 @@ function upload_video_formats_gcs($vid, $formats, $server)
             $object = 'h264/' . $vid . '/' . $label;
             echo "\n[Multi-Server-GCS] Enviando: " . $filename . " (" . $fileSizeMB . " MB) para gs://" . $bucket . "/" . $object;
 
-            // Objeto PRIVADO: o player acessa via V4 Signed URLs (expirantes),
-            // nunca por URL pública adivinhável.
+            // GCS: objeto privado (o player assina a URL na hora).
+            // R2: objeto público — a base r2.dev/domínio próprio é o caminho de
+            // leitura, então o cache pode ser longo (mídia imutável por VID).
             $gsUri = $gcs->upload($localFile, $object, 'video/mp4', array(
-                'cacheControl' => 'private, max-age=0, no-store'
+                'cacheControl' => $isR2
+                    ? 'public, max-age=31536000'
+                    : 'private, max-age=0, no-store'
             ));
 
             if ($gsUri !== false) {
@@ -602,7 +721,7 @@ function upload_video_formats_gcs($vid, $formats, $server)
         $videoUrl = rtrim($server['video_url'], '/');
         $conn->execute("UPDATE video SET server = " . $conn->qStr($videoUrl) . " WHERE VID = " . intval($vid) . " LIMIT 1");
         update_server($server);
-        echo "\n[Multi-Server-GCS] Vídeo ID " . $vid . " vinculado ao bucket: gs://" . $bucket . "\n";
+        echo "\n[Multi-Server] Vídeo ID " . $vid . " vinculado ao bucket: " . ($isR2 ? 's3://' : 'gs://') . $bucket . "\n";
 
         // Mídia derivada (thumbs, sprite, miniclips) acompanha o vídeo no bucket.
         upload_video_thumbs_gcs($vid, $server);
@@ -716,7 +835,7 @@ function upload_video_thumbs_gcs($vid, $server, $onlyFile = null, $silent = fals
         $ext       = strtolower(pathinfo($file, PATHINFO_EXTENSION));
         $mime      = isset($mimeMap[$ext]) ? $mimeMap[$ext] : 'application/octet-stream';
 
-        $log("\n[Multi-Server-GCS] Thumb: " . $file . " (" . round(filesize($localPath) / 1024, 1) . " KB) -> gs://" . $server['gcs_bucket'] . "/" . $object);
+        $log("\n[Multi-Server] Thumb: " . $file . " (" . round(filesize($localPath) / 1024, 1) . " KB) -> " . storage_bucket_name($server) . "/" . $object);
 
         $gsUri = $gcs->upload($localPath, $object, $mime, array(
             'acl' => 'publicRead',
@@ -822,7 +941,7 @@ function sync_video_thumbs($vid, $onlyFile = null, $silent = false, $deleteLocal
     }
 
     $server = get_server_by_video_url($rs->fields['server']);
-    if (!$server || !isset($server['server_type']) || $server['server_type'] !== 'gcs') {
+    if (!$server || !server_is_remote_storage($server)) {
         return false;
     }
 
@@ -853,7 +972,7 @@ function video_is_on_gcs($vid)
     $rs  = $conn->execute($sql);
     if ($conn->Affected_Rows() == 1 && !empty($rs->fields['server'])) {
         $server = get_server_by_video_url($rs->fields['server']);
-        $cache[$vid] = ($server && isset($server['server_type']) && $server['server_type'] === 'gcs');
+        $cache[$vid] = ($server && server_is_remote_storage($server));
     }
 
     return $cache[$vid];
@@ -1079,7 +1198,7 @@ function gcs_video_has_formats($vid, $server)
  */
 function delete_video_gcs( $video_id, $server )
 {
-    if (empty($server['gcs_key_path']) || empty($server['gcs_bucket'])) {
+    if (storage_bucket_name($server) === '') {
         return false;
     }
 

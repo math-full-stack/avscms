@@ -49,13 +49,12 @@ function get_gcs_thumbs_base()
 	}
 
 	$base = '';
-	$sql  = "SELECT gcs_bucket, video_url FROM servers WHERE server_type = 'gcs' AND status = '1' ORDER BY server_id ASC LIMIT 1";
+	$sql  = "SELECT video_url FROM servers WHERE server_type IN ('gcs', 'r2') AND status = '1' AND video_url <> '' ORDER BY (server_type = 'r2') DESC, current_used DESC, server_id ASC LIMIT 1";
 	$rs   = $conn->execute($sql);
 	if ($conn->Affected_Rows() == 1) {
-		// Bucket GCS é HNS/UBLA (acesso por IAM, sem público): as thumbs são
-		// servidas via proxy que gera V4 signed URLs. Os callers montam
-		// {base}{VID}/{arquivo}, e o proxy parseia o caminho (v={VID}/{arquivo}).
-		$base = $config['BASE_URL'] . '/gcs_thumbs.php?v=';
+		// Bucket GCS público: thumbs servidas direto do storage.googleapis.com
+		// Sem barra final: os callers montam {base}/{vid}/{arquivo}.jpg.
+		$base = rtrim($rs->fields['video_url'], '/') . '/thumbs';
 	}
 
 	return $base;
@@ -93,15 +92,38 @@ function get_video_thumb_base($vid)
 	if ($conn->Affected_Rows() == 1 && !empty($rs->fields['server'])) {
 		require_once $config['BASE_DIR'] . '/include/function_server.php';
 		$server = get_server_by_video_url($rs->fields['server']);
-		if ($server && isset($server['server_type']) && $server['server_type'] === 'gcs') {
-			// Thumbs no bucket são privadas (HNS/UBLA) e são entregues via proxy
-			// de signed URLs em slash-style. Os callers montam
-			// {base}/{arquivo} — e o proxy parseia v={VID}/{arquivo}.
-			$cache[$vid] = $config['BASE_URL'] . '/gcs_thumbs.php?v=' . $vid;
+		if ($server && server_is_remote_storage($server)) {
+			// Thumbs no bucket público: URL direta do storage.googleapis.com
+			// Sem barra final: os callers montam {base}/{frame}.jpg.
+			$cache[$vid] = rtrim($server['video_url'], '/') . '/thumbs/' . $vid;
 		}
 	}
 
 	return $cache[$vid];
+}
+
+/**
+ * O base de thumbs aponta para o bucket GCS público?
+ *
+ * Fonte única da detecção "thumb remota" usada pelo siteadmin/ajax (a antiga
+ * checagem `strpos($base, 'gcs_thumbs.php')` morreu quando a mídia passou a
+ * ser servida direto do storage.googleapis.com).
+ *
+ * @param string $base Base devolvida por get_video_thumb_base()/get_gcs_thumbs_base()
+ * @return bool
+ */
+function video_thumb_base_is_remote($base)
+{
+	global $config;
+
+	$base = (string)$base;
+	if ($base === '') {
+		return false;
+	}
+
+	// Base local é {BASE_URL}/media/videos/{tmb,tmbN}; qualquer outra origem
+	// (bucket GCS público ou R2) é mídia remota.
+	return strpos($base, $config['BASE_URL'] . '/media/') !== 0;
 }
 
 function get_thumb_url($vid)
@@ -129,8 +151,9 @@ function get_video_thumb_src($vid, $frame)
 	$num  = intval($frame);
 	$tmb_url_def = $config['BASE_URL'].'/media/videos/tmb/default.jpg';
 
-	if (strpos($base, 'gcs_thumbs.php') !== false) {
-		return $config['BASE_URL'].'/gcs_thumbs.php?v='.$vid.'/'.$num.'.jpg';
+	// GCS público: base já inclui streaming URL + thumbs/VID/
+	if (video_thumb_base_is_remote($base)) {
+		return $base . '/' . $num . '.jpg';
 	}
 
 	$path_dir = get_thumb_dir($vid);

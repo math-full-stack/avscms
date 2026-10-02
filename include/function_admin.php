@@ -365,7 +365,7 @@ function insert_video_thumbs( $options )
     // Vídeos no bucket GCS: thumbs são privadas/proxiadas e o local costuma
     // ter sido removido — a grade passa a vir do proxy (fonte remota de verdade).
     $base   = get_video_thumb_base($vid);
-    $remote = (strpos($base, 'gcs_thumbs.php') !== false);
+    $remote = video_thumb_base_is_remote($base);
     for ( $i=1; $i<=20; $i++ ) {
         $tmb            = get_thumb_dir($vid). '/' .$i. '.jpg';
         if ( ($remote || ( file_exists($tmb) && is_file($tmb) )) ) {
@@ -387,7 +387,7 @@ function insert_vvideo_thumbs( $options )
     $vkey   = isset($options['vkey']) ? $options['vkey'] : '';
     $output = array();
     $base   = get_video_thumb_base($vid);
-    $remote = (strpos($base, 'gcs_thumbs.php') !== false);
+    $remote = video_thumb_base_is_remote($base);
     for ( $i=1; $i<=20; $i++ ) {
         $tmb            = get_thumb_dir($vid). '/' .$i. '.jpg';
         if ( ($remote || ( file_exists($tmb) && is_file($tmb) )) ) {
@@ -650,7 +650,7 @@ function delete_video_ftp( $video_id, $srv )
     $server 	= get_vid_server($srv);
 
     // Servidor do tipo Google Cloud Storage (GCS)? Nesse caso apaga os objetos no bucket
-    if ( isset($server['server_type']) && $server['server_type'] === 'gcs' ) {
+    if ( isset($server['server_type']) && in_array($server['server_type'], array('gcs', 'r2'), true) ) {
         require_once $config['BASE_DIR']. '/include/function_server.php';
         delete_video_gcs($video_id, $server);
         return;

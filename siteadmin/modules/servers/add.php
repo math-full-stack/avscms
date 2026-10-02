@@ -14,6 +14,12 @@ $server = array(
     'server_type'  => 'ftp',
     'gcs_bucket'   => '',
     'gcs_key_path' => '',
+    // Cloudflare R2 / S3-compatível
+    's3_endpoint'   => '',
+    's3_bucket'     => '',
+    's3_access_key' => '',
+    's3_secret_key' => '',
+    's3_region'     => 'auto',
     'status'       => '1'
 );
 
@@ -30,7 +36,14 @@ if (isset($_POST['add_server'])) {
     $gcs_key_path = $filter->get('gcs_key_path');
     $status       = $filter->get('status');
 
-    $server['server_type']  = ($server_type === 'gcs') ? 'gcs' : 'ftp';
+    // Cloudflare R2 / S3-compatível
+    $s3_endpoint   = $filter->get('s3_endpoint');
+    $s3_bucket     = $filter->get('s3_bucket');
+    $s3_access_key = $filter->get('s3_access_key');
+    $s3_secret_key = isset($_POST['s3_secret_key']) ? trim($_POST['s3_secret_key']) : '';
+    $s3_region     = $filter->get('s3_region');
+
+    $server['server_type']  = ($server_type === 'gcs' || $server_type === 'r2') ? $server_type : 'ftp';
     $server['url']          = $url;
     $server['video_url']    = $video_url;
     $server['server_ip']    = $server_ip;
@@ -38,9 +51,31 @@ if (isset($_POST['add_server'])) {
     $server['ftp_root']     = $ftp_root;
     $server['gcs_bucket']   = $gcs_bucket;
     $server['gcs_key_path'] = $gcs_key_path;
+    $server['s3_endpoint']   = $s3_endpoint;
+    $server['s3_bucket']     = $s3_bucket;
+    $server['s3_access_key'] = $s3_access_key;
+    $server['s3_secret_key'] = $s3_secret_key;
+    $server['s3_region']     = ($s3_region !== '') ? $s3_region : 'auto';
     $server['status']       = ($status == '1') ? '1' : '0';
 
-    if ($server['server_type'] === 'gcs') {
+    if ($server['server_type'] === 'r2') {
+        // Validação R2/S3: credenciais por Access Key e base pública de leitura.
+        if (empty($s3_endpoint)) {
+            $errors[] = 'Por favor, insira o endpoint do R2 (ou só o account id)!';
+        }
+        if (empty($s3_bucket)) {
+            $errors[] = 'Por favor, insira o nome do Bucket R2!';
+        }
+        if (empty($s3_access_key)) {
+            $errors[] = 'Por favor, insira a Access Key ID do R2!';
+        }
+        if (empty($s3_secret_key)) {
+            $errors[] = 'Por favor, insira a Secret Access Key do R2!';
+        }
+        if (empty($video_url)) {
+            $errors[] = 'Por favor, insira a URL pública do bucket R2 (ex: https://pub-xxxx.r2.dev)!';
+        }
+    } elseif ($server['server_type'] === 'gcs') {
         // Validação GCS
         if (empty($gcs_bucket)) {
             $errors[] = 'Por favor, insira o nome do Bucket GCS!';
@@ -93,7 +128,19 @@ if (isset($_POST['add_server'])) {
     }
 
     if (!$errors) {
-        if ($server['server_type'] === 'gcs') {
+        if ($server['server_type'] === 'r2') {
+            $sql = "INSERT INTO servers SET
+                        url = " . $conn->qStr($url) . ",
+                        video_url = " . $conn->qStr($video_url) . ",
+                        server_type = 'r2',
+                        s3_endpoint = " . $conn->qStr($s3_endpoint) . ",
+                        s3_bucket = " . $conn->qStr($s3_bucket) . ",
+                        s3_access_key = " . $conn->qStr($s3_access_key) . ",
+                        s3_secret_key = " . $conn->qStr($s3_secret_key) . ",
+                        s3_region = " . $conn->qStr($server['s3_region']) . ",
+                        current_used = '0',
+                        status = '" . $server['status'] . "'";
+        } elseif ($server['server_type'] === 'gcs') {
             $sql = "INSERT INTO servers SET
                         url = " . $conn->qStr($url) . ",
                         video_url = " . $conn->qStr($video_url) . ",
@@ -119,7 +166,8 @@ if (isset($_POST['add_server'])) {
         $sid = $conn->insert_Id();
 
         if ($sid > 0) {
-            $typeLabel = ($server['server_type'] === 'gcs') ? 'Google Cloud Storage' : 'FTP';
+            $typeLabel = ($server['server_type'] === 'gcs') ? 'Google Cloud Storage'
+                       : (($server['server_type'] === 'r2') ? 'Cloudflare R2' : 'FTP');
             VRedirect::go('servers.php?m=all&msg=' . urlencode('Servidor (' . $typeLabel . ') adicionado com sucesso! (ID: ' . $sid . ')'));
         } else {
             $errors[] = 'Erro ao salvar o servidor no banco de dados.';

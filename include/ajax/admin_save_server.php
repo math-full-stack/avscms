@@ -25,12 +25,42 @@ $server_type  = isset($data['server_type']) ? trim($data['server_type']) : 'ftp'
 $gcs_key_path = isset($data['gcs_key_path']) ? trim($data['gcs_key_path']) : '';
 $gcs_bucket   = isset($data['gcs_bucket']) ? trim($data['gcs_bucket']) : '';
 
+// Cloudflare R2 / S3-compatível (fonte 'r2')
+$s3_endpoint   = isset($data['s3_endpoint']) ? trim($data['s3_endpoint']) : '';
+$s3_bucket     = isset($data['s3_bucket']) ? trim($data['s3_bucket']) : '';
+$s3_access_key = isset($data['s3_access_key']) ? trim($data['s3_access_key']) : '';
+$s3_secret_key = isset($data['s3_secret_key']) ? trim($data['s3_secret_key']) : '';
+$s3_region     = isset($data['s3_region']) ? trim($data['s3_region']) : 'auto';
+
+// Secret em branco no form = manter o que já está salvo (não apaga credencial
+// por edição parcial da ficha).
+if ($server_type === 'r2' && $s3_secret_key === '') {
+    $rs = $conn->execute("SELECT s3_secret_key FROM servers WHERE server_id = ".$sid." LIMIT 1");
+    if ($rs && $conn->Affected_Rows() == 1) {
+        $s3_secret_key = (string)$rs->fields['s3_secret_key'];
+    }
+}
+
 if ($sid <= 0) {
     echo json_encode($response);
     die();
 }
 
-if ($server_type === 'gcs') {
+if ($server_type === 'r2') {
+    $sql = "UPDATE servers
+            SET url = ".$conn->qStr($url).",
+                video_url = ".$conn->qStr($video_url).",
+                server_type = 'r2',
+                s3_endpoint = ".$conn->qStr($s3_endpoint).",
+                s3_bucket = ".$conn->qStr($s3_bucket).",
+                s3_access_key = ".$conn->qStr($s3_access_key).",
+                s3_secret_key = ".$conn->qStr($s3_secret_key).",
+                s3_region = ".$conn->qStr($s3_region !== '' ? $s3_region : 'auto').",
+                current_used = '".$current_used."',
+                status = '".$status."'
+            WHERE server_id = ".$sid."
+            LIMIT 1";
+} elseif ($server_type === 'gcs') {
     $sql = "UPDATE servers
             SET url = ".$conn->qStr($url).",
                 video_url = ".$conn->qStr($video_url).",
