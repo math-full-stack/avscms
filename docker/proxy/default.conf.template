@@ -1,0 +1,25 @@
+# Front do Cloud Run na região que ACEITA domain-mappings (us-east1).
+# Encaminha para o app real em southamerica-east1. Mídia (playback/thumb/
+# download) NÃO passa por aqui — vai direto do bucket GCS para o navegador;
+# só HTML/CSS/JS e uploads atravessam este proxy.
+server {
+    listen ${PORT};
+    server_name _;
+
+    client_max_body_size 64m;
+    proxy_http_version 1.1;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_read_timeout 600s;
+    proxy_send_timeout 600s;
+
+    location / {
+        proxy_pass https://${BACKEND};
+        proxy_ssl_server_name on;
+        proxy_set_header Host ${BACKEND};
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Cookie $http_cookie;
+    }
+}

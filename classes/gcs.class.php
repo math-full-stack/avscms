@@ -108,6 +108,15 @@ class GCS
             return $this->accessToken;
         }
 
+        // Cloud Run: não há chave em disco — usa a Service Account da instância
+        // (metadata server). O gate em K_SERVICE evita atrasar hosts locais.
+        if (getenv('K_SERVICE')) {
+            $token = $this->metadataToken();
+            if ($token) {
+                return $token;
+            }
+        }
+
         $key = $this->loadKey();
         if (!$key) {
             return false;
@@ -195,6 +204,41 @@ class GCS
     }
 
     /**
+     * Token da metadata server (Service Account da instância).
+     * Usado só quando não há chave JSON — hoje: Cloud Run.
+     *
+     * @return string|false
+     */
+    private function metadataToken()
+    {
+        $ch = curl_init('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token');
+        curl_setopt_array($ch, array(
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 1,
+            CURLOPT_TIMEOUT        => 3,
+            CURLOPT_HTTPHEADER     => array('Metadata-Flavor: Google')
+        ));
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || !$response) {
+            return false;
+        }
+
+        $result = json_decode($response, true);
+        if (empty($result['access_token'])) {
+            return false;
+        }
+
+        $this->accessToken = $result['access_token'];
+        $this->tokenExpiry = time() + (isset($result['expires_in']) ? intval($result['expires_in']) : 3600);
+
+        return $this->accessToken;
+    }
+
+    /**
      * Obtém um access token OAuth2 com escopo de leitura/escrita (Bearer).
      *
      * Neste ambiente o V4 signed-URL não funciona com esta Service Account
@@ -272,6 +316,11 @@ class GCS
 
         $url = 'https://storage.googleapis.com/upload/storage/v1/b/'
              . urlencode($this->bucket) . '/o?uploadType=multipart&name=' . urlencode($objectName);
+        // ACL por objeto: sem isto tudo nasce project-private e o player
+        // (URL direta do bucket) recebe 403 para usuário anônimo.
+        if ($acl !== null && $acl !== '') {
+            $url .= '&predefinedAcl=' . urlencode($acl);
+        }
 
         $headers = array(
             'Authorization: Bearer ' . $token,
@@ -316,6 +365,9 @@ class GCS
         // Step 1: Initiate resumable session
         $url = 'https://storage.googleapis.com/upload/storage/v1/b/'
              . urlencode($this->bucket) . '/o?uploadType=resumable&name=' . urlencode($objectName);
+        if ($acl !== null && $acl !== '') {
+            $url .= '&predefinedAcl=' . urlencode($acl);
+        }
 
         $meta = array(
             'cacheControl' => $cacheCtrl

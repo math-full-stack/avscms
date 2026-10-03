@@ -58,7 +58,34 @@ if ($processor === 'ffmpeg') {
 
 $processed = 0;
 
+// Fila de conversão (caminho principal): o upload enfileira em
+// conversion_queue_fp/sp e só ESTA máquina drena (worker_role=converter).
+// queue_resolve_source() baixa a fonte do bucket quando ela não está em disco.
+$drainQueue = function_exists('pump_conversion_queue');
+if (!$drainQueue) {
+    echo "[Local Worker] function_queue.php não carregada — fila não será drenada.\n";
+}
+
 do {
+    // --- 1) Drena a fila de conversão (banco compartilhado com o upload) ---
+    if ($drainQueue) {
+        $started = pump_conversion_queue();
+        $active  = active_conversions('conversion_queue_fp')
+                 + active_conversions('conversion_queue_sp');
+        if ($started || $active > 0) {
+            echo "  [Fila] disparadas=$started em_andamento=$active\n";
+            // Espera os processos em background terminarem. Teto de 30 min
+            // evita prender o daemon numa conversão pendurada: na próxima
+            // rodada pump_conversion_queue() roda remove_overdue() e reprocessa.
+            $wait = 0;
+            while (active_conversions('conversion_queue_fp')
+                 + active_conversions('conversion_queue_sp') > 0 && $wait < 360) {
+                sleep(5);
+                $wait++;
+            }
+        }
+    }
+
     // Find one video: active=3, has vdoname, NOT in any conversion queue.
     $sql = "SELECT v.VID, v.vdoname, v.title, v.UID, v.cut, v.cut_out
             FROM video v

@@ -244,12 +244,14 @@ function gcs_get_client($server)
     $keyPath = isset($server['gcs_key_path']) ? $server['gcs_key_path'] : '';
 
     // Chave segura via env tem prioridade (GCS class lê GCS_KEY_JSON / GCS_KEY_PATH).
-    // Só exige o arquivo legado quando não há env configurado.
+    // Só exige o arquivo legado quando não há env configurado nem metadata server
+    // (Cloud Run: token vem da Service Account da instância, sem chave em disco).
     $envJson = getenv('GCS_KEY_JSON');
     $envPath = getenv('GCS_KEY_PATH');
     $hasEnv  = ($envJson !== false && $envJson !== '') || ($envPath !== false && $envPath !== '');
+    $hasMetadata = (getenv('K_SERVICE') !== false && getenv('K_SERVICE') !== '');
 
-    if (!$hasEnv) {
+    if (!$hasEnv && !$hasMetadata) {
         if (empty($keyPath)) {
             return false;
         }
@@ -480,6 +482,66 @@ function gcs_download_object_to_file($server, $object, $target)
 }
 
 /**
+ * Publica a fonte original de um upload no bucket remoto (src/{VID}/{arquivo}).
+ *
+ * Chamado no host de upload (Cloud Run) depois que a fila registra o vídeo:
+ * o arquivo sai do disco do runtime e só o bucket guarda a cópia, que o
+ * worker local baixa antes de converter. Sem 'acl' — a fonte nasce privada
+ * (é material de trabalho, não mídia de playback).
+ *
+ * @param int    $vid       VID do vídeo
+ * @param string $filename  nome do arquivo (será normalizado com basename)
+ * @param string $localPath caminho local temporário do upload
+ * @return string|false object path no bucket em sucesso; false em falha
+ */
+function storage_publish_source($vid, $filename, $localPath)
+{
+    $server = get_server();
+    if (!$server || !server_is_remote_storage($server)) {
+        return false;
+    }
+    if (!file_exists($localPath) || filesize($localPath) <= 0) {
+        return false;
+    }
+
+    $client = gcs_get_client($server);
+    if (!$client) {
+        return false;
+    }
+
+    $object = 'src/' . intval($vid) . '/' . basename($filename);
+    $ext    = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    $mimes  = array(
+        'mp4' => 'video/mp4', 'm4v' => 'video/mp4', 'webm' => 'video/webm',
+        'mkv' => 'video/x-matroska', 'avi' => 'video/x-msvideo',
+        'mov' => 'video/quicktime', 'flv' => 'video/x-flv', 'wmv' => 'video/x-ms-wmv'
+    );
+    $mime = isset($mimes[$ext]) ? $mimes[$ext] : 'application/octet-stream';
+
+    $uri = $client->upload($localPath, $object, $mime);
+    return ($uri === false) ? false : $object;
+}
+
+/**
+ * Baixa a fonte original do bucket para o worker local (streaming).
+ * Falha ⇒ o chamador mantém a linha na fila e tenta na próxima rodada.
+ *
+ * @param int    $vid      VID do vídeo
+ * @param string $filename nome do arquivo dentro de src/{VID}/
+ * @param string $target   caminho local de destino
+ * @return bool true quando o arquivo está completo e não-vazio
+ */
+function storage_fetch_source($vid, $filename, $target)
+{
+    $server = get_server();
+    if (!$server || !server_is_remote_storage($server)) {
+        return false;
+    }
+
+    return gcs_download_object_to_file($server, 'src/' . intval($vid) . '/' . basename($filename), $target);
+}
+
+/**
  * Entrega um objeto GCS via streaming server-side (Bearer + alt=media),
  * espelhando status e headers (Content-Type/Content-Length/Content-Range/
  * Accept-Ranges) e respeitando Range do request (vídeo / progressive).
@@ -693,10 +755,12 @@ function upload_video_formats_gcs($vid, $formats, $server)
             $object = 'h264/' . $vid . '/' . $label;
             echo "\n[Multi-Server-GCS] Enviando: " . $filename . " (" . $fileSizeMB . " MB) para gs://" . $bucket . "/" . $object;
 
-            // GCS: objeto privado (o player assina a URL na hora).
+            // GCS: objeto público — o player abre URL direta do bucket
+            // (gcs_streaming_url), então sem publicRead a reprodução dá 403.
             // R2: objeto público — a base r2.dev/domínio próprio é o caminho de
             // leitura, então o cache pode ser longo (mídia imutável por VID).
             $gsUri = $gcs->upload($localFile, $object, 'video/mp4', array(
+                'acl' => 'publicRead',
                 'cacheControl' => $isR2
                     ? 'public, max-age=31536000'
                     : 'private, max-age=0, no-store'

@@ -124,8 +124,23 @@ if ( isset($_POST['video_upload_started']) ) {
 
 
             $conn->execute($sql);
-            
-			
+
+			// Publica a fonte no bucket e tira o arquivo do disco do runtime:
+			// a cópia que o worker local baixa antes de converter é
+			// src/{VID}/{vdoname}. Tem de vir DEPOIS de get_video_duration(),
+			// que lê o arquivo local. Nunca apaga na máquina converter (lá o
+			// original é o que a conversão consome).
+			$published = storage_publish_source($video_id, $vdoname, $vdo_path);
+			if ($published) {
+				log_conversion($config['LOG_DIR']. '/' .$video_id. '.log', "FONTE NO BUCKET: ".$published);
+				$worker = isset($config['worker_role']) ? $config['worker_role'] : 'web';
+				if ($worker !== 'converter') {
+					@unlink($vdo_path);
+				}
+			} else {
+				log_conversion($config['LOG_DIR']. '/' .$video_id. '.log', "ERRO: falha ao publicar fonte no bucket (VID=".$video_id.", ".$vdo_path.")");
+			}
+
             $video_url  = $config['BASE_URL']. '/video/' .$video_id. '/' .prepare_string($title);
 			$video_link = '<a href="'.$video_url.'">'.$video_url.'</a>';
             

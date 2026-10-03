@@ -45,6 +45,48 @@ function queue_should_process() {
 	}
 }
 
+function queue_resolve_source($vid, $video_name, $video_path) {
+
+	global $config;
+
+	// 1) Mesma máquina que fez o upload: o arquivo ainda está no disco.
+	if (!empty($video_path) && file_exists($video_path)) {
+		return $video_path;
+	}
+
+	// 2) Host remoto (worker local): a fonte publicada fica no bucket
+	//    (src/{VID}/{video_name}) — baixa para o VDO_DIR, que é de onde
+	//    function_conversion_{fp,sp}.php lê o original.
+	if (!isset($config['VDO_DIR'])) {
+		$config['VDO_DIR'] = $config['BASE_DIR'] . '/media/videos/vid';
+	}
+	$target = rtrim($config['VDO_DIR'], '/') . '/' . basename($video_name);
+	if (file_exists($target) && filesize($target) > 0) {
+		return $target;
+	}
+
+	if (!function_exists('storage_fetch_source')) {
+		require_once $config['BASE_DIR'] . '/include/function_server.php';
+	}
+
+	$tmp = $target . '.part';
+	@unlink($tmp);
+	if (!storage_fetch_source($vid, $video_name, $tmp)) {
+		// Falha de rede/bucket: mantém a linha na fila e tenta na próxima
+		// rodada — apagar aqui mataria o vídeo (active=3 sem fila nunca mais).
+		log_in_back($config['LOG_DIR'] . '/' . intval($vid) . '.log',
+			"AGUARDANDO: fonte no bucket indisponível (VID=" . intval($vid) . ", src/" . intval($vid) . "/" . basename($video_name) . ")");
+		@unlink($tmp);
+		return false;
+	}
+	if (!@rename($tmp, $target)) {
+		@unlink($tmp);
+		return false;
+	}
+
+	return $target;
+}
+
 function check_q() {
 
 	global $config, $conn;
@@ -76,7 +118,9 @@ function check_q() {
 					continue;
 				}
 				$script 	= $config['BASE_DIR']."/scripts/convert_videos_fp.php";
-				if(file_exists($video_path)) {
+				$resolved	= queue_resolve_source($video_id, $video_name, $video_path);
+				if($resolved !== false) {
+					$video_path = $resolved;
 					$cmd = $config['phppath']." ".$script." ".$video_name." ".$video_id." ".$video_path."";
 					$sql = "UPDATE conversion_queue_fp SET status='1', start = '".time()."' WHERE VID = '".$video_id."' LIMIT 1";
 					$conn->execute($sql);
@@ -90,10 +134,6 @@ function check_q() {
 						$conn->execute("UPDATE conversion_queue_fp SET status='0', start = '0' WHERE VID = '".$video_id."' LIMIT 1");
 					}
 					return true;
-				} else {
-					log_in_back($config['LOG_DIR']. '/' .$video_id. '.log', "ERRO: Arquivo fonte não existe: $video_path (VID=$video_id)");
-					$sql = "DELETE FROM conversion_queue_fp WHERE VID = '".$video_id."' LIMIT 1";
-					$conn->execute($sql);
 				}
 			}
 			unset($videos);
@@ -119,7 +159,9 @@ function check_q() {
 				return false;
 			}
 			$script 	= $config['BASE_DIR']."/scripts/convert_videos_sp.php";
-			if(file_exists($video_path)) {					
+			$resolved	= queue_resolve_source($video_id, $video_name, $video_path);
+			if($resolved !== false) {
+				$video_path = $resolved;
 				$cmd = $config['phppath']." ".$script." ".$video_name." ".$video_id." ".$video_path." ".$skip."";
 				$sql = "UPDATE conversion_queue_sp SET status='1', start = '".time()."' WHERE VID = '".$video_id."' LIMIT 1";
 				$conn->execute($sql);
@@ -133,10 +175,6 @@ function check_q() {
 					$conn->execute("UPDATE conversion_queue_sp SET status='0', start = '0' WHERE VID = '".$video_id."' LIMIT 1");
 				}
 				return true;
-			} else {
-				log_in_back($config['LOG_DIR']. '/' .$video_id. '.log', "ERRO: Arquivo fonte não existe: $video_path (VID=$video_id, 2nd pass)");
-				$sql = "DELETE FROM conversion_queue_sp WHERE VID = '".$video_id."' LIMIT 1";
-				$conn->execute($sql);			
 			}
 		}
 	}
@@ -164,13 +202,19 @@ function pump_conversion_queue() {
 
     $limit = max(1, intval(isset($config['q_limit']) ? $config['q_limit'] : 1));
     $started = 0;
+    $tried   = array();
 
     // 1. Pump first pass queue (conversion_queue_fp)
     while ($started < $limit) {
         if (active_conversions('conversion_queue_fp') >= $limit) {
             break;
         }
-        $rs = $conn->execute("SELECT * FROM conversion_queue_fp WHERE status = '0' ORDER BY addtime ASC LIMIT 1");
+        $sql = "SELECT * FROM conversion_queue_fp WHERE status = '0'";
+        if ($tried) {
+            $sql .= " AND VID NOT IN (" . implode(',', $tried) . ")";
+        }
+        $sql .= " ORDER BY addtime ASC LIMIT 1";
+        $rs = $conn->execute($sql);
         if ($conn->Affected_Rows() < 1) {
             break;
         }
@@ -185,11 +229,14 @@ function pump_conversion_queue() {
             $conn->execute("DELETE FROM conversion_queue_fp WHERE VID = '" . $video_id . "' LIMIT 1");
             continue;
         }
-        if (!file_exists($video_path)) {
-            log_in_back($config['LOG_DIR'] . '/' . $video_id . '.log', "ERRO: Arquivo fonte não existe: $video_path (VID=$video_id, pump fp)");
-            $conn->execute("DELETE FROM conversion_queue_fp WHERE VID = '" . $video_id . "' LIMIT 1");
+        $resolved = queue_resolve_source($video_id, $video_name, $video_path);
+        if ($resolved === false) {
+            // Fonte ainda não alcançou o bucket: pula esta linha para as
+            // próximas — sem isto o SELECT voltaria sempre a ela (livelock).
+            $tried[] = $video_id;
             continue;
         }
+        $video_path = $resolved;
 
         $script = $config['BASE_DIR'] . "/scripts/convert_videos_fp.php";
         $cmd = $config['phppath'] . " " . $script . " " . $video_name . " " . $video_id . " " . $video_path;
@@ -209,7 +256,12 @@ function pump_conversion_queue() {
 
     // 2. Pump second pass queue (conversion_queue_sp)
     while (active_conversions('conversion_queue_sp') < $limit) {
-        $rs = $conn->execute("SELECT * FROM conversion_queue_sp WHERE status = '0' ORDER BY addtime ASC LIMIT 1");
+        $sql = "SELECT * FROM conversion_queue_sp WHERE status = '0'";
+        if ($tried) {
+            $sql .= " AND VID NOT IN (" . implode(',', $tried) . ")";
+        }
+        $sql .= " ORDER BY addtime ASC LIMIT 1";
+        $rs = $conn->execute($sql);
         if ($conn->Affected_Rows() < 1) {
             break;
         }
@@ -224,11 +276,12 @@ function pump_conversion_queue() {
             $conn->execute("DELETE FROM conversion_queue_sp WHERE VID = '" . $video_id . "' LIMIT 1");
             continue;
         }
-        if (!file_exists($video_path)) {
-            log_in_back($config['LOG_DIR'] . '/' . $video_id . '.log', "ERRO: Arquivo fonte não existe: $video_path (VID=$video_id, pump sp)");
-            $conn->execute("DELETE FROM conversion_queue_sp WHERE VID = '" . $video_id . "' LIMIT 1");
+        $resolved = queue_resolve_source($video_id, $video_name, $video_path);
+        if ($resolved === false) {
+            $tried[] = $video_id;
             continue;
         }
+        $video_path = $resolved;
 
         $script = $config['BASE_DIR'] . "/scripts/convert_videos_sp.php";
         $cmd = $config['phppath'] . " " . $script . " " . $video_name . " " . $video_id . " " . $video_path . " " . $skip;

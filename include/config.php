@@ -41,7 +41,10 @@ if (file_exists(__DIR__ . '/config.local.php')) {
     $config['template']       = 'pornozinho';
     $config['template_admin'] = 'default';
     $config['worker_role']    = 'web';
-    $config['conversion_q']   = '0';
+    // CONVERSION_Q=1 ⇒ a fila recebe as linhas (check/pump continuam
+    // bloqueados pelo gate worker_role != 'converter'); só a máquina local
+    // processa. Fail-closed: sem a env, continua '0'.
+    $config['conversion_q']   = getenv('CONVERSION_Q') ?: '0';
     $config['q_limit']        = '4';
     $config['q_timeout']      = '6';
     $config['gcs_enabled']    = '1';
