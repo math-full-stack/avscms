@@ -11,7 +11,7 @@
 #
 set -euo pipefail
 
-PROJECT="${GCLOUD_PROJECT:-novinhasbr}"
+PROJECT="${GCLOUD_PROJECT:-pornozinho-510422}"
 VM="${GCLOUD_VM:-pornozinho-vm}"
 ZONE="${GCLOUD_ZONE:-southamerica-east1-c}"
 NEG="${GCLOUD_NEG:-pornozinho-vm-neg}"

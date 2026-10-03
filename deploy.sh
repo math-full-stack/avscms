@@ -10,17 +10,17 @@
 # This script is for manual deploys from a local machine.
 #
 # Environment overrides:
-#   GCLOUD_PROJECT    (novinhasbr)
+#   GCLOUD_PROJECT    (pornozinho-510422)
 #   GCLOUD_REGION     (southamerica-east1)
 #   GCLOUD_SERVICE    (pornozinho)
-#   GCLOUD_SQL_INST   (novinhasbr:southamerica-east1:pornozinho-sql)
+#   GCLOUD_SQL_INST   (pornozinho-510422:southamerica-east1:pornozinho-sql)
 #
 set -euo pipefail
 
 PROJECT="${GCLOUD_PROJECT:-pornozinho-510422}"
 REGION="${GCLOUD_REGION:-southamerica-east1}"
 SERVICE="${GCLOUD_SERVICE:-pornozinho}"
-SQL_INST="${GCLOUD_SQL_INST:-novinhasbr:southamerica-east1:pornozinho-sql}"
+SQL_INST="${GCLOUD_SQL_INST:-pornozinho-510422:southamerica-east1:pornozinho-sql}"
 
 # Credenciais vêm do .env local (gitignored) ou de env vars — nunca hardcode.
 get_env() { grep -E "^$1=" .env 2>/dev/null | head -1 | cut -d= -f2-; }

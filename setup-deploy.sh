@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-PROJECT="novinhasbr"
+PROJECT="pornozinho-510422"
 VM_NAME="pornozinho-vm"
 ZONE="southamerica-east1-c"
 VM_USER="matheussturiao_gmail_com"  # OS Login username
