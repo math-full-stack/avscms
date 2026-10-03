@@ -99,7 +99,7 @@ var vitem = "{$vitem}";
 		{elseif $player.engine == 'vidstack'}
 			{include file='video_vsplayer.tpl'}
 		{else}
-		<video id="video" class="video-js vjs-16-9 vjs-big-play-centered vjs-sublime-skin" preload="auto" controls="true" playsinline webkit-playsinline poster="{insert name=thumb_path vid=$video.VID}/default.jpg" data-setup='{
+		<video id="video" class="video-js vjs-16-9 vjs-big-play-centered vjs-sublime-skin" preload="auto" controls="true" playsinline webkit-playsinline poster="{insert name=thumb_path vid=$video.VID}/{$video.thumb}.jpg" data-setup='{
 		  "autoplay": {if $player.autoplay}true{else}false{/if}{if $vast_vpaid && $player.vast_vpaid_adv},
 		  "plugins": {
 		  "vastClient": {

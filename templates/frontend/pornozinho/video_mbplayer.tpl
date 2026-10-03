@@ -1,7 +1,7 @@
-<div class="avs-player" id="avs-player" data-autoplay="{if $smarty.get.autoplay == '1'}1{elseif $player.autoplay}1{else}0{/if}" data-poster="{insert name=thumb_path vid=$video.VID}/default.jpg" data-source-w="{$video.width_sd}" data-source-h="{$video.height_sd}" data-vast-enabled="{if $vast_vpaid && $player.vast_vpaid_adv}1{else}0{/if}" data-vast-url="{if $vast_vpaid}{$vast_vpaid.adtagurl}{/if}" data-vast-cancel="{if $vast_vpaid}{$vast_vpaid.adscanceltimeout}{/if}">
+<div class="avs-player" id="avs-player" data-autoplay="{if $smarty.get.autoplay == '1'}1{elseif $player.autoplay}1{else}0{/if}" data-poster="{insert name=thumb_path vid=$video.VID}/{$video.thumb}.jpg" data-source-w="{$video.width_sd}" data-source-h="{$video.height_sd}" data-vast-enabled="{if $vast_vpaid && $player.vast_vpaid_adv}1{else}0{/if}" data-vast-url="{if $vast_vpaid}{$vast_vpaid.adtagurl}{/if}" data-vast-cancel="{if $vast_vpaid}{$vast_vpaid.adscanceltimeout}{/if}">
 	<canvas></canvas>
 	{if $smarty.get.autoplay == '1' || $player.autoplay}
-	<img class="avs-poster" src="{insert name=thumb_path vid=$video.VID}/default.jpg" alt="">
+	<img class="avs-poster" src="{insert name=thumb_path vid=$video.VID}/{$video.thumb}.jpg" alt="">
 	{else}
 	<div class="avs-poster avs-cover">{insert name=video_trio vid=$video.VID thumb=$video.thumb thumbs=$video.thumbs opt=$video.thumbnails_opt title=$video.title type=$video.type}</div>
 	<video class="avs-preview-video" muted loop autoplay playsinline preload="auto">

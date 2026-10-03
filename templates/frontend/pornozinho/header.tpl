@@ -14,7 +14,7 @@
 		<meta property="og:title" content="{$video.title|escape:'html'}">
 		<meta property="og:url" content="{$baseurl}/video/{$video.VID}/{$video.title|clean}">
 		<meta property="og:type" content="video">
-		<meta property="og:image" content="{insert name=thumb_path vid=$video.VID}/{if $video.embed_code != ''}1{else}default{/if}.jpg">
+		<meta property="og:image" content="{insert name=thumb_path vid=$video.VID}/{if $video.embed_code != ''}1{else}{$video.thumb}{/if}.jpg">
 		<meta property="og:description" content="{if $video.description}{$video.description|escape:'html'}{else}{$video.title|escape:'html'}{/if}">
 		<meta property="video:duration" content="{$video.duration}">
 		<meta property="video:release_date" content="{$video.addtime|date_format:'%Y-%m-%d'}">
@@ -74,7 +74,7 @@
 		<meta name="twitter:site" content="@adultocloud">
 		<meta name="twitter:title" content="{$video.title|escape:'html'}">
 		<meta name="twitter:description" content="{if $video.description}{$video.description|escape:'html'|truncate:200}{else}{$video.title|escape:'html'}{/if}">
-		<meta name="twitter:image" content="{insert name=thumb_path vid=$video.VID}/{if $video.embed_code != ''}1{else}default{/if}.jpg">
+		<meta name="twitter:image" content="{insert name=thumb_path vid=$video.VID}/{if $video.embed_code != ''}1{else}{$video.thumb}{/if}.jpg">
 		<meta name="twitter:player" content="{$baseurl}/embed/{$video.VID}/{$video.title|clean}">
 		<meta name="twitter:player:width" content="640">
 		<meta name="twitter:player:height" content="360">
@@ -97,7 +97,7 @@
       "@type": "VideoObject",
       "name": "{$video.title|escape:'html'|escape:'json'}",
       "description": "{if $video.description}{$video.description|escape:'html'|escape:'json'|truncate:300}{else}{$video.title|escape:'html'|escape:'json'}{/if}",
-      "thumbnailUrl": "{insert name=thumb_path vid=$video.VID}/{if $video.embed_code != ''}1{else}default{/if}.jpg",
+      "thumbnailUrl": "{insert name=thumb_path vid=$video.VID}/{if $video.embed_code != ''}1{else}{$video.thumb}{/if}.jpg",
       "uploadDate": "{$video.addtime|date_format:'%Y-%m-%d'}",
       "duration": "PT{$video.duration|seconds_to_iso8601}",
       "embedUrl": "{if !$video.embed_code}{$baseurl}/embed/{$video.VID}/{$video.title|clean}{/if}",
@@ -170,7 +170,7 @@
     <title>{if isset($self_title) && $self_title != ''}{$self_title|escape:'html'}{else}{$site_name}{/if}</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="{if (isset($index) && $index) || (isset($video_listing) && $video_listing) || (isset($video_page) && $video_page) || (isset($shorts_page) && $shorts_page)}width=device-width, initial-scale=1{else}width=1280, initial-scale=1, maximum-scale=1, user-scalable=no{/if}">	
+    <meta name="viewport" content="width=device-width, initial-scale=1">	
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="robots" content="index, follow" />
     <meta name="revisit-after" content="1 days" />
@@ -449,7 +449,7 @@
 
 <div class="xb-header">
 <div class="xb-topbar">
-	<div class="container xb-topbar-inner">
+	<div class="container-nav xb-topbar-inner">
 		<a class="xb-logo" href="{$relative}/" style="--xb-logo-img:url('{$relative}/images/logo/logo.png')"><img src="{$relative}/images/logo/logo.png" alt="{$site_name}"></a>
 
 		<div class="xb-search">
@@ -510,7 +510,7 @@
 </div>
 
 <nav class="xb-nav collapse d-lg-block" id="xbNav">
-	<div class="container">
+	<div class="container-nav">
 		<form class="xb-mobilesearch" name="search" id="search_form_xs" method="post" action="{$relative}/search/{if !isset($search_type)}videos{else}{$search_type}{/if}">
 			<div class="xb-search-wrapper">
 				<div class="xb-search-type">

@@ -6,7 +6,7 @@
 {literal}
 window.__vidstack = {
 {/literal}
-	poster: "{insert name=thumb_path vid=$video.VID}/default.jpg",
+	poster: "{insert name=thumb_path vid=$video.VID}/{$video.thumb}.jpg",
 	title: "{$video.title|escape:'javascript'|escape:'html'}",
 	autoplay: {if $smarty.get.autoplay == '1' || $player.autoplay}true{else}false{/if},
 	start_muted: {if $player.start_muted == '1'}true{else}false{/if},

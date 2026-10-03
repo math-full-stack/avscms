@@ -1,7 +1,7 @@
 {* Card de vídeo dos grids (home, lista de vídeos). Recebe `v` = item do vídeo.
    `card_cols` (classes Bootstrap da coluna, default 4-col) e `show_tags` (default 1).
    Único place de markup do grid — qualquer ajuste vale para todos os grids de uma vez. *}
-<div class="{if $card_cols}{$card_cols}{else}col-6 col-sm-6 col-md-4 col-lg-3{/if}">
+<div class="{if $card_cols}{$card_cols}{else}col-6 col-sm-6 col-md-4 col-lg-3 col-xxl-2 col-xxxl-2{/if}">
 	<a href="{$relative}/video/{$v.VID}/{$v.title|clean}">
 <div class="thumb-overlay{if isset($v.orientation) && $v.orientation == 'portrait'} xb-portrait{/if}" {if $v.vthumbs == '1'} id="playvthumb_{$v.VID}"{/if}>
 			{if isset($v.orientation) && $v.orientation == 'portrait'}{insert name=video_trio vid=$v.VID thumb=$v.thumb thumbs=$v.thumbs opt=$v.thumbnails_opt title=$v.title type=$v.type}{else}<img src="{insert name=thumb_path vid=$v.VID}/{$v.thumb}.jpg" title="{$v.title|escape:'html'}" alt="{$v.title|escape:'html'}" {if $v.vthumbs == '0'}id="rotate_{$v.VID}_{$v.thumbs}_{$v.thumb}_viewed"{/if} class="img-responsive {if $v.type == 'private'}img-private{/if}"/>{/if}

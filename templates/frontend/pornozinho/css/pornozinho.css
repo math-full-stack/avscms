@@ -53,14 +53,51 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   Container fluido — aproveita todo o espaço horizontal da tela
+   Container fluido — 100% largura, sem max-width
    -------------------------------------------------------------------------- */
 .container {
 	width: 100%;
-	max-width: 1280px;
+	max-width: none;
 	margin-inline: auto;
 	padding-left: 24px;
 	padding-right: 24px;
+}
+
+/* --------------------------------------------------------------------------
+   Container para header/nav — max-width confortável para navegação
+   -------------------------------------------------------------------------- */
+.container-nav {
+	width: 100%;
+	max-width: 1920px;
+	margin-inline: auto;
+	padding-left: 24px;
+	padding-right: 24px;
+}
+
+/* --------------------------------------------------------------------------
+   Breakpoints customizados além do xl (1200px) do Bootstrap 4
+   Progressão: 1400px→5 cols, 1600px→6 cols, 1920px→7 cols, 2560px→8 cols
+   -------------------------------------------------------------------------- */
+@media (min-width: 1400px) {
+	.col-xxl-2 { flex: 0 0 20%; max-width: 20%; }
+	.col-xxl-3 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+	.col-xxl-4 { flex: 0 0 25%; max-width: 25%; }
+}
+
+@media (min-width: 1600px) {
+	.col-xxxl-2 { flex: 0 0 16.666667%; max-width: 16.666667%; }
+	.col-xxxl-3 { flex: 0 0 25%; max-width: 25%; }
+	.col-xxxl-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+}
+
+@media (min-width: 1920px) {
+	.col-xxxxl-2 { flex: 0 0 14.285714%; max-width: 14.285714%; }
+	.col-xxxxl-3 { flex: 0 0 21.428571%; max-width: 21.428571%; }
+	.col-xxxxl-4 { flex: 0 0 28.571429%; max-width: 28.571429%; }
+}
+
+@media (min-width: 2560px) {
+	.col-xxxxxl-2 { flex: 0 0 12.5%; max-width: 12.5%; }
 }
 
 ::selection {
@@ -592,8 +629,10 @@ a:active {
 .xb-dropdown-menu {
 	position: absolute;
 	top: 100%;
-	left: 0;
-	right: 0;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 100%;
+	max-width: 1400px;
 	z-index: 1050;
 	display: none;
 	background-color: var(--xb-card);
@@ -607,12 +646,12 @@ a:active {
 @keyframes xb-dropdown-in {
 	from {
 		opacity: 0;
-		transform: translateY(-8px);
+		transform: translateX(-50%) translateY(-8px);
 	}
 
 	to {
 		opacity: 1;
-		transform: translateY(0);
+		transform: translateX(-50%) translateY(0);
 	}
 }
 
@@ -1959,7 +1998,7 @@ a:hover .xb-thumb-meta {
    -------------------------------------------------------------------------- */
 .xb-cats {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 	gap: 16px;
 }
 
@@ -3099,7 +3138,7 @@ a:hover .xb-thumb-meta {
 
 	/* Categorias: compactas no mobile */
 	.xb-cats {
-		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 		gap: 12px;
 	}
 
