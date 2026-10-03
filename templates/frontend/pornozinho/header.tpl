@@ -450,7 +450,7 @@
 
 <div class="xb-header">
 <div class="xb-topbar">
-	<div class="container-nav xb-topbar-inner">
+	<div class="container xb-topbar-inner">
 		<a class="xb-logo" href="{$relative}/" style="--xb-logo-img:url('{$relative}/images/logo/logo.png')"><img src="{$relative}/images/logo/logo.png" alt="{$site_name}"></a>
 
 		<div class="xb-search">
@@ -511,7 +511,7 @@
 </div>
 
 <nav class="xb-nav collapse d-lg-block" id="xbNav">
-	<div class="container-nav">
+	<div class="container">
 		<form class="xb-mobilesearch" name="search" id="search_form_xs" method="post" action="{$relative}/search/{if !isset($search_type)}videos{else}{$search_type}{/if}">
 			<div class="xb-search-wrapper">
 				<div class="xb-search-type">

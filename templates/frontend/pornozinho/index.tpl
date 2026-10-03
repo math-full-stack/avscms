@@ -55,7 +55,7 @@
 	</script>
 	{/if}
 
-	{if $tags_sm}
+{if $tags_sm}
 	<div class="xb-section">
 		<span class="xb-section-bar"></span>
 		<h2><i class="fas fa-hashtag"></i>Tags populares</h2>
@@ -68,9 +68,38 @@
 	</div>
 	{/if}
 
+	{* Seção Novos Vídeos *}
+	<div class="xb-section">
+		<span class="xb-section-bar"></span>
+		<h2><i class="fas fa-calendar-plus"></i>Novos</h2>
+		<a class="xb-section-link" href="{$relative}/videos?sort=recent">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
+	</div>
+
+	{if $novos_videos}
+	<div class="row content-row" id="novos-feed">
+		{section name=n loop=$novos_videos}
+			{if $smarty.section.n.iteration <= 6}{assign var=fetch_prio value='high'}{else}{assign var=fetch_prio value='lazy'}{/if}
+			{include file='video_card.tpl' v=$novos_videos[n] card_cols='col-6 col-sm-6 col-md-4 col-lg-3' show_tags=1 fetchpriority=$fetch_prio}
+			{if $smarty.section.n.iteration is div by 8}
+			{include file='ad_feed.tpl' group='index_feed'}
+			{/if}
+		{/section}
+	</div>
+	<div class="xb-feed-more-wrap">
+		<button type="button" id="novos-feed-more" class="xb-feed-more-btn">
+			<span class="material-symbols-rounded" aria-hidden="true">expand_more</span>
+			<span class="xb-feed-more-label">Exibir mais</span>
+		</button>
+	</div>
+	{else}
+	<div class="well well-sm">
+		<span class="text-danger">{t c='videos.no_videos_found'}.</span>
+	</div>
+	{/if}
+
 	{* Seção Destaques (hero) removida a pedido. O CSS .xb-hero-* ficou dormente
-   em pornozinho.css e a query $hero_videos segue em index.php sem consumidor. *}
-<div class="xb-section">
+	   em pornozinho.css e a query $hero_videos segue em index.php sem consumidor. *}
+	<div class="xb-section">
 		<span class="xb-section-bar"></span>
 		<h2><i class="fas fa-thumbs-up"></i>Para Você</h2>
 		<a class="xb-section-link" href="{$relative}/videos">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
@@ -85,12 +114,6 @@
 			{include file='ad_feed.tpl' group='index_feed'}
 			{/if}
 		{/section}
-	</div>
-	<div class="xb-feed-more-wrap">
-		<button type="button" id="home-feed-more" class="xb-feed-more-btn">
-			<span class="material-symbols-rounded" aria-hidden="true">expand_more</span>
-			<span class="xb-feed-more-label">Exibir mais</span>
-		</button>
 	</div>
 	{else}
 	<div class="well well-sm">

@@ -1,15 +1,15 @@
 /**
- * AVSCMS — Feed único da home (Para Você) com botão "Exibir mais".
- * A 1ª página vem do servidor (index.tpl -> $home_feed_videos); o botão pede
- * as seguintes a include/ajax/home_feed.php (mesmo score híbrido) e anexa os
- * cards DENTRO do #home-feed. Quando o serviço diz que não tem mais
+ * AVSCMS — Feed "Novos" da home com botão "Exibir mais".
+ * A 1ª página vem do servidor (index.tpl -> $novos_videos); o botão pede
+ * as seguintes a include/ajax/novos_feed.php (mesmo score híbrido) e anexa os
+ * cards DENTRO do #novos-feed. Quando o serviço diz que não tem mais
  * (has_more=false ou count 0), o botão é removido.
  */
 (function (window, document) {
 	'use strict';
 
-	var grid = document.getElementById('home-feed');
-	var btn = document.getElementById('home-feed-more');
+	var grid = document.getElementById('novos-feed');
+	var btn = document.getElementById('novos-feed-more');
 	var wrap = btn && btn.parentNode;
 	if (!grid || !btn || !wrap) {
 		return;
@@ -55,7 +55,7 @@
 		}
 		setLoading(true);
 
-		fetch(base_url + '/ajax/home_feed?page=' + (page + 1), {
+		fetch(base_url + '/ajax/novos_feed?page=' + (page + 1), {
 			credentials: 'same-origin'
 		}).then(function (res) {
 			return res.json();

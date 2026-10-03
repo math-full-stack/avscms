@@ -2794,9 +2794,6 @@ span.iconset {
   display: block;
   z-index: 80;
 }
-.overlayer.fullwidth {
-  width: 100%;
-}
 .overlayer-wrapper {
   position: relative;
   display: block;

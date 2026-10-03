@@ -145,15 +145,9 @@ if ($random_category) {
 $smarty->assign('random_category', $random_category[0] ?? null);
 $smarty->assign('random_cat_videos', $random_cat_videos);
 
-// Normaliza keywords para arrays (mesmo formato da página do vídeo)
-foreach ( $home_feed_videos as $k => $v ) {
-    $home_feed_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
-}
-
 // Shorts / Vídeos Verticais para a vitrine da home: SÓ verticais (orientation) e
-// até 1:40 (100s), ordenados por recência + audiência no mesmo score
-// (mesma fórmula do feed em shorts.php / ajax/shorts_feed.php).
-$sql_shorts = "SELECT " . $video_select . $video_from_shorts . " AND v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait' ORDER BY (v.viewnumber / POW(TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(CAST(v.addtime AS UNSIGNED)), NOW()) + 2, 1.5)) DESC, v.addtime DESC, v.VID DESC LIMIT 12";
+// até 1:40 (100s), ordem ALEATÓRIA.
+$sql_shorts = "SELECT " . $video_select . $video_from_shorts . " AND v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait' ORDER BY RAND() LIMIT 12";
 $rs_shorts  = $conn->execute($sql_shorts);
 $shorts_videos = $rs_shorts ? $rs_shorts->getrows() : array();
 video_apply_cover_rotation($shorts_videos);
@@ -161,15 +155,31 @@ foreach ( $shorts_videos as $k => $v ) {
     $shorts_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
 }
 
-// Novos Vídeos: últimos 7 dias + score híbrido (mesmo do feed "Para Você" / shorts foryou)
+// Novos Vídeos: últimos 7 dias — ordenados por MAIS RECENTE primeiro (addtime DESC)
 // Quantidade variável: usa items_per_front_page
 $window_hours = 168; // 7 dias
-$sql_novos = "SELECT " . $video_select . $video_from . " AND v.addtime >= UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL $window_hours HOUR)) ORDER BY (v.viewnumber / POW(TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(CAST(v.addtime AS UNSIGNED)), NOW()) + 2, 1.5)) DESC, v.addtime DESC, v.VID DESC LIMIT " . intval($config['items_per_front_page']);
+$sql_novos = "SELECT " . $video_select . $video_from . " AND v.addtime >= UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL $window_hours HOUR)) ORDER BY v.addtime DESC, v.VID DESC LIMIT " . intval($config['items_per_front_page']);
 $rs_novos = $conn->execute($sql_novos);
 $novos_videos = $rs_novos->getrows();
 video_apply_cover_rotation($novos_videos);
 foreach ($novos_videos as $k => $v) {
     $novos_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
+}
+
+// Coletar VIDs dos novos para excluir do feed "Para Você" e evitar repetição
+$novos_vids = array_column($novos_videos, 'VID');
+$novos_vids_sql = $novos_vids ? ' AND v.VID NOT IN (' . implode(',', array_map('intval', $novos_vids)) . ')' : '';
+
+// Feed único da home (Para Você): recência + audiência no MESMO score do feed
+// de shorts (foryou). A primeira página usa $config['items_per_front_page'] e o
+// scroll infinito pede as seguintes em include/ajax/home_feed.php (LIMIT igual).
+$sql = "SELECT " . $video_select . $video_from . $novos_vids_sql . " ORDER BY (v.viewnumber / POW(TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(CAST(v.addtime AS UNSIGNED)), NOW()) + 2, 1.5)) DESC, v.addtime DESC, v.VID DESC LIMIT " . intval($config['items_per_front_page']);
+$rs = $conn->execute($sql);
+$home_feed_videos = $rs->getrows();
+
+// Normaliza keywords para arrays (mesmo formato da página do vídeo)
+foreach ( $home_feed_videos as $k => $v ) {
+    $home_feed_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
 }
 
 $smarty->assign('errors',$errors);

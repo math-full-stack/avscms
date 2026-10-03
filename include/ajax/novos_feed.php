@@ -25,22 +25,13 @@ $sql_add .= " AND v.active = '1'";
 // Excluir shorts (portrait + duração < 100s) do feed da home
 $sql_add .= " AND NOT (v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait')";
 
-// Excluir VIDs da seção "Novos" (últimos 7 dias) para evitar repetição
-$window_hours = 168;
-$novos_vids_sql = " AND v.VID NOT IN (
-    SELECT VID FROM video
-    WHERE active = '1'" . ($config['show_private_videos'] == '0' ? " AND type = 'public'" : "") . "
-    AND NOT (duration > 0 AND duration < 100 AND orientation = 'portrait')
-    AND addtime >= UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL $window_hours HOUR))
-)";
+// Novos: últimos 7 dias — ordenados por MAIS RECENTE primeiro (addtime DESC)
+$window_hours = 168; // 7 dias
 
-// Feed único da home: MESMA query e ordenação (score híbrido recência+audiência)
-// do index.php — manter em sincronia.
-$sql = "SELECT v.VID, v.title, v.duration, v.addtime, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.viewnumber, v.rate, v.likes, v.dislikes, v.type, v.hd, v.keyword, v.UID, v.orientation, v.featured, u.username
-        FROM video AS v, signup AS u
-        WHERE v.UID = u.UID" . $sql_add . $novos_vids_sql . "
-        ORDER BY (v.viewnumber / POW(TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(CAST(v.addtime AS UNSIGNED)), NOW()) + 2, 1.5)) DESC, v.addtime DESC, v.VID DESC
-        LIMIT " . $offset . ", " . $per_page;
+$video_select = "v.VID, v.title, v.duration, v.addtime, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.viewnumber, v.rate, v.likes, v.dislikes, v.type, v.hd, v.keyword, v.UID, v.orientation, v.featured, u.username";
+$video_from = " FROM video AS v, signup AS u WHERE v.UID = u.UID" . $sql_add;
+
+$sql = "SELECT " . $video_select . $video_from . " AND v.addtime >= UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL $window_hours HOUR)) ORDER BY v.addtime DESC, v.VID DESC LIMIT " . $offset . ", " . $per_page;
 $rs = $conn->execute($sql);
 $videos = $rs ? $rs->getrows() : array();
 
@@ -49,8 +40,7 @@ foreach ( $videos as $k => $v ) {
     $videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
 }
 
-// Renderiza o MESMO card da home (video_card.tpl) para o scroll infinito.
-// Smarty 3.1 só aplica o default com warning — define os defaults da home aqui.
+// Renderiza o MESMO card da home (video_card.tpl)
 $smarty->assign('card_cols', 'col-6 col-sm-6 col-md-4 col-lg-3');
 $smarty->assign('show_tags', 1);
 $html = '';
@@ -58,7 +48,6 @@ foreach ( $videos as $k => $v ) {
     $smarty->assign('v', $v);
     $html .= $smarty->fetch('video_card.tpl');
     // Anúncio intercalado no grid (a cada 8 cards) — MESMA cadência do index.tpl.
-    // Posição global: (página-1)*per_page + índice local (1-based) múltiplo de 8.
     if ( ( ($page - 1) * $per_page + $k + 1 ) % 8 == 0 ) {
         $smarty->assign('group', 'index_feed');
         $html .= $smarty->fetch('ad_feed.tpl');

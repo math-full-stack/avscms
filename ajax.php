@@ -195,6 +195,7 @@ $modules_allowed    = array(
 	'mediabunny_serve' => 1,
 	'shorts_feed' => 1,
 	'home_feed' => 1,
+	'novos_feed' => 1,
 	'player_ad_view' => 1,
 	'player_ad_click' => 1
 );

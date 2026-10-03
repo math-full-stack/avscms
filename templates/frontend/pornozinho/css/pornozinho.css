@@ -53,25 +53,38 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   Container fluido — 100% largura, sem max-width
+   Container responsivo — max-width por breakpoint (Bootstrap padrão)
    -------------------------------------------------------------------------- */
 .container {
 	width: 100%;
-	max-width: none;
 	margin-inline: auto;
 	padding-left: 24px;
 	padding-right: 24px;
 }
 
-/* --------------------------------------------------------------------------
-   Container para header/nav — max-width confortável para navegação
-   -------------------------------------------------------------------------- */
-.container-nav {
-	width: 100%;
-	max-width: 1920px;
-	margin-inline: auto;
-	padding-left: 24px;
-	padding-right: 24px;
+@media (min-width: 576px) {
+	.container { max-width: 540px; }
+}
+@media (min-width: 768px) {
+	.container { max-width: 720px; }
+}
+@media (min-width: 992px) {
+	.container { max-width: 960px; }
+}
+@media (min-width: 1200px) {
+	.container { max-width: 1140px; }
+}
+@media (min-width: 1400px) {
+	.container { max-width: 1320px; }
+}
+@media (min-width: 1600px) {
+	.container { max-width: 1500px; }
+}
+@media (min-width: 1920px) {
+	.container { max-width: 1800px; }
+}
+@media (min-width: 2560px) {
+	.container { max-width: 2400px; }
 }
 
 /* --------------------------------------------------------------------------
