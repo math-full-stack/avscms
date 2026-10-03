@@ -81,39 +81,44 @@ $sql            = "SELECT " .$video_select. $video_from. " ORDER BY (v.viewnumbe
 $rs             = $conn->execute($sql);
 $home_feed_videos = $rs->getrows();
 
-// Hero da home: destaques (mais vistos)
-$hero_select = $video_select. ", v.server, v.formats, v.iphone, v.embed_code";
-$sql         = "SELECT " .$hero_select. $video_from. " ORDER BY v.viewnumber DESC, v.viewtime DESC LIMIT 7";
-$rs          = $conn->execute($sql);
-$hero_videos = $rs->getrows();
-
-// Mini-clip mudo no primeiro card do hero: fonte de playback (URL assinada)
-foreach ( $hero_videos as $k => $v ) {
-    $hero_videos[$k]['hero_src'] = '';
-    if ( $v['embed_code'] != '' || empty($v['formats']) ) {
-        continue;
-    }
-    $sources = get_video_sources($v);
-    $best    = null;
-    foreach ( $sources['files'] as $f ) {
-        if ( $best === null || $f['height'] < $best['height'] ) {
-            $best = $f;
-        }
-    }
-    if ( $best === null && !empty($sources['iphone_url']) ) {
-        $best = array('url' => $sources['iphone_url']);
-    }
-    if ( $best === null && !empty($sources['hd_url']) ) {
-        $best = array('url' => $sources['hd_url']);
-    }
-    if ( $best !== null && !empty($best['url']) ) {
-        $hero_videos[$k]['hero_src'] = $best['url'];
-    }
-}
+// Hero da home: destaques (mais vistos) — DESUSADO no template (index.tpl removeu a seção)
+// Mantido comentado para referência; descomente se a seção voltar.
+// $hero_select = $video_select. ", v.server, v.formats, v.iphone, v.embed_code";
+// $sql         = "SELECT " .$hero_select. $video_from. " ORDER BY v.viewnumber DESC, v.viewtime DESC LIMIT 7";
+// $rs          = $conn->execute($sql);
+// $hero_videos = $rs->getrows();
+// 
+// // Mini-clip mudo no primeiro card do hero: fonte de playback (URL assinada)
+// foreach ( $hero_videos as $k => $v ) {
+//     $hero_videos[$k]['hero_src'] = '';
+//     if ( $v['embed_code'] != '' || empty($v['formats']) ) {
+//         continue;
+//     }
+//     $sources = get_video_sources($v);
+//     $best    = null;
+//     foreach ( $sources['files'] as $f ) {
+//         if ( $best === null || $f['height'] < $best['height'] ) {
+//             $best = $f;
+//         }
+//     }
+//     if ( $best === null && !empty($sources['iphone_url']) ) {
+//         $best = array('url' => $sources['iphone_url']);
+//     }
+//     if ( $best === null && !empty($sources['hd_url']) ) {
+//         $best = array('url' => $sources['hd_url']);
+//     }
+//     if ( $best !== null && !empty($best['url']) ) {
+//         $hero_videos[$k]['hero_src'] = $best['url'];
+//     }
+// }
+// 
+// // Rotação de capas (frames marcados em thumbnails_opt) - hero
+// video_apply_cover_rotation($hero_videos);
+// 
+$hero_videos = array(); // placeholder vazio para evitar notice no template
 
 // Rotação de capas (frames marcados em thumbnails_opt)
 video_apply_cover_rotation($home_feed_videos);
-video_apply_cover_rotation($hero_videos);
 
 // Creators: usuários com mais vídeos
 $sql            = "SELECT UID, username, photo, gender, total_videos FROM signup
@@ -143,9 +148,6 @@ $smarty->assign('random_cat_videos', $random_cat_videos);
 // Normaliza keywords para arrays (mesmo formato da página do vídeo)
 foreach ( $home_feed_videos as $k => $v ) {
     $home_feed_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
-}
-foreach ( $hero_videos as $k => $v ) {
-    $hero_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
 }
 
 // Shorts / Vídeos Verticais para a vitrine da home: SÓ verticais (orientation) e

@@ -531,8 +531,9 @@ function insert_video_trio($options)
 	$type  = isset($options['type']) ? $options['type'] : 'public';
 	$title = isset($options['title']) ? $options['title'] : '';
 	$opt   = isset($options['opt']) ? $options['opt'] : '';
+	$fetchpriority = isset($options['fetchpriority']) ? $options['fetchpriority'] : 'lazy';
 
-	return video_trio_html($options['vid'], $options['thumb'], $options['thumbs'], $opt, $title, $type);
+	return video_trio_html($options['vid'], $options['thumb'], $options['thumbs'], $opt, $title, $type, $fetchpriority);
 }
 
 function insert_gcs_thumbs_base($options)

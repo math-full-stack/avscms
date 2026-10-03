@@ -61,7 +61,7 @@ if (file_exists(__DIR__ . '/config.local.php')) {
     $config['blogs_per_page'] = '10';
     $config['watched_per_page'] = '18';
     $config['recent_per_page'] = '30';
-    $config['items_per_front_page'] = '32';
+    $config['items_per_front_page'] = '12';
     $config['max_img_size']   = '200';
     $config['img_max_width']  = '1920';
     $config['img_max_height'] = '1080';

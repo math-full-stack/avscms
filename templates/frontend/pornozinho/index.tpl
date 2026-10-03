@@ -79,7 +79,8 @@
 	{if $home_feed_videos}
 	<div class="row content-row" id="home-feed">
 		{section name=i loop=$home_feed_videos}
-			{include file='video_card.tpl' v=$home_feed_videos[i] card_cols='col-6 col-sm-6 col-md-4 col-lg-3' show_tags=1}
+			{if $smarty.section.i.iteration <= 6}{assign var=fetch_prio value='high'}{else}{assign var=fetch_prio value='lazy'}{/if}
+			{include file='video_card.tpl' v=$home_feed_videos[i] card_cols='col-6 col-sm-6 col-md-4 col-lg-3' show_tags=1 fetchpriority=$fetch_prio}
 			{if $smarty.section.i.iteration is div by 8}
 			{include file='ad_feed.tpl' group='index_feed'}
 			{/if}

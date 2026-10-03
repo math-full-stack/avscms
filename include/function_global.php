@@ -167,7 +167,7 @@ function video_cover_trio($video)
  * HTML do trio vertical: 3 capas lado a lado (CSS faz a divisória preta de
  * 2px via gap). data-* alimenta o avanço no hover (jquery.rotator.js).
  */
-function video_trio_html($vid, $thumb, $thumbs, $opt, $title, $type = 'public')
+function video_trio_html($vid, $thumb, $thumbs, $opt, $title, $type = 'public', $fetchpriority = 'lazy')
 {
     global $config;
 
@@ -180,9 +180,11 @@ function video_trio_html($vid, $thumb, $thumbs, $opt, $title, $type = 'public')
     $esc  = htmlspecialchars((string)$title, ENT_QUOTES, 'UTF-8');
     $cls  = ( $type === 'private' ) ? 'img-responsive img-private' : 'img-responsive';
 
+    $load_attr = ($fetchpriority === 'high') ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"';
+
     $html = '<div class="xb-trio" data-vid="'.(int)$vid.'" data-idx="'.(int)$idx.'" data-covers="'.implode(',', $covers).'" data-thumbs="'.(int)$thumbs.'">';
     foreach ( $trio as $f ) {
-        $html .= '<img src="'.$base.'/'.(int)$f.'.jpg" title="'.$esc.'" alt="'.$esc.'" class="'.$cls.'" loading="lazy"/>';
+        $html .= '<img src="'.$base.'/'.(int)$f.'.jpg" title="'.$esc.'" alt="'.$esc.'" class="'.$cls.'" '.$load_attr.'/>';
     }
     return $html.'</div>';
 }

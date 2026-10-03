@@ -27,6 +27,26 @@ if (!preg_match('/^[A-Za-z0-9._-]+$/', $file)
     exit;
 }
 
+// Detecta preferência do client por formatos modernos
+$accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+$wantsWebP = strpos($accept, 'image/webp') !== false;
+$wantsAvif = strpos($accept, 'image/avif') !== false;
+
+$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+$baseName = basename($file, '.' . $ext);
+
+// Tentar WebP/AVIF se o client aceita e a extensão original é jpg/png
+$tryFormats = [];
+if (in_array($ext, ['jpg', 'jpeg', 'png']) && ($wantsWebP || $wantsAvif)) {
+    if ($wantsAvif) {
+        $tryFormats[] = $baseName . '.avif';
+    }
+    if ($wantsWebP) {
+        $tryFormats[] = $baseName . '.webp';
+    }
+}
+$tryFormats[] = $file; // fallback original
+
 $server = gcs_get_server_by_vid($vid);
 if (!$server) {
     // Sem servidor GCS vinculado: cai no fallback das thumbs locais.
@@ -39,7 +59,29 @@ if (!$server) {
     exit;
 }
 
-$object = 'thumbs/' . $vid . '/' . $file;
+$object = null;
+$contentType = null;
+$body = null;
+$code = 0;
+
+foreach ($tryFormats as $fmt) {
+    $object = 'thumbs/' . $vid . '/' . $fmt;
+    list($code, $body, $contentType) = gcs_fetch_object($server, $object);
+    if ($code === 200 && $body !== false) {
+        break;
+    }
+}
+
+if ($code !== 200 || $body === false) {
+    // Fallback local quando bucket não tem o objeto
+    $local = get_thumb_dir($vid) . '/' . $file;
+    if (file_exists($local)) {
+        header('Location: ' . get_thumb_url_local($vid) . '/' . $file, true, 302);
+        exit;
+    }
+    http_response_code(404);
+    exit;
+}
 
 // Mini-clipes do hover-preview (video.mp4/webm) são entregues via streaming
 // server-side com suporte a Range: gcs_fetch_object carrega o arquivo inteiro
@@ -58,22 +100,11 @@ if (preg_match('/\.(mp4|webm)$/i', $file)) {
     exit;
 }
 
-list($code, $body, $contentType) = gcs_fetch_object($server, $object);
-
-if ($code !== 200 || $body === false) {
-    // Fallback local quando bucket não tem o objeto
-    $local = get_thumb_dir($vid) . '/' . $file;
-    if (file_exists($local)) {
-        header('Location: ' . get_thumb_url_local($vid) . '/' . $file, true, 302);
-        exit;
-    }
-    http_response_code(404);
-    exit;
-}
-
 // Mídia derivada é imutável por vídeo: cache longo em browser.
 header('Content-Type: ' . ($contentType ?: 'application/octet-stream'));
 header('Content-Length: ' . strlen($body));
 header('Cache-Control: public, max-age=86400');
+// Vary: Accept para que proxies/CDN façam cache separado por formato
+header('Vary: Accept');
 echo $body;
 exit;
