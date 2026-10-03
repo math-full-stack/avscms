@@ -111,16 +111,28 @@
 		</div>
 		
 		<div class="content-right mb-3">
-			<div class="list-group mb-3">
-				<a href="{url base='videos' strip='c' value=''}" {if $category == "0"}class="list-group-item active"{else}class="list-group-item"{/if}>
-					{t c='global.all'}
+<div class="list-group mb-3">
+			<a href="{url base='videos' strip='c' value=''}" {if $category == "0"}class="list-group-item active"{else}class="list-group-item"{/if}>
+				{t c='global.all'}
+			</a>
+			{section name=p loop=$category_parents}
+			<div class="category-parent-group">
+				<a href="{url base='videos/'|cat:$category_parents[p].slug strip='c' value=''}" class="list-group-item list-group-item-heading {if $category == $category_parents[p].CHID}active{/if} fw-bold">
+					{$category_parents[p].name}
+					{if $category_parents[p].children|@count > 0}<span class="float-right"><i class="material-symbols-rounded xb-nav-icon">expand_more</i></span>{/if}
 				</a>
-				{section name=i loop=$categories}
-				<a href="{url base='videos/'|cat:$categories[i].slug strip='c' value=''}" {if $category == $categories[i].CHID}class="list-group-item active"{else}class="list-group-item"{/if}>
-					{$categories[i].name}
-				</a>
-				{/section}
+				{if $category_parents[p].children|@count > 0}
+				<div class="category-children {if $active_parent_id == $category_parents[p].CHID}show{/if}">
+					{section name=c loop=$category_parents[p].children}
+					<a href="{url base='videos/'|cat:$category_parents[p].children[c].slug strip='c' value=''}" class="list-group-item list-group-item-small {if $category == $category_parents[p].children[c].CHID}active{/if}" style="padding-left: 32px;">
+						{$category_parents[p].children[c].name}
+					</a>
+					{/section}
+				</div>
+				{/if}
 			</div>
+			{/section}
+		</div>
 			{insert name=adv assign=adv group='videos_right'}
 			{if $adv.ad}
 			<div class="ad-content">

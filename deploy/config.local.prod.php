@@ -25,8 +25,8 @@ $config['admin_pass'] = getenv('ADMIN_PASS') ?: '';
 $config['noreply_email'] = 'noreply@adulto.cloud';
 $config['admin_email']   = 'admin@adulto.cloud';
 $config['emailsender']   = 'adulto.cloud';
-$config['meta_description'] = 'Free Porn Videos';
-$config['meta_keywords']    = 'porn, sex, porno, free porn, porn tube, free streaming porn, full sex videos';
+$config['meta_description'] = 'adulto.cloud — Free HD porn videos. Watch amateur and professional porn movies, no signup required. Categories: amateur, anal, MILF, lesbian, trans and more.';
+$config['meta_keywords']    = 'adulto.cloud, porn videos, free porn, adult videos, porn tube, free sex, porn movies, amateur, anal, milf, lesbian, trans, hd porn, free porn videos, porn tube, adult videos';
 
 // --- Tool paths (VM Debian 13) ---
 $config['phppath']  = '/usr/bin/php';

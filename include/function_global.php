@@ -187,15 +187,74 @@ function video_trio_html($vid, $thumb, $thumbs, $opt, $title, $type = 'public')
     return $html.'</div>';
 }
 
-function get_categories()
+function get_categories($parent_only = false, $parent_id = 0)
 {
     global $conn;
     
-    $sql        = "SELECT CHID, name, slug FROM channel ORDER BY name ASC";
-    $rs         = $conn->execute($sql);
+    $where = $parent_only ? " WHERE parent_id = 0" : ($parent_id ? " WHERE parent_id = " . intval($parent_id) : "");
+    $sql = "SELECT CHID, name, slug, parent_id, sort_order, is_featured FROM channel" . $where . " ORDER BY sort_order ASC, name ASC";
+    $rs = $conn->execute($sql);
     $categories = $rs->getrows();
     
     return $categories;
+}
+
+function get_category_parents()
+{
+    global $conn;
+    
+    $sql = "SELECT CHID, name, slug, sort_order, is_featured FROM channel WHERE parent_id = 0 ORDER BY sort_order ASC, name ASC";
+    $rs = $conn->execute($sql);
+    return $rs->getrows();
+}
+
+function get_category_children($parent_id)
+{
+    global $conn;
+    
+    $sql = "SELECT CHID, name, slug, parent_id, sort_order, is_featured FROM channel WHERE parent_id = " . intval($parent_id) . " ORDER BY sort_order ASC, name ASC";
+    $rs = $conn->execute($sql);
+    return $rs->getrows();
+}
+
+function get_category_tree()
+{
+    global $conn;
+    
+    $parents = get_category_parents();
+    foreach ($parents as &$parent) {
+        $parent['children'] = get_category_children($parent['CHID']);
+    }
+    return $parents;
+}
+
+function get_category_by_slug($slug)
+{
+    global $conn;
+    
+    $sql = "SELECT CHID, name, slug, parent_id, sort_order, is_featured FROM channel WHERE slug = " . $conn->qStr($slug) . " LIMIT 1";
+    $rs = $conn->execute($sql);
+    if ($rs && $conn->Affected_Rows() > 0) {
+        return $rs->fields;
+    }
+    return null;
+}
+
+function get_category_ids_for_tree($parent_slug)
+{
+    global $conn;
+    
+    $parent = get_category_by_slug($parent_slug);
+    if (!$parent) {
+        return [];
+    }
+    
+    $ids = [$parent['CHID']];
+    $children = get_category_children($parent['CHID']);
+    foreach ($children as $child) {
+        $ids[] = $child['CHID'];
+    }
+    return $ids;
 }
 
 function get_albums_categories()

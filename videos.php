@@ -7,25 +7,31 @@ require 'classes/pagination.class.php';
 
 $slug = get_request_arg('videos', 'STRING');
 if ($slug != '') {
-	$sql            = "SELECT CHID FROM channel WHERE slug = '".$slug."' LIMIT 1";
+	$sql            = "SELECT CHID, parent_id FROM channel WHERE slug = '".$slug."' LIMIT 1";
 	$rs             = $conn->execute($sql);
 	if ($conn->Affected_Rows()) {
 		$cat_id         = $rs->fields['CHID'];
+		$cat_parent_id  = $rs->fields['parent_id'];
 	}
 } else {
 	$cat_id = NULL;
+	$cat_parent_id = 0;
 }
 
 $type	= ( $config['show_private_videos'] == '0' ) ? 'public' : NULL;
 $type    = ( isset($_GET['type']) && ($_GET['type'] == 'private' or $_GET['type'] == 'public' or $_GET['type'] == 'featured') ) ? $_GET['type'] : $type;
-$quality = ( isset($_GET['q']) && ($_GET['q'] == 'all' or $_GET['q'] == 'hd' ) ) ? $_GET['q'] : $quality;
+$quality = ( isset($_GET['q']) && ($_GET['q'] == 'all' or $_GET['q'] == 'hd' ) ) ? $_GET['q'] : 'all';
 
 if ($cat_id) {
 	$category  = $cat_id;
 } else {
 	$category       = ( isset($_GET['c']) ) ? intval($_GET['c']) : 0;
 }
-$categories     = get_categories();
+
+// Get category tree for sidebar (parents with children)
+$category_parents = get_category_tree();
+$categories = get_categories(); // flat list for backward compat
+
 $orders         = array('bw', 'mr', 'mv', 'tr', 'md', 'tf', 'lg');
 $order          = ( isset($_GET['o']) && in_array($_GET['o'], $orders) ) ? $_GET['o'] : 'mr';
 $timeframes     = array('t', 'w', 'm', 'a');
@@ -81,20 +87,49 @@ switch ( $timeframe ) {
         break;
 }
 
+// Category filter: if parent category, include all children
+$category_ids = [];
 if ( $category ) {
-    $sql_add        .= $sql_delim. " v.channel = " .$category;
-    $sql_add_count  .= $sql_delim. " v.channel = " .$category;
-    $sql_delim       = ' AND';
-    foreach ( $categories as $categ ) {
-        if ( $categ['CHID'] == $category ) {
-            $title_c = ' ' .$categ['name'];
+    // Check if this is a parent category
+    $cat_info = null;
+    foreach ($categories as $c) {
+        if ($c['CHID'] == $category) {
+            $cat_info = $c;
             break;
         }
+    }
+    
+    if ($cat_info && $cat_info['parent_id'] == 0) {
+        // Parent category: get all children IDs
+        $category_ids = get_category_ids_for_tree($cat_info['slug']);
+        $title_c = ' ' . $cat_info['name'];
+    } else {
+        // Child category or legacy flat category
+        $category_ids = [$category];
+        foreach ( $categories as $categ ) {
+            if ( $categ['CHID'] == $category ) {
+                $title_c = ' ' .$categ['name'];
+                break;
+            }
+        }
+    }
+    
+    if ($category_ids) {
+        $placeholders = implode(',', array_fill(0, count($category_ids), '?'));
+        $sql_add        .= $sql_delim. " v.channel IN ($placeholders)";
+        $sql_add_count  .= $sql_delim. " v.channel IN ($placeholders)";
+        $sql_delim       = ' AND';
     }
 }
 
 $sql_add       .= $sql_delim . " v.active = '1'";
 $sql_add_count .= $sql_delim . " v.active = '1'";
+
+// If no conditions added yet (no type, quality, timeframe, category), ensure we have WHERE
+if ($sql_delim === ' WHERE ') {
+    $sql_add = ' WHERE v.active = \'1\'';
+    $sql_add_count = ' WHERE v.active = \'1\'';
+}
 
 switch ( $order ) {
     case 'bw':
@@ -127,14 +162,20 @@ switch ( $order ) {
         break;		
 }
 
-$sql            = "SELECT count(v.VID) AS total_videos FROM video AS v" .$sql_add_count;
-$rsc            = $conn->execute($sql);
-$total          = $rsc->fields['total_videos'];
-$pagination     = new Pagination($config['videos_per_page']);
-$limit          = $pagination->getLimit($total);
-$sql            = "SELECT v.*, u.username FROM video AS v LEFT JOIN signup AS u ON v.UID = u.UID" .$sql_add. " LIMIT " .$limit;
-$rs             = $conn->execute($sql);
-$videos         = $rs->getrows();
+// Prepare count query first
+$sql_count = "SELECT count(v.VID) AS total_videos FROM video AS v" . $sql_add_count;
+$stmt_count = $conn->Prepare($sql_count);
+$rsc = $conn->Execute($stmt_count, $category_ids);
+$total = $rsc->fields['total_videos'];
+
+$pagination = new Pagination($config['videos_per_page']);
+$limit = $pagination->getLimit($total);
+
+// Build main query with limit
+$sql = "SELECT v.*, u.username FROM video AS v LEFT JOIN signup AS u ON v.UID = u.UID" . $sql_add . " LIMIT " . $limit;
+$stmt = $conn->Prepare($sql);
+$rs = $conn->Execute($stmt, $category_ids);
+$videos = $rs->getrows();
 
 // Rotação de capas (frames marcados em thumbnails_opt)
 video_apply_cover_rotation($videos);
@@ -160,10 +201,23 @@ $self_title         = $title . $seo['videos_title'];
 $self_description   = $title . $seo['videos_desc'];
 $self_keywords      = $title . $seo['videos_keywords'];
 
+// Find active parent category (if a child is selected)
+$active_parent_id = 0;
+if ($category) {
+    foreach ($categories as $c) {
+        if ($c['CHID'] == $category && $c['parent_id'] > 0) {
+            $active_parent_id = $c['parent_id'];
+            break;
+        }
+    }
+}
+
 $smarty->assign('errors',$errors);
 $smarty->assign('messages',$messages);
 $smarty->assign('menu', 'videos');
 $smarty->assign('categories', $categories);
+$smarty->assign('category_parents', $category_parents);
+$smarty->assign('active_parent_id', $active_parent_id);
 $smarty->assign('type', $type);
 $smarty->assign('videos', $videos);
 $smarty->assign('videos_total', $total);

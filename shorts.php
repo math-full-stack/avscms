@@ -280,7 +280,9 @@ if ($adv_feed) {
 }
 
 $smarty->assign('shorts_page', true);
-$smarty->assign('self_title', 'Shorts — ' . $config['site_name']);
+$smarty->assign('self_title', $seo['shorts_title']);
+$smarty->assign('self_description', $seo['shorts_desc']);
+$smarty->assign('self_keywords', $seo['shorts_keywords']);
 $smarty->assign('menu', 'shorts');
 $smarty->assign('active_tab', $tab);
 $smarty->assign('initial_vid', $initial_vid);

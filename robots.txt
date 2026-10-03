@@ -10,6 +10,8 @@ Disallow: /templates/
 Disallow: /scripts/
 Disallow: /addons/
 
+Sitemap: https://adulto.cloud/sitemap.php
+
 # ============================================================
 # Crawlers que consomem banda sem trazer visita.
 #

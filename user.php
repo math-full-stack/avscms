@@ -114,8 +114,8 @@ if ( $options['module'] != '' ) {
         $sql            = "UPDATE signup SET profile_viewed = profile_viewed+1, popularity = popularity+0.1 WHERE UID = " .$uid. " LIMIT 1";
         $conn->execute($sql);
           
-        $self_title         = $username. '\' Profile - Free Adult Sex Tube Porno';
-      
+$self_title         = $username. '\' Profile - ' .$config['site_name'];
+       
         $smarty->assign('friends', $friends);
         $smarty->assign('playlist', $playlist);
         $smarty->assign('favorites', $favorites);
@@ -137,6 +137,8 @@ $total_subscribers = get_user_total_subscribers($uid);
 $smarty->assign('total_subscribers', $total_subscribers);
 
 $self_title = ( isset($self_title) ) ? $self_title . ' - ' .$config['site_name'] : $config['site_name'];
+$self_description = $seo['users_desc'];
+$self_keywords = $seo['users_keywords'];
 
 $smarty->assign('errors',$errors);
 $smarty->assign('err',$err);
@@ -145,11 +147,15 @@ $smarty->assign('menu', 'community');
 $smarty->assign('submenu', '');
 $smarty->assign('username', $username);
 $smarty->assign('user', $user);
+$smarty->assign('user_page', true);
+$smarty->assign('profile_user', $user);
 $smarty->assign('online', $online);
 $smarty->assign('popularity', '$popularity');
 $smarty->assign('points', '$points');
 $smarty->assign('profile', true);
 $smarty->assign('self_title', $self_title);
+$smarty->assign('self_description', $self_description);
+$smarty->assign('self_keywords', $self_keywords);
 $smarty->loadFilter('output', 'trimwhitespace');
 $smarty->display('header.tpl');
 if ( isset($profile_menu) ) {

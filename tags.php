@@ -15,19 +15,20 @@ foreach ($tags as $k => $v) {
 	$tags[$k]['name'] = str_replace(' ', '-', trim($v['tag']));
 }
 
-$self_title         = 'Most Popular Tags - ' .$config['site_name'];
-$self_description   = 'Most Popular Tags - ' .$config['site_name'];
-$title 				= 'Most Popular Tags - ' .$config['site_name'];	
+$self_title         = $seo['tags_title'];
+$self_description   = $seo['tags_desc'];
+$title 				= $seo['tags_title'];	
 
 $smarty->assign('errors',$errors);
 $smarty->assign('messages',$messages);
 $smarty->assign('menu', 'tags');
+$smarty->assign('tags_page', true);
 $smarty->assign('tags', $tags);
 
 $smarty->assign('title', $title);
 $smarty->assign('self_title', $self_title);
 $smarty->assign('self_description', $self_description);
-$smarty->assign('self_keywords', $self_keywords);
+$smarty->assign('self_keywords', $seo['tags_keywords']);
 $smarty->loadFilter('output', 'trimwhitespace');
 $smarty->display('header.tpl');
 $smarty->display('tags.tpl');

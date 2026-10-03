@@ -83,6 +83,7 @@ $smarty->assign('errors',$errors);
 $smarty->assign('messages',$messages);
 $smarty->assign('menu', 'categories');
 $smarty->assign('catgy', true);
+$smarty->assign('categories_page', true);
 $smarty->assign('categories', $categories);
 $smarty->assign('self_title', $seo['categories_title']);
 $smarty->assign('self_description', $seo['categories_desc']);

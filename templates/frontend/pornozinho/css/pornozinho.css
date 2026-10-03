@@ -3158,6 +3158,125 @@ a:hover .xb-thumb-meta {
 	}
 }
 
+/* ==========================================================================
+   Category Tree Sidebar — hierarquia Pai > Filhos
+   ========================================================================== */
+.category-parent-group {
+    border-bottom: 1px solid var(--xb-border);
+}
+
+.category-parent-group:last-child {
+    border-bottom: none;
+}
+
+.list-group-item-heading {
+    font-weight: 600;
+    font-size: 14px;
+    padding: 12px 16px;
+    border-radius: 0;
+    border: none;
+    background: transparent;
+    color: var(--xb-text);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.list-group-item-heading:hover {
+    background: var(--xb-card);
+    color: var(--xb-accent-2);
+    text-decoration: none;
+}
+
+.list-group-item-heading.active {
+    background: var(--xb-grad);
+    color: #fff;
+}
+
+.list-group-item-heading .xb-nav-icon {
+    font-size: 18px;
+    transition: transform 0.2s ease;
+    color: var(--xb-muted);
+}
+
+.list-group-item-heading.active .xb-nav-icon {
+    color: #fff;
+    transform: rotate(180deg);
+}
+
+.category-children {
+    display: none;
+    background: var(--xb-bg-alt);
+    border-top: 1px solid var(--xb-border);
+    margin-top: -1px;
+}
+
+.category-children.show {
+    display: block;
+}
+
+.list-group-item-small {
+    font-size: 13px;
+    padding: 8px 16px 8px 40px;
+    border-radius: 0;
+    border: none;
+    background: transparent;
+    color: var(--xb-muted);
+    transition: background 0.15s ease, color 0.15s ease;
+    border-left: 3px solid transparent;
+}
+
+.list-group-item-small:hover {
+    background: var(--xb-card);
+    color: var(--xb-text);
+    border-left-color: var(--xb-accent);
+    text-decoration: none;
+}
+
+.list-group-item-small.active {
+    background: var(--xb-card-2);
+    color: var(--xb-accent-2);
+    border-left-color: var(--xb-accent);
+    font-weight: 500;
+}
+
+/* Desktop: sidebar de categorias como lista hierárquica (não grid de chips) */
+@media (min-width: 992px) {
+    .content-right .list-group {
+        display: block;
+    }
+    
+    .content-right .list-group-item {
+        border-radius: 0;
+        text-align: left;
+        padding: 12px 16px;
+        font-size: 14px;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        border: none;
+        border-bottom: 1px solid var(--xb-border);
+        background: transparent;
+        color: var(--xb-text);
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+    
+    .content-right .list-group-item:first-child {
+        border-top: none;
+    }
+    
+    .content-right .list-group-item:hover {
+        background: var(--xb-card);
+        color: var(--xb-accent-2);
+    }
+    
+    .content-right .list-group-item.active {
+        background: var(--xb-grad);
+        color: #fff;
+    }
+}
+
 /* --------------------------------------------------------------------------
    Videos — responsivo real (device-width)
    O listado de vídeos também troca o viewport (videos.php via $video_listing).

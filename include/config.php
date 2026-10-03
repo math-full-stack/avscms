@@ -34,8 +34,8 @@ if (file_exists(__DIR__ . '/config.local.php')) {
     $config['ffprobe']        = getenv('FFPROBE_PATH')    ?: '/usr/bin/ffprobe';
     $config['thumbs_tool']    = 'ffmpeg';
     $config['processor']      = 'ffmpeg';
-    $config['meta_description'] = getenv('META_DESC')    ?: 'Vídeos pornos grátis';
-    $config['meta_keywords']  = getenv('META_KEYWORDS')  ?: 'pornô, sexo, porno, vídeos grátis, tube pornô, vídeos pornos, streaming grátis, filmes de sexo, free porn, porn videos, sex videos, free porn videos';
+    $config['meta_description'] = getenv('META_DESC')    ?: 'adulto.cloud — Vídeos adultos grátis em HD. Assista filmes pornô, amadores e profissionais, sem cadastro. Categorias: amador, anal, MILF, lésbicas, trans e mais.';
+    $config['meta_keywords']  = getenv('META_KEYWORDS')  ?: 'adulto.cloud, videos porno, porno gratis, videos adultos, tube porno, sexo gratis, filmes porno, amador, anal, milf, lesbianas, trans, hd porn, free porn videos, porn tube, adult videos';
     $config['language']       = 'pt_BR';
     $config['multi_language'] = '0';
     $config['template']       = 'pornozinho';

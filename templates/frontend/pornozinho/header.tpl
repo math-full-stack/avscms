@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 {if $view}
+	<head prefix="og: http://ogp.me/ns# video: http://ogp.me/ns/video#">
+{elseif $index}
 	<head prefix="og: http://ogp.me/ns#">
 {else}
 	<head>
@@ -14,13 +16,156 @@
 		<meta property="og:type" content="video">
 		<meta property="og:image" content="{insert name=thumb_path vid=$video.VID}/{if $video.embed_code != ''}1{else}default{/if}.jpg">
 		<meta property="og:description" content="{if $video.description}{$video.description|escape:'html'}{else}{$video.title|escape:'html'}{/if}">
+		<meta property="video:duration" content="{$video.duration}">
+		<meta property="video:release_date" content="{$video.addtime|date_format:'%Y-%m-%d'}">
 	{section name=i loop=$vtags}
 	<meta property="video:tag" content="{$vtags[i]}">
 	{/section}			
 		{if !$video.embed_code}	
 			{include file='player_settings.tpl'}	
 		{/if}
+	{elseif $index}
+		<meta property="og:site_name" content="{$site_name}">
+		<meta property="og:title" content="{$site_name} — Vídeos Adultos Grátis em HD">
+		<meta property="og:url" content="{$baseurl}/">
+		<meta property="og:type" content="website">
+		<meta property="og:image" content="{$baseurl}/images/logo/logo.png">
+		<meta property="og:description" content="Assista aos melhores vídeos pornô grátis no adulto.cloud. Milhares de filmes em HD: amador, anal, MILF, lésbicas, trans e muito mais. Sem cadastro, streaming rápido.">
+	{elseif $video_listing}
+		<meta property="og:site_name" content="{$site_name}">
+		<meta property="og:title" content="{if isset($self_title)}{$self_title|escape:'html'}{else}Vídeos - {$site_name}{/if}">
+		<meta property="og:url" content="{$current_url|escape:'html'}">
+		<meta property="og:type" content="website">
+		<meta property="og:image" content="{$baseurl}/images/logo/logo.png">
+		<meta property="og:description" content="{if isset($self_description)}{$self_description|escape:'html'}{else}Navegue por milhares de vídeos pornô grátis no adulto.cloud. Filtre por categoria, duração, qualidade HD e mais.{/if}">
+	{elseif $shorts_page}
+		<meta property="og:site_name" content="{$site_name}">
+		<meta property="og:title" content="Shorts - {$site_name}">
+		<meta property="og:url" content="{$baseurl}/shorts">
+		<meta property="og:type" content="website">
+		<meta property="og:image" content="{$baseurl}/images/logo/logo.png">
+		<meta property="og:description" content="Shorts verticais no adulto.cloud. Vídeos curtos, rápidos e viciantes. Scroll infinito, tela cheia, sem cadastro.">
+	{elseif $categories_page}
+		<meta property="og:site_name" content="{$site_name}">
+		<meta property="og:title" content="Categorias - {$site_name}">
+		<meta property="og:url" content="{$current_url|escape:'html'}">
+		<meta property="og:type" content="website">
+		<meta property="og:image" content="{$baseurl}/images/logo/logo.png">
+		<meta property="og:description" content="Todas as categorias de vídeos pornô no adulto.cloud: amador, anal, MILF, lésbicas, trans, interracial, grupal e muito mais.">
+	{elseif $tags_page}
+		<meta property="og:site_name" content="{$site_name}">
+		<meta property="og:title" content="Tags - {$site_name}">
+		<meta property="og:url" content="{$current_url|escape:'html'}">
+		<meta property="og:type" content="website">
+		<meta property="og:image" content="{$baseurl}/images/logo/logo.png">
+		<meta property="og:description" content="Todas as tags de vídeos pornô no adulto.cloud. Encontre conteúdo por palavra-chave.">
+	{elseif $user_page}
+		<meta property="og:site_name" content="{$site_name}">
+		<meta property="og:title" content="{if isset($profile_user)}{$profile_user.username|escape:'html'}{else}Membros{/if} - {$site_name}">
+		<meta property="og:url" content="{$current_url|escape:'html'}">
+		<meta property="og:type" content="profile">
+		<meta property="og:image" content="{if isset($profile_user.photo)}{$profile_user.photo}{else}{$baseurl}/images/logo/logo.png{/if}">
+		<meta property="og:description" content="{if isset($profile_user)}{$profile_user.username|escape:'html'} no adulto.cloud. Vídeos, álbuns e atividade.{else}Conheça os membros do adulto.cloud.{/if}">
 	{/if}
+
+	<!-- Twitter Card -->
+	{if $view}
+		<meta name="twitter:card" content="player">
+		<meta name="twitter:site" content="@adultocloud">
+		<meta name="twitter:title" content="{$video.title|escape:'html'}">
+		<meta name="twitter:description" content="{if $video.description}{$video.description|escape:'html'|truncate:200}{else}{$video.title|escape:'html'}{/if}">
+		<meta name="twitter:image" content="{insert name=thumb_path vid=$video.VID}/{if $video.embed_code != ''}1{else}default{/if}.jpg">
+		<meta name="twitter:player" content="{$baseurl}/embed/{$video.VID}/{$video.title|clean}">
+		<meta name="twitter:player:width" content="640">
+		<meta name="twitter:player:height" content="360">
+	{else}
+		<meta name="twitter:card" content="summary_large_image">
+		<meta name="twitter:site" content="@adultocloud">
+		<meta name="twitter:title" content="{if isset($self_title)}{$self_title|escape:'html'}{else}{$site_name}{/if}">
+		<meta name="twitter:description" content="{if isset($self_description)}{$self_description|escape:'html'|truncate:200}{else}{$meta_description|escape:'html'|truncate:200}{/if}">
+		<meta name="twitter:image" content="{$baseurl}/images/logo/logo.png">
+	{/if}
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{$current_url|escape:'html'}" />
+
+    <!-- JSON-LD Structured Data -->
+    {if $view}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "VideoObject",
+      "name": "{$video.title|escape:'html'|escape:'json'}",
+      "description": "{if $video.description}{$video.description|escape:'html'|escape:'json'|truncate:300}{else}{$video.title|escape:'html'|escape:'json'}{/if}",
+      "thumbnailUrl": "{insert name=thumb_path vid=$video.VID}/{if $video.embed_code != ''}1{else}default{/if}.jpg",
+      "uploadDate": "{$video.addtime|date_format:'%Y-%m-%d'}",
+      "duration": "PT{$video.duration|seconds_to_iso8601}",
+      "embedUrl": "{if !$video.embed_code}{$baseurl}/embed/{$video.VID}/{$video.title|clean}{/if}",
+      "contentUrl": "{if !$video.embed_code && isset($video.iphone_url)}{$video.iphone_url}{/if}",
+      "publisher": {
+        "@type": "Organization",
+        "name": "{$site_name}",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "{$baseurl}/images/logo/logo.png"
+        }
+      },
+      "interactionStatistic": {
+        "@type": "InteractionCounter",
+        "interactionType": "https://schema.org/WatchAction",
+        "userInteractionCount": {$video.viewnumber}
+      }
+      {if $video.rate > 0},
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": {$video.rate},
+        "reviewCount": {$video.rate_count|default:0}
+      }
+      {/if}
+    }
+    </script>
+    {elseif $index}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "{$site_name}",
+      "url": "{$baseurl}/",
+      "description": "Assista aos melhores vídeos pornô grátis no adulto.cloud. Milhares de filmes em HD: amador, anal, MILF, lésbicas, trans e muito mais. Sem cadastro, streaming rápido.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "{$baseurl}/search/videos/{ldelim}search_term_string{rdelim}"
+        },
+        "query-input": "required name=search_term_string"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "{$site_name}",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "{$baseurl}/images/logo/logo.png"
+        }
+      }
+    }
+    </script>
+    {elseif $video_listing || $categories_page || $tags_page}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": "{if isset($self_title)}{$self_title|escape:'html'|escape:'json'}{else}{$site_name}{/if}",
+      "url": "{$current_url|escape:'html'}",
+      "description": "{if isset($self_description)}{$self_description|escape:'html'|escape:'json'|truncate:300}{else}{$meta_description|escape:'html'|escape:'json'|truncate:300}{/if}",
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "{$site_name}",
+        "url": "{$baseurl}/"
+      }
+    }
+    </script>
+    {/if}
 
     <title>{if isset($self_title) && $self_title != ''}{$self_title|escape:'html'}{else}{$site_name}{/if}</title>
     <meta charset="utf-8">
