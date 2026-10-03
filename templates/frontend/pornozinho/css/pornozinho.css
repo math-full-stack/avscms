@@ -3177,6 +3177,11 @@ a:hover .xb-thumb-meta {
     border: none;
     background: transparent;
     color: var(--xb-text);
+    cursor: pointer;
+}
+.list-group-item-heading .xb-nav-icon {
+    transition: transform 0.2s ease;
+}
     display: flex;
     align-items: center;
     justify-content: space-between;

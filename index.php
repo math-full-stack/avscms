@@ -159,6 +159,17 @@ foreach ( $shorts_videos as $k => $v ) {
     $shorts_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
 }
 
+// Novos Vídeos: últimos 7 dias + score híbrido (mesmo do feed "Para Você" / shorts foryou)
+// Quantidade variável: usa items_per_front_page
+$window_hours = 168; // 7 dias
+$sql_novos = "SELECT " . $video_select . $video_from . " AND v.addtime >= UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL $window_hours HOUR)) ORDER BY (v.viewnumber / POW(TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(CAST(v.addtime AS UNSIGNED)), NOW()) + 2, 1.5)) DESC, v.addtime DESC, v.VID DESC LIMIT " . intval($config['items_per_front_page']);
+$rs_novos = $conn->execute($sql_novos);
+$novos_videos = $rs_novos->getrows();
+video_apply_cover_rotation($novos_videos);
+foreach ($novos_videos as $k => $v) {
+    $novos_videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
+}
+
 $smarty->assign('errors',$errors);
 $smarty->assign('messages',$messages);
 $smarty->assign('menu', 'home');
@@ -166,6 +177,7 @@ $smarty->assign('index', true);
 $smarty->assign('home_feed_videos', $home_feed_videos);
 $smarty->assign('hero_videos', $hero_videos);
 $smarty->assign('shorts_videos', $shorts_videos);
+$smarty->assign('novos_videos', $novos_videos);
 $smarty->assign('creators', $creators);
 $smarty->assign('self_title', $seo['index_title']);
 $smarty->assign('self_description', $seo['index_desc']);

@@ -117,7 +117,7 @@
 			</a>
 			{section name=p loop=$category_parents}
 			<div class="category-parent-group">
-				<a href="{url base='videos/'|cat:$category_parents[p].slug strip='c' value=''}" class="list-group-item list-group-item-heading {if $category == $category_parents[p].CHID}active{/if} fw-bold">
+				<a href="{url base='videos/'|cat:$category_parents[p].slug strip='c' value=''}" class="list-group-item list-group-item-heading {if $category == $category_parents[p].CHID}active{/if} fw-bold category-parent-link" data-parent-id="{$category_parents[p].CHID}">
 					{$category_parents[p].name}
 					{if $category_parents[p].children|@count > 0}<span class="float-right"><i class="material-symbols-rounded xb-nav-icon">expand_more</i></span>{/if}
 				</a>
@@ -158,5 +158,25 @@
 			<p class="ad-size">Auto &times; Auto</p>
 		</div>			
 	{/if}	
+
+{literal}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.category-parent-link').forEach(function(link) {
+        if (link.dataset.parentId) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                var siblingChildren = this.nextElementSibling;
+                if (siblingChildren && siblingChildren.classList.contains('category-children')) {
+                    siblingChildren.classList.toggle('show');
+                    var icon = this.querySelector('.xb-nav-icon');
+                    if (icon) icon.style.transform = siblingChildren.classList.contains('show') ? 'rotate(180deg)' : '';
+                }
+            });
+        }
+    });
+});
+</script>
+{/literal}
 
 </div>
