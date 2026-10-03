@@ -62,8 +62,17 @@ if ( $config['show_private_videos'] == '0' ) {
 
 $sql_add       .= $sql_delim. " v.active = '1'";  
 
+// Excluir shorts (portrait + duração < 100s) dos feeds de vídeos normais
+$sql_add       .= " AND NOT (v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait')";
+
 $video_select   = "v.VID, v.title, v.duration, v.addtime, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.viewnumber, v.rate, v.likes, v.dislikes, v.type, v.hd, v.keyword, v.UID, v.orientation, v.featured, u.username";
 $video_from     = " FROM video AS v, signup AS u WHERE v.UID = u.UID" .$sql_add;
+
+// Para shorts: versão SEM a exclusão (query dedicada)
+$video_from_shorts = " FROM video AS v, signup AS u WHERE v.UID = u.UID" . $sql_delim . " v.active = '1'";
+if ( $config['show_private_videos'] == '0' ) {
+    $video_from_shorts .= " AND v.type = 'public'";
+}
 
 // Feed único da home (Para Você): recência + audiência no MESMO score do feed
 // de shorts (foryou). A primeira página usa $config['items_per_front_page'] e o
@@ -142,7 +151,7 @@ foreach ( $hero_videos as $k => $v ) {
 // Shorts / Vídeos Verticais para a vitrine da home: SÓ verticais (orientation) e
 // até 1:40 (100s), ordenados por recência + audiência no mesmo score
 // (mesma fórmula do feed em shorts.php / ajax/shorts_feed.php).
-$sql_shorts = "SELECT " . $video_select . $video_from . " AND v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait' ORDER BY (v.viewnumber / POW(TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(CAST(v.addtime AS UNSIGNED)), NOW()) + 2, 1.5)) DESC, v.addtime DESC, v.VID DESC LIMIT 12";
+$sql_shorts = "SELECT " . $video_select . $video_from_shorts . " AND v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait' ORDER BY (v.viewnumber / POW(TIMESTAMPDIFF(HOUR, FROM_UNIXTIME(CAST(v.addtime AS UNSIGNED)), NOW()) + 2, 1.5)) DESC, v.addtime DESC, v.VID DESC LIMIT 12";
 $rs_shorts  = $conn->execute($sql_shorts);
 $shorts_videos = $rs_shorts ? $rs_shorts->getrows() : array();
 video_apply_cover_rotation($shorts_videos);

@@ -512,14 +512,14 @@ if (defined('_ADMIN')) {
 	require_once __DIR__ . '/function_global.php';
 
 	$sql            = "SELECT VID, title, duration, addtime, thumb, thumbs, thumbnails_opt, vthumbs, viewnumber, rate, likes, dislikes, type, hd
-					   FROM video WHERE featured='yes' ORDER BY RAND() DESC LIMIT 8";
+					   FROM video WHERE featured='yes' AND NOT (duration > 0 AND duration < 100 AND orientation = 'portrait') ORDER BY RAND() DESC LIMIT 8";
 	$rs             = $conn->execute($sql);
 	$featured       = $rs->getrows();
 	video_apply_cover_rotation($featured);
 	$smarty->assign('featured_videos_sm', $featured);
 
 	$mm_video_sql   = "SELECT VID, title, duration, addtime, thumb, thumbs, thumbnails_opt, vthumbs, viewnumber, rate, likes, dislikes, type, hd
-					   FROM video WHERE active = '1' ";
+					   FROM video WHERE active = '1' AND NOT (duration > 0 AND duration < 100 AND orientation = 'portrait') ";
 	$rs             = $conn->execute($mm_video_sql . "ORDER BY addtime DESC LIMIT 8");
 	$mm_videos_recent = $rs->getrows();
 	video_apply_cover_rotation($mm_videos_recent);

@@ -248,7 +248,8 @@ if ( $config['approve'] == '1' ) {
 $sql_at	       .= $sql_delim;
 
 $sql            = "SELECT COUNT(VID) AS total_videos FROM video" .$sql_at. " active = '1' AND channel = '" .$video['channel']. "' AND VID != " .$vid. "
-                   AND ( title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")";
+                    AND NOT (duration > 0 AND duration < 100 AND orientation = 'portrait')
+                    AND ( title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")";
 $rsc            = $conn->execute($sql);
 $total_related  = $rsc->fields['total_videos'];
 if ( $total_related > 32 ) {
@@ -257,9 +258,10 @@ if ( $total_related > 32 ) {
 $pagination     = new Pagination(8, 'p_related_videos_' .$video['VID']. '_');
 $limit          = $pagination->getLimit($total_related);
 $sql            = "SELECT v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.hd, v.keyword, v.orientation, v.featured, u.username FROM video AS v, signup AS u
-                    WHERE v.UID = u.UID AND v.active = '1' AND v.channel = '" .$video['channel']. "' AND v.VID != " .$vid. "
-                    AND ( v.title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")
-                    ORDER BY v.addtime DESC LIMIT " .$limit;
+                     WHERE v.UID = u.UID AND v.active = '1' AND v.channel = '" .$video['channel']. "' AND v.VID != " .$vid. "
+                     AND NOT (v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait')
+                     AND ( v.title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")
+                     ORDER BY v.addtime DESC LIMIT " .$limit;
 $rs             = $conn->execute($sql);
 $videos         = $rs->getrows();
 
@@ -320,7 +322,7 @@ $video['total_subscribers'] = get_user_total_subscribers($video['UID']);
 
 // ---- Carousels estilo Netflix (seções abaixo do player) ----
 $caro_select = "v.VID, v.title, v.duration, v.addtime, v.rate, v.likes, v.dislikes, v.viewnumber, v.type, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.hd, v.orientation, u.username";
-$caro_from   = " FROM video AS v, signup AS u WHERE v.UID = u.UID AND v.active = '1' AND v.type = 'public' AND v.VID != " .$vid. " ";
+$caro_from   = " FROM video AS v, signup AS u WHERE v.UID = u.UID AND v.active = '1' AND v.type = 'public' AND v.VID != " .$vid. " AND NOT (v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait') ";
 
 // Em alta (mais vistos)
 $sql         = "SELECT " .$caro_select. $caro_from. " ORDER BY v.viewnumber DESC LIMIT 30";

@@ -122,14 +122,16 @@ if ( $category ) {
     }
 }
 
-$sql_add       .= $sql_delim . " v.active = '1'";
-$sql_add_count .= $sql_delim . " v.active = '1'";
-
 // If no conditions added yet (no type, quality, timeframe, category), ensure we have WHERE
 if ($sql_delim === ' WHERE ') {
     $sql_add = ' WHERE v.active = \'1\'';
     $sql_add_count = ' WHERE v.active = \'1\'';
 }
+
+// Excluir shorts (portrait + duração < 100s) das listagens de vídeos normais
+// DEVE vir DEPOIS do bloco acima para não ser removido
+$sql_add       .= " AND NOT (v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait')";
+$sql_add_count .= " AND NOT (v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait')";
 
 switch ( $order ) {
     case 'bw':

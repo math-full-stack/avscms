@@ -24,6 +24,9 @@ if ($config['show_private_videos'] == '0') {
 }
 $sql_add .= " AND v.active = '1'";
 
+// Excluir shorts (portrait + duração < 100s) do feed da home
+$sql_add .= " AND NOT (v.duration > 0 AND v.duration < 100 AND v.orientation = 'portrait')";
+
 // Feed único da home: MESMA query e ordenação (score híbrido recência+audiência)
 // do index.php — manter em sincronia.
 $sql = "SELECT v.VID, v.title, v.duration, v.addtime, v.thumb, v.thumbs, v.thumbnails_opt, v.vthumbs, v.viewnumber, v.rate, v.likes, v.dislikes, v.type, v.hd, v.keyword, v.UID, v.orientation, v.featured, u.username

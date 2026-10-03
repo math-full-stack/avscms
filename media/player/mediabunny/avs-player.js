@@ -139,6 +139,16 @@ import {
         posterImg.style.display = '';
     }
 
+    // Iniciar com som: preferência do usuário (override do admin).
+    // Se ativo, ignora player_start_muted e começa com som.
+    let startWithSound = (() => {
+        try {
+            return localStorage.getItem('avs_start_with_sound') === '1';
+        } catch (e) {
+            return false;
+        }
+    })();
+
     // Repetir (loop): desligado por padrão, persistido por usuário em
     // localStorage (mesmo padrão das demais preferências de reprodução).
     let repeat = (() => {
@@ -354,8 +364,8 @@ import {
     let muteTouched = false;
     let playbackRate = 1;
 
-    // Start muted (configurable in admin playeredit)
-    if (startMuted) {
+    // Start muted (configurable in admin playeredit), but user can override with "start with sound"
+    if (startMuted && !startWithSound) {
         volumeMuted = true;
     }
     let seeking = false;
@@ -1292,6 +1302,7 @@ import {
         if (id === 'repeat') return repeat;
         if (id === 'mini') return miniPref;
         if (id === 'autoplayNext') return autoplayNext;
+        if (id === 'startWithSound') return startWithSound;
         return false;
     };
 
@@ -1453,6 +1464,18 @@ import {
             });
             nextItem.dataset.playbackId = 'autoplayNext';
             playbackGroup.appendChild(nextItem);
+
+            const startSoundItem = buildSettingsItem(
+                'Iniciar com som',
+                startWithSound ? '1' : '0',
+                () => {
+                    startWithSound = !startWithSound;
+                    try { localStorage.setItem('avs_start_with_sound', startWithSound ? '1' : '0'); } catch (e) { /* noop */ }
+                    markPlayback();
+                }
+            );
+            startSoundItem.dataset.playbackId = 'startWithSound';
+            playbackGroup.appendChild(startSoundItem);
         }
         markSpeed(playbackRate);
         syncRepeatUi();

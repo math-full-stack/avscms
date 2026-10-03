@@ -89,6 +89,10 @@ if ( $search_query ) {
     $sql_add_count  .= " AND ( title LIKE '%" .trim($conn->qStr($search_query_f), "'"). "%' OR keyword LIKE '%" .trim($conn->qStr($search_query_f), "'"). "%' )";
 }
 
+// Excluir shorts (portrait + duração < 100s) das buscas de vídeos
+$sql_add        .= " AND NOT (duration > 0 AND duration < 100 AND orientation = 'portrait')";
+$sql_add_count  .= " AND NOT (duration > 0 AND duration < 100 AND orientation = 'portrait')";
+
 switch ( $order ) {
     case 'br':
         $sql_add .= " ORDER BY viewtime DESC";

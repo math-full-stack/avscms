@@ -39,9 +39,10 @@ if ( isset($_POST['video_id']) && isset($_POST['move']) && isset($_POST['page'])
         $sql_add   .= ")";
     }
     
-	$type			= ($config['show_private_videos'] == '1') ? '' : " AND type = 'public'";
+$type			= ($config['show_private_videos'] == '1') ? '' : " AND type = 'public'";
     $sql            = "SELECT COUNT(VID) AS total_videos FROM video WHERE channel = '" .$video['channel']. "' AND VID != " .$vid. "
 					   AND active = '1'" .$type. "
+                       AND NOT (duration > 0 AND duration < 100 AND orientation = 'portrait')
                        AND ( title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")";
     $rs             = $conn->execute($sql);
     $total          = $rs->fields['total_videos'];
@@ -53,10 +54,11 @@ if ( isset($_POST['video_id']) && isset($_POST['move']) && isset($_POST['page'])
     $limit          = $pagination->getLimit($total);
     $sql            = "SELECT VID, title, duration, addtime, rate, likes, dislikes, viewnumber, type, thumb, thumbs, thumbnails_opt, orientation, hd
 	                   FROM video 
-                       WHERE channel = '" .intval($video['channel']). "' AND VID != " .$vid. "
+                        WHERE channel = '" .intval($video['channel']). "' AND VID != " .$vid. "
 					   AND active = '1'" .$type. "
+                       AND NOT (duration > 0 AND duration < 100 AND orientation = 'portrait')
                        AND ( title LIKE '%" .trim($conn->qStr($video['title']), "'"). "%' " .$sql_add. ")
-                       ORDER BY addtime DESC LIMIT " .$limit;
+                        ORDER BY addtime DESC LIMIT " .$limit;
     $rs             = $conn->execute($sql);
     $videos         = $rs->getrows();
     video_apply_cover_rotation($videos);
