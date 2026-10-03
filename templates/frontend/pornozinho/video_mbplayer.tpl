@@ -175,7 +175,7 @@
 </div>
 {if $player.timeline_preview}<link rel="preload" as="image" href="{insert name=thumb_path vid=$video.VID}/sprite.jpg">{/if}
 <link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=3.2.12">
-<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=3.2.18"></script>
+<script type="module" src="{$baseurl}/media/player/mediabunny/avs-player.js?ver=3.2.19"></script>
 <script>
 {literal}
 window.__avsReady = false;

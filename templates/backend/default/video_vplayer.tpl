@@ -109,7 +109,7 @@
 	</center>
 {/if}
 {if !$video.embed_code}
-	<script src="/media/player/videojs/video-js-events.js?ver=1.1.1"></script>
+	<script src="/media/player/videojs/video-js-events.js?ver=1.1.2"></script>
 {/if}
 </body>
 </html>

@@ -13,6 +13,7 @@
 		player_logo_link = "{$baseurl}/video/{$video.VID}/{$video.title|clean}";
 	{literal}}{/literal}
 	var player_logo_image = "{$baseurl}/media/player/logo/logo.png";	
+	var player_logo_image_light = "{$baseurl}/media/player/logo/logo-light.png";
 	var player_logo_opacity = "{$player.logo_opacity}";
 	var player_pause_adv = "{$player.pause_adv}";
 	var video_duration = "{$video.duration}";	

@@ -125,7 +125,7 @@ var vitem = "{$vitem}";
 <script type="text/javascript" src="{$relative_tpl}/js/player.js?ver=1.0.35"></script>
 <script type="text/javascript" src="{$relative_tpl}/js/decrypt.min.js?ver=1.0.35"></script>
 <script type="text/javascript" src="{$relative_tpl}/js/player-init.min.js?ver=1.0.35"></script>
-<script src="{$baseurl}/media/player/videojs/video-js-events.js?ver=1.1.1"></script>	
+<script src="{$baseurl}/media/player/videojs/video-js-events.js?ver=1.1.2"></script>	
 {/if}
 </body>
 </html>

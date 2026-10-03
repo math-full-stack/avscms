@@ -167,7 +167,7 @@ if (file_exists(__DIR__ . '/config.local.php')) {
     $config['thumbnail_player_height'] = '1080';
     $config['thumbnail_remove_bb'] = '1';
     $config['thumbnail_keep_ar'] = '1';
-    $config['watermark_image'] = 'media/player/logo/logo.png';
+    $config['watermark_image'] = 'media/player/logo/logo-wm.png';
     $config['neroaacenc']      = '';
     $config['mp4box']          = '';
     $config['mediainfo']       = '';

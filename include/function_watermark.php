@@ -221,13 +221,13 @@ function wm_refresh_video_snapshot($vid, $sourceUrl)
 }
 
 /**
- * Resolve the logo file path (config watermark_image, default player logo).
+ * Resolve the watermark logo file path (config watermark_image, default seal).
  * @return string
  */
 function wm_logo_path() {
     global $config;
-    $path = !empty($config['watermark_image']) ? trim($config['watermark_image']) : 'media/player/logo/logo.png';
-    if ($path === '') $path = 'media/player/logo/logo.png';
+    $path = !empty($config['watermark_image']) ? trim($config['watermark_image']) : 'media/player/logo/logo-wm.png';
+    if ($path === '') $path = 'media/player/logo/logo-wm.png';
     if (!preg_match('#^(/|' . preg_quote($config['BASE_DIR'], '#') . ')#', $path)) {
         $path = $config['BASE_DIR'] . '/' . ltrim($path, '/');
     }

@@ -374,6 +374,7 @@ import {
         vastCancel:  parseInt(player.dataset.vastCancel || '5000', 10) || 5000,
         logo:        window.player_logo === '1',
         logoImage:   window.player_logo_image || (base_url + '/media/player/logo/logo.png'),
+        logoImageLight: window.player_logo_image_light || (base_url + '/media/player/logo/logo-light.png'),
         logoLink:    (window.player_logo_link && window.player_logo_link !== '') ? window.player_logo_link : (base_url + '/video/' + video_id + '/' + (window.location.pathname.split('/').pop() || '')),
         logoPosition: window.player_logo_position || 'top-right',
         logoOpacity: parseFloat(window.player_logo_opacity || '40') / 100 || 0.4,
@@ -1743,11 +1744,20 @@ import {
         wrap.target = '_blank';
         wrap.rel = 'noopener';
         const img = document.createElement('img');
-        img.src = cfg.logoImage;
+        // Mesma cor do header: variante grafite no tema claro, prata no escuro.
+        const logoSrc = () => (document.documentElement.getAttribute('data-theme') === 'light' && cfg.logoImageLight)
+            ? cfg.logoImageLight : cfg.logoImage;
+        img.src = logoSrc();
         img.alt = '';
         wrap.style.opacity = String(cfg.logoOpacity);
         wrap.appendChild(img);
         player.appendChild(wrap);
+        if (typeof MutationObserver !== 'undefined') {
+            new MutationObserver(() => {
+                const next = logoSrc();
+                if (img.getAttribute('src') !== next) img.src = next;
+            }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        }
     };
     setupLogo();
 

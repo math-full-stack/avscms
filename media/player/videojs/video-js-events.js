@@ -14,8 +14,12 @@ if (player_logo == '1') {
 	if (player_logo_redirect != '1') {
 		player_logo_link = "#";
 	}
+	// Mesma cor do header: variante grafite no tema claro, prata no escuro.
+	var logo_theme_image = (document.documentElement.getAttribute('data-theme') === 'light'
+		&& typeof player_logo_image_light !== 'undefined' && player_logo_image_light)
+		? player_logo_image_light : player_logo_image;
 	player.logobrand({
-		image: player_logo_image, //image to use
+		image: logo_theme_image, //image to use
 		destination: player_logo_link, //destination when clicked
 		position: player_logo_position,
 		opacity: player_logo_opacity
