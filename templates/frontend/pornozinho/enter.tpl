@@ -4,6 +4,16 @@
 <head>
     <title>{if isset($self_title) && $self_title != ''}{$self_title|escape:'html'}{else}{$site_name}{/if}</title>
     <meta charset="utf-8">
+    <!-- Tema claro/escuro: aplica antes da 1ª pintura (evita flash); padrão é claro -->
+    <script type="text/javascript">
+    {literal}
+    (function () {
+        var t = null;
+        try { t = localStorage.getItem('avs_theme'); } catch (e) {}
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+    })();
+    {/literal}
+    </script>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=1280, initial-scale=1, maximum-scale=1, user-scalable=no">	
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -30,7 +40,35 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.21" rel="stylesheet">	
+	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.22" rel="stylesheet">
+	<!-- Logo com máscara animada (regras de .xb-logo vivem em pornozinho.css,
+	     que o age gate não carrega — bloco mínimo equivalente aqui) -->
+	<style>
+	.xb-logo {
+		display: inline-flex;
+		position: relative;
+		background: var(--xb-logo-grad);
+		background-size: 200% 100%;
+		-webkit-mask-image: var(--xb-logo-img);
+		mask-image: var(--xb-logo-img);
+		-webkit-mask-size: contain;
+		mask-size: contain;
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-position: center;
+		mask-position: center;
+		animation: xb-logo-wave 6s ease-in-out infinite alternate;
+	}
+	@keyframes xb-logo-wave {
+		from { background-position: 0% 50%; }
+		to { background-position: 100% 50%; }
+	}
+	.xb-logo img {
+		max-height: 46px;
+		width: auto;
+		visibility: hidden;
+	}
+	</style>
 	
 </head>
 <body>
@@ -41,7 +79,7 @@
 	  <tr>
 		<td valing="middle" align="center">
 			<div class="enter">
-				<img src="{$relative}/images/logo/logo.png" height="46" alt="{$site_name|escape:'html'}" title="{$site_name|escape:'html'}">
+				<a class="xb-logo" href="{$baseurl}" style="--xb-logo-img:url('{$relative}/images/logo/logo.png')"><img src="{$relative}/images/logo/logo.png" height="46" alt="{$site_name|escape:'html'}" title="{$site_name|escape:'html'}"></a>
 				<h3>
 					WARNING: This website contains explicit adult material.
 				</h3>

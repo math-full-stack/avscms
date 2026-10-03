@@ -11,7 +11,7 @@ var vitem = "{$vitem}";
 	<link href="/media/player/videojs/plugins/videojs-resolution-switcher-master/lib/videojs-resolution-switcher.css" rel="stylesheet">		
 	<link href="/media/player/videojs/plugins/videojs-logobrand-master/src/videojs.logobrand.css" rel="stylesheet">
 	<link href="/media/player/videojs/plugins/videojs-thumbnails-master/videojs.thumbnails.css" rel="stylesheet">
-	<link href="/media/player/videojs/video-js-custom.css?ver=1.0.7" rel="stylesheet">					
+	<link href="/media/player/videojs/video-js-custom.css?ver=1.0.8" rel="stylesheet">					
 	{if $vast_vpaid && $player.vast_vpaid_adv}
 		<link href="{$baseurl}/media/player/videojs/plugins/videojs-vast-vpaid-master/bin/videojs.vast.vpaid.css" rel="stylesheet">			
 	{/if}

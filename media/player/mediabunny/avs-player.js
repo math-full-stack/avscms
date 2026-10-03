@@ -2350,7 +2350,7 @@ import {
         /* Fake progress */
         if (String(ad.fake_progress) === '1' && dur > 0) {
             const bar = document.createElement('div');
-            bar.style.cssText = 'position:absolute;bottom:0;left:0;height:3px;background:linear-gradient(90deg,#7c4dff,#ff1493);z-index:9;width:0%';
+            bar.style.cssText = 'position:absolute;bottom:0;left:0;height:3px;background:linear-gradient(90deg,#5A646E,#C9CED4);z-index:9;width:0%';
             wrap.appendChild(bar);
             const t0 = Date.now();
             const tick = () => {

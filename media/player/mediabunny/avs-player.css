@@ -977,7 +977,7 @@
     font-size: 13px;
 }
 .avs-smart-html a {
-    color: #ff1493;
+    color: var(--xb-accent-2, #8B949D);
 }
 
 /* --- Autoplay overlay --- */
@@ -1031,7 +1031,7 @@
 .avs-player .avs-autoplay-more-head .material-symbols-rounded,
 .avs-player .avs-autoplay-next-head .material-symbols-rounded {
     font-size: 17px;
-    color: var(--xb-accent, #ff1493);
+    color: var(--xb-accent-2, #8B949D);
     font-variation-settings: 'FILL' 1;
 }
 
@@ -1170,11 +1170,12 @@
 }
 
 .avs-player .avs-autoplay-btn-primary {
-    background: var(--xb-accent, #ff1493);
+    background: var(--xb-accent, #5A646E);
     border-color: transparent;
-    box-shadow: 0 2px 14px rgba(255, 20, 147, 0.35);
+    color: #fff;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
 }
 
 .avs-player .avs-autoplay-btn-primary:hover {
-    background: #ff2ea2;
+    background: var(--xb-accent-d, #48515A);
 }

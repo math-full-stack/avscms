@@ -18,13 +18,13 @@ defined('_VALID') or die('Restricted Access!');
 // include/config.paths.php a partir da env var SITE_BASE_URL
 // (definida via Apache SetEnv na VM = https://adulto.cloud).
 // Não sobrescreva aqui para manter consistência com IMG_URL etc.
-$config['site_name']  = 'Pornozinho';
-$config['site_title'] = 'Pornozinho';
+$config['site_name']  = 'adulto.cloud';
+$config['site_title'] = 'adulto.cloud';
 $config['admin_name'] = 'admin';
 $config['admin_pass'] = getenv('ADMIN_PASS') ?: '';
 $config['noreply_email'] = 'noreply@adulto.cloud';
 $config['admin_email']   = 'admin@adulto.cloud';
-$config['emailsender']   = 'Pornozinho';
+$config['emailsender']   = 'adulto.cloud';
 $config['meta_description'] = 'Free Porn Videos';
 $config['meta_keywords']    = 'porn, sex, porno, free porn, porn tube, free streaming porn, full sex videos';
 

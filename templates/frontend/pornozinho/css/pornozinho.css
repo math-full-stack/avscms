@@ -1,50 +1,53 @@
 /* ==========================================================================
-   PORNOZINHO — identidade visual
+   ADULTO.CLOUD — identidade visual
    Camada complementar ao style.css (o base continua valendo).
-   Paleta: fundo #080808 / #0D0D0D · cards #151515 · accent magenta #FF1493
+   Paleta: fundo #17181A / #131416 · cards #212225 · accent grafite #5A646E
    ========================================================================== */
 
 :root {
-	--xb-bg: #080808;
-	--xb-bg-alt: #0D0D0D;
-	--xb-card: #151515;
-	--xb-card-2: #1c1c1c;
-	--xb-border: #262626;
-	--xb-text: #cfcfcf;
-	--xb-muted: #8d8d8d;
-	--xb-accent: #ff1493;
-	--xb-accent-d: #d30f7e;
+	--xb-bg: #17181A;
+	--xb-bg-alt: #131416;
+	--xb-card: #212225;
+	--xb-card-2: #26272B;
+	--xb-border: #35373B;
+	--xb-text: #E5E4E1;
+	--xb-muted: #9A9791;
+	--xb-accent: #5A646E;
+	--xb-accent-d: #48515A;
 	--xb-radius: 10px;
 	--xb-radius-sm: 8px;
 
 	/* ---- Vidro (frosted glass estilo macOS) ---- */
-	--xb-glass-bg: rgba(255, 255, 255, 0.07);
-	--xb-glass-bg-dark: rgba(13, 13, 13, 0.78);
+	--xb-glass-bg: rgba(35, 36, 39, 0.82);
+	--xb-glass-bg-dark: rgba(20, 21, 23, 0.72);
 	--xb-glass-border: rgba(255, 255, 255, 0.14);
 	--xb-glass-hl: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 	--xb-glass-blur: blur(20px) saturate(180%);
 	--xb-glass-blur-sm: blur(8px) saturate(160%);
 
-	/* ---- Cor viva / gradientes (DRY) — usados por botões, ícones e glows ---- */
-	--xb-accent-2: #7c4dff;
-	--xb-accent-cyan: #29e6ff;
-	--xb-grad: linear-gradient(135deg, var(--xb-accent), var(--xb-accent-2));
-	--xb-grad-v: linear-gradient(180deg, var(--xb-accent), var(--xb-accent-2));
-	--xb-glow: 0 0 22px rgba(255, 20, 147, .5);
-	--xb-glow-soft: 0 8px 24px rgba(255, 20, 147, .22);
-	--xb-glow-v: 0 0 18px rgba(124, 77, 255, .45);
+	/* ---- Cor viva / gradientes (DRY) — usados por botões, ícones e glows ----
+	       grad vai accent -> accent-d (duas faces escuras): texto branco
+	       continua legível em toda a faixa do gradiente animado. ---- */
+	--xb-accent-2: #8B949D;
+	--xb-accent-cyan: #6FA3B5;
+	--xb-grad: linear-gradient(135deg, var(--xb-accent), var(--xb-accent-d));
+	--xb-grad-v: linear-gradient(180deg, var(--xb-accent), var(--xb-accent-d));
+	--xb-glow: 0 4px 14px rgba(0, 0, 0, .5);
+	--xb-glow-soft: 0 8px 24px rgba(0, 0, 0, .35);
+	--xb-glow-v: 0 4px 12px rgba(0, 0, 0, .4);
+	--xb-logo-grad: linear-gradient(100deg, #8B949D, #E5E4E1, #8B949D);
 }
 
 html {
-	scrollbar-color: var(--xb-accent-d) #0a0a0a;
+	scrollbar-color: var(--xb-accent-d) #0f1011;
 }
 
 body {
 	background-color: var(--xb-bg);
 	background-image:
-		radial-gradient(1200px 500px at 50% -200px, rgba(255, 20, 147, 0.06), transparent 60%),
-		radial-gradient(900px 600px at 92% -2%, rgba(124, 77, 255, 0.06), transparent 55%),
-		radial-gradient(700px 500px at 4% 0%, rgba(41, 230, 255, 0.035), transparent 55%);
+		radial-gradient(1200px 500px at 50% -200px, rgba(229, 228, 225, 0.045), transparent 60%),
+		radial-gradient(900px 600px at 92% -2%, rgba(139, 148, 157, 0.05), transparent 55%),
+		radial-gradient(700px 500px at 4% 0%, rgba(111, 163, 181, 0.03), transparent 55%);
 	background-attachment: fixed;
 	color: var(--xb-text);
 }
@@ -126,7 +129,7 @@ a:active {
 	border-color: var(--xb-accent);
 	color: #fff !important;
 	font-weight: 600;
-	box-shadow: 0 4px 14px rgba(255, 20, 147, 0.25);
+	box-shadow: var(--xb-glow-soft);
 	transition: background-position .35s ease, box-shadow .2s ease;
 }
 
@@ -138,7 +141,7 @@ a:active {
 	background-image: var(--xb-grad);
 	background-position: 100% 50%;
 	border-color: var(--xb-accent-2);
-	box-shadow: 0 6px 20px rgba(255, 20, 147, 0.4);
+	box-shadow: var(--xb-glow);
 }
 
 .btn-secondary {
@@ -166,7 +169,7 @@ a:active {
 .form-control:focus {
 	background-color: #191919;
 	border-color: var(--xb-accent);
-	box-shadow: 0 0 0 .2rem rgba(255, 20, 147, .15);
+	box-shadow: 0 0 0 .2rem rgba(90, 100, 110, .22);
 }
 
 .dropdown-menu {
@@ -237,10 +240,11 @@ a:active {
 	line-height: 1;
 	display: inline-flex;
 	position: relative;
-	/* Gradiente vivo em onda (tons de roxo <-> rosa), recortado pelo formato da
+	/* Gradiente vivo em onda (tons de grafite), recortado pelo formato da
 	   logo via máscara (alpha do PNG). A <img> fica invisível e só reserva o
-	   layout; a URL da máscara chega inline do header.tpl (--xb-logo-img). */
-	background: linear-gradient(100deg, #7C4DFF, #FF1493, #C24BFF, #FF2DAA, #7C4DFF);
+	   layout; a URL da máscara chega inline do header.tpl (--xb-logo-img).
+	   --xb-logo-grad vira claro no dark e escuro no light (bloco light). */
+	background: var(--xb-logo-grad);
 	background-size: 200% 100%;
 	-webkit-mask-image: var(--xb-logo-img);
 	mask-image: var(--xb-logo-img);
@@ -283,7 +287,7 @@ a:active {
 
 .xb-search form:focus-within {
 	border-color: var(--xb-accent);
-	box-shadow: 0 0 0 3px rgba(255, 20, 147, .12);
+	box-shadow: 0 0 0 3px rgba(90, 100, 110, .20);
 }
 
 .xb-search .xb-search-input {
@@ -475,13 +479,13 @@ a:active {
 	background-image: var(--xb-grad);
 	color: #fff;
 	font-weight: 600;
-	box-shadow: 0 4px 14px rgba(255, 20, 147, .25);
+	box-shadow: var(--xb-glow-soft);
 }
 
 .xb-actions .xb-action-upload:hover {
 	background-image: var(--xb-grad);
 	color: #fff;
-	box-shadow: 0 8px 22px rgba(255, 20, 147, .45);
+	box-shadow: var(--xb-glow);
 	filter: brightness(1.1);
 }
 
@@ -555,7 +559,7 @@ a:active {
 	height: 2px;
 	background: var(--xb-grad);
 	border-radius: 2px;
-	box-shadow: 0 2px 8px rgba(255, 20, 147, .5);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, .45);
 }
 
 .xb-nav-icon {
@@ -595,7 +599,7 @@ a:active {
 	background-color: var(--xb-card);
 	border: 1px solid var(--xb-border);
 	border-radius: var(--xb-radius);
-	box-shadow: 0 10px 40px rgba(0, 0, 0, .6), 0 0 0 1px rgba(255, 20, 147, .1);
+	box-shadow: 0 10px 40px rgba(0, 0, 0, .6), 0 0 0 1px rgba(90, 100, 110, .3);
 	overflow: hidden;
 	animation: xb-dropdown-in .2s ease;
 }
@@ -676,7 +680,7 @@ a:active {
 }
 
 .xb-badge-sm {
-	background: rgba(255, 20, 147, .15);
+	background: rgba(90, 100, 110, .15);
 	color: var(--xb-accent);
 	font-size: 10px;
 	font-weight: 700;
@@ -705,14 +709,14 @@ a:active {
 }
 
 .xb-dropdown-tag:hover {
-	background: rgba(255, 20, 147, .12);
+	background: rgba(90, 100, 110, .12);
 	border-color: var(--xb-accent);
 	color: var(--xb-accent);
 	text-decoration: none;
 }
 
 .xb-tag-count {
-	background: rgba(255, 20, 147, .15);
+	background: rgba(90, 100, 110, .15);
 	color: var(--xb-accent);
 	font-size: 10px;
 	font-weight: 700;
@@ -899,7 +903,7 @@ a:active {
 }
 
 .xb-dropdown-view-all:hover {
-	background: rgba(255, 20, 147, .12);
+	background: rgba(90, 100, 110, .12);
 	color: #fff;
 	text-decoration: none;
 }
@@ -919,7 +923,7 @@ a:active {
 	height: 22px;
 	border-radius: 4px;
 	background: linear-gradient(180deg, var(--xb-accent), var(--xb-accent-d));
-	box-shadow: 0 0 10px rgba(255, 20, 147, .5);
+	box-shadow: var(--xb-glow-soft);
 }
 
 .xb-section h2 {
@@ -929,7 +933,7 @@ a:active {
 	margin: 0;
 	padding: 0;
 	text-transform: uppercase;
-	background: linear-gradient(90deg, #fff, #ffc2de 55%, var(--xb-accent-2));
+	background: linear-gradient(90deg, var(--xb-text), var(--xb-muted) 55%, var(--xb-accent-2));
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;
@@ -940,7 +944,6 @@ a:active {
 	-webkit-background-clip: text;
 	background-clip: text;
 	-webkit-text-fill-color: transparent;
-	filter: drop-shadow(0 0 8px rgba(255, 20, 147, .5));
 	margin-right: 8px;
 	font-size: .85em;
 }
@@ -969,7 +972,7 @@ a:active {
 
 a:hover .thumb-overlay {
 	transform: translateY(-3px);
-	box-shadow: 0 10px 28px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 20, 147, .35), var(--xb-glow-soft);
+	box-shadow: 0 10px 28px rgba(0, 0, 0, .55), 0 0 0 1px rgba(90, 100, 110, .45), var(--xb-glow-soft);
 }
 
 /* Thumb 16:9 sempre uniforme, cortado com cover, sem limite de altura */
@@ -1457,7 +1460,7 @@ a:hover .xb-thumb-meta {
 }
 
 .xb-creator .xb-badge {
-	background: rgba(255, 20, 147, .14);
+	background: rgba(90, 100, 110, .14);
 	color: var(--xb-accent);
 	font-size: 9px;
 	font-weight: 700;
@@ -1486,10 +1489,10 @@ a:hover .xb-thumb-meta {
 }
 
 .xb-tags a:hover {
-	background: rgba(255, 20, 147, .12);
+	background: rgba(90, 100, 110, .12);
 	border-color: var(--xb-accent);
 	color: var(--xb-accent);
-	box-shadow: 0 0 12px rgba(255, 20, 147, .35);
+	box-shadow: var(--xb-glow-soft);
 	text-decoration: none;
 }
 
@@ -1656,7 +1659,7 @@ a:hover .xb-thumb-meta {
 
 .xb-hero .xb-hero-main .xb-hero-title {
 	color: #fff;
-	background: linear-gradient(90deg, #fff, #ffc6e0 75%, var(--xb-accent-2));
+	background: linear-gradient(90deg, #fff, #cfc9c0 75%, var(--xb-accent-2));
 	-webkit-background-clip: text;
 	background-clip: text;
 	-webkit-text-fill-color: transparent;
@@ -1732,13 +1735,13 @@ a:hover .xb-thumb-meta {
 	width: 58px;
 	height: 58px;
 	border-radius: 50%;
-	background: rgba(255, 20, 147, .88);
+	background: rgba(90, 100, 110, .88);
 	color: #fff;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	font-size: 21px;
-	box-shadow: 0 8px 26px rgba(255, 20, 147, .45);
+	box-shadow: 0 8px 26px rgba(0, 0, 0, .45);
 	opacity: 0;
 	transition: opacity .2s ease, transform .2s ease;
 	z-index: 2;
@@ -1971,7 +1974,7 @@ a:hover .xb-thumb-meta {
 
 .xb-cat-card:hover {
 	transform: translateY(-4px);
-	box-shadow: 0 10px 28px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 20, 147, .3), var(--xb-glow-soft);
+	box-shadow: 0 10px 28px rgba(0, 0, 0, .55), 0 0 0 1px rgba(90, 100, 110, .4), var(--xb-glow-soft);
 	text-decoration: none;
 }
 
@@ -2143,7 +2146,7 @@ a:hover .xb-thumb-meta {
 }
 
 .tag:hover {
-	background: rgba(255, 20, 147, .12);
+	background: rgba(90, 100, 110, .12);
 	border-color: var(--xb-accent);
 	color: var(--xb-accent) !important;
 	text-decoration: none;
@@ -2365,7 +2368,7 @@ a:hover .xb-thumb-meta {
 }
 
 .autoplay-btn-skip:hover {
-	background: #ff2ea2 !important;
+	background: var(--xb-accent-d) !important;
 }
 
 /* Comentários */

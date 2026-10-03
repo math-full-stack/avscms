@@ -95,8 +95,8 @@
 	<link rel="stylesheet" href="{$relative_tpl}/css/easy-autocomplete.min.css"> 	
 	<link rel="stylesheet" href="{$relative_tpl}/css/easy-autocomplete.themes.min.css">	
 	
-	<link href="{$relative_tpl}/css/style.css" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.31" rel="stylesheet">
+	<link href="{$relative_tpl}/css/style.css?ver=1.0.1" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.32" rel="stylesheet">
 	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
 	<!-- Material Design 3 -->
@@ -104,10 +104,10 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.21" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho-md3.css?ver=1.0.22" rel="stylesheet">
 	<link href="{$relative_tpl}/css/avs-disguise.css?ver=1.0.2" rel="stylesheet">
 	{if isset($shorts_page) && $shorts_page}
-	<link href="{$relative_tpl}/css/avs-shorts.css?ver=1.0.12" rel="stylesheet">
+	<link href="{$relative_tpl}/css/avs-shorts.css?ver=1.0.13" rel="stylesheet">
 	{/if}
 
 	<!-- Tema claro/escuro: aplica antes da 1ª pintura (evita flash) e persiste em avs_theme -->
@@ -118,8 +118,7 @@
 		var root = document.documentElement;
 		var stored = null;
 		try { stored = localStorage.getItem(KEY); } catch (e) {}
-		var theme = (stored === 'light' || stored === 'dark') ? stored
-			: (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		var theme = (stored === 'light' || stored === 'dark') ? stored : 'light';
 		root.setAttribute('data-theme', theme);
 		function syncIcon() {
 			var cur = root.getAttribute('data-theme');
@@ -145,7 +144,7 @@
 		<link href="{$baseurl}/media/player/videojs/plugins/videojs-resolution-switcher-master/lib/videojs-resolution-switcher.css" rel="stylesheet">		
 		<link href="{$baseurl}/media/player/videojs/plugins/videojs-logobrand-master/src/videojs.logobrand.css" rel="stylesheet">
 		<link href="{$baseurl}/media/player/videojs/plugins/videojs-thumbnails-master/videojs.thumbnails.css" rel="stylesheet">
-		<link href="{$baseurl}/media/player/videojs/video-js-custom.css?ver=1.0.7" rel="stylesheet">					
+		<link href="{$baseurl}/media/player/videojs/video-js-custom.css?ver=1.0.8" rel="stylesheet">					
 		{if $vast_vpaid && $player.vast_vpaid_adv}
 			<link href="{$baseurl}/media/player/videojs/plugins/videojs-vast-vpaid-master/bin/videojs.vast.vpaid.css" rel="stylesheet">			
 		{/if}

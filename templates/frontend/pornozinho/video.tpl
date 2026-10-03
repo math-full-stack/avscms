@@ -74,7 +74,7 @@
    background: rgba(255,255,255,0.1);
 }
 .autoplay-btn-skip {
-   background: #ff1493;
+   background: var(--xb-accent);
    color: #fff;
    border: none;
    padding: 8px 20px;
@@ -85,7 +85,7 @@
    transition: background 0.2s;
 }
 .autoplay-btn-skip:hover {
-   background: #ff2ea2;
+   background: var(--xb-accent-d);
 }
 
 .autoplay-switch-wrap {
@@ -144,14 +144,14 @@
    transition: transform 0.3s, background 0.3s;
 }
 .autoplay-switch input:checked + .autoplay-slider {
-   background: #ff1493;
+   background: var(--xb-accent);
 }
 .autoplay-switch input:checked + .autoplay-slider:before {
    transform: translateX(18px);
    background: #fff;
 }
 .autoplay-switch input:focus + .autoplay-slider {
-   box-shadow: 0 0 2px rgba(229,9,20,0.5);
+   box-shadow: 0 0 2px rgba(90, 100, 110, 0.5);
 }
 
 .autoplay-card {
@@ -178,7 +178,7 @@
    font-weight: 500;
 }
 .autoplay-card-header-left i {
-   color: #ff1493;
+   color: var(--xb-accent-2);
    font-size: 12px;
 }
 .autoplay-card-body {

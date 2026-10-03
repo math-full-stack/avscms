@@ -219,15 +219,15 @@
 	min-width: 0;
 }
 .easy-autocomplete.eac-pornozinho input:focus {
-	border-color: #ff1493;
-	box-shadow: 0 0 0 3px rgba(255, 20, 147, .12);
+	border-color: var(--xb-accent);
+	box-shadow: 0 0 0 3px rgba(90, 100, 110, .12);
 	outline: none;
 }
 .easy-autocomplete.eac-pornozinho ul {
 	background: #151515;
 	border: 1px solid #262626;
 	border-radius: 10px;
-	box-shadow: 0 10px 40px rgba(0, 0, 0, .6), 0 0 0 1px rgba(255, 20, 147, .1);
+	box-shadow: 0 10px 40px rgba(0, 0, 0, .6), 0 0 0 1px rgba(90, 100, 110, .1);
 	top: 8px;
 	overflow: hidden;
 }
@@ -239,7 +239,7 @@
 	transition: all .15s ease;
 }
 .easy-autocomplete.eac-pornozinho ul li.selected, .easy-autocomplete.eac-pornozinho ul .eac-category.selected {
-	background: rgba(255, 20, 147, .12);
+	background: rgba(90, 100, 110, .12);
 	color: #fff;
 }
 .easy-autocomplete.eac-pornozinho ul li:hover, .easy-autocomplete.eac-pornozinho ul .eac-category:hover {
@@ -247,7 +247,7 @@
 	color: #fff;
 }
 .easy-autocomplete.eac-pornozinho ul li b, .easy-autocomplete.eac-pornozinho ul .eac-category b {
-	color: #ff1493;
+	color: var(--xb-accent);
 	font-weight: 600;
 }
 .easy-autocomplete.eac-pornozinho ul li .eac-category {
@@ -255,8 +255,8 @@
 	text-transform: uppercase;
 	font-size: 11px;
 	letter-spacing: .5px;
-	color: #ff1493;
-	background: rgba(255, 20, 147, .08);
+	color: var(--xb-accent);
+	background: rgba(90, 100, 110, .08);
 	padding: 8px 16px;
 }
 

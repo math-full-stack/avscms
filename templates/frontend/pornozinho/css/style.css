@@ -271,17 +271,17 @@ a.show-hide i {
 
 	.navbar-dark .navbar-nav .active>.nav-link {
 		color: #fff;
-		-moz-box-shadow: inset 0 -2px 0 #ff1493;
-		-webkit-box-shadow: inset 0 -2px 0 #ff1493;
-		box-shadow: inset 0 -2px 0 #ff1493;	
+		-moz-box-shadow: inset 0 -2px 0 var(--xb-accent);
+		-webkit-box-shadow: inset 0 -2px 0 var(--xb-accent);
+		box-shadow: inset 0 -2px 0 var(--xb-accent);	
 	}
 
 	.navbar-dark .navbar-nav .nav-link:hover {
 		background-color: #121212;
 		color: #fff;
-		-moz-box-shadow: inset 0 2px 0 #ff1493;
-		-webkit-box-shadow: inset 0 2px 0 #ff1493;
-		box-shadow: inset 0 2px 0 #ff1493;
+		-moz-box-shadow: inset 0 2px 0 var(--xb-accent);
+		-webkit-box-shadow: inset 0 2px 0 var(--xb-accent);
+		box-shadow: inset 0 2px 0 var(--xb-accent);
 		transition: none;
 	}
 	
@@ -453,9 +453,9 @@ a.show-hide i {
 }
 
 .well-action:hover {
-    -moz-box-shadow: inset 0 -2px 0 #ff1493;
-    -webkit-box-shadow: inset 0 -2px 0 #ff1493;
-    box-shadow: inset 0 -2px 0 #ff1493;	
+    -moz-box-shadow: inset 0 -2px 0 var(--xb-accent);
+    -webkit-box-shadow: inset 0 -2px 0 var(--xb-accent);
+    box-shadow: inset 0 -2px 0 var(--xb-accent);	
 }
 
 
@@ -884,15 +884,15 @@ a.show-hide i {
 
 .btn-primary {
     color: #fff;
-    background-color: #ff1493;
-    border-color: #ff1493;
+    background-color: var(--xb-accent);
+    border-color: var(--xb-accent);
 	box-shadow: none!important;
 }
 
 .btn-primary:hover, .btn-primary:focus, .btn-primary:active, .btn-primary.active, .open>.dropdown-toggle.btn-primary {
     color: #fff;
-    background-color: #d30f7e!important;
-    border-color: #d30f7e!important;
+    background-color: var(--xb-accent-d)!important;
+    border-color: var(--xb-accent-d)!important;
 }
 
 .modal-content {
@@ -971,7 +971,7 @@ a.show-hide i {
 }
 
 .top-menu .dropdown-item:focus, .top-menu .dropdown-item:hover {
-    background-color: #ff1493;
+    background-color: var(--xb-accent);
 }
 
 .top-menu .dropdown-item .badge {
@@ -981,9 +981,9 @@ a.show-hide i {
 .navbar .show .dropdown-toggle {
 	color: #fff;	
     background-color: #121212!important;
-	-moz-box-shadow:    inset 0 2px 0 #ff1493!important;
-	-webkit-box-shadow: inset 0 2px 0 #ff1493!important;
-	box-shadow:         inset 0 2px 0 #ff1493!important;	
+	-moz-box-shadow:    inset 0 2px 0 var(--xb-accent)!important;
+	-webkit-box-shadow: inset 0 2px 0 var(--xb-accent)!important;
+	box-shadow:         inset 0 2px 0 var(--xb-accent)!important;	
 	transition:none;
 }
 
@@ -1133,19 +1133,19 @@ a.list-group-item:hover, a.list-group-item:focus {
 .list-group-item.active, .list-group-item.active:hover, .list-group-item.active:focus {
     z-index: 2;
     color: #fff;
-    background-color: #ff1493;
-    border-color: #ff1493;
+    background-color: var(--xb-accent);
+    border-color: var(--xb-accent);
 }
 
 .page-item.active .page-link { 
-    background-color: #ff1493; 
-    border-color: #ff1493;
+    background-color: var(--xb-accent); 
+    border-color: var(--xb-accent);
 }
 
 .page-item.active .page-link:hover {
     color: #fff;
-    background-color: #d30f7e!important;
-    border-color: #d30f7e!important;
+    background-color: var(--xb-accent-d)!important;
+    border-color: var(--xb-accent-d)!important;
 }
 
 .page-link {
@@ -2404,7 +2404,7 @@ a.replies-hide {
 }
 
 .progress-bar {
-    background-color: #ff1493;
+    background-color: var(--xb-accent);
 }
 
 /* END FORMS */
@@ -2468,8 +2468,8 @@ a.replies-hide {
 
 .note-modal .note-btn {
     color: #fff!important;
-    background-color: #ff1493!important;
-    border-color: #ff1493!important;
+    background-color: var(--xb-accent)!important;
+    border-color: var(--xb-accent)!important;
     border-radius: 3px!important;
     font-size: 14px!important;
     font-weight: 700!important;
@@ -2482,8 +2482,8 @@ a.replies-hide {
 }
 
 .note-modal .note-btn:hover {
-	background-color: #d30f7e!important;
-    border-color: #d30f7e!important;
+	background-color: var(--xb-accent-d)!important;
+    border-color: var(--xb-accent-d)!important;
 }
 
 /* width */
@@ -2582,8 +2582,8 @@ a.replies-hide {
 }
 
 .profile-menu .nav-tabs .nav-item.show .nav-link, .profile-menu .nav-tabs .nav-link.active {
-	background-color: #ff1493;
-    border-color: #ff1493;
+	background-color: var(--xb-accent);
+    border-color: var(--xb-accent);
 	margin-bottom: -1px;	
 }
 

@@ -1,43 +1,43 @@
 /* ==========================================================================
-   PORNOZINHO — Material Design 3
-   Camada de design tokens M3 (dark scheme, seed #FF1493) aplicada sobre o
-   DOM atual (Bootstrap 4 + style.css + pornozinho.css).
+   ADULTO.CLOUD — Material Design 3
+   Camada de design tokens M3 (dark scheme, neutro office grafite) aplicada
+   sobre o DOM atual (Bootstrap 4 + style.css + pornozinho.css).
    Carrega por último para republicar todos os componentes em linguagem M3:
    superfícies, elevation, shape cor­ner, state layers, ripple, tipografia.
    ========================================================================== */
 
 :root {
-	/* ---- Material 3 color scheme (dark, seed #FF1493) ---- */
-	--md-sys-color-primary: #FFB1C9;
-	--md-sys-color-on-primary: #560036;
-	--md-sys-color-primary-container: #7B0758;
-	--md-sys-color-on-primary-container: #FFD9E3;
-	--md-sys-color-inverse-primary: #B60D66;
-	--md-sys-color-secondary: #E2B9C3;
-	--md-sys-color-on-secondary: #432531;
-	--md-sys-color-secondary-container: #5C3B46;
-	--md-sys-color-on-secondary-container: #FFD9E2;
-	--md-sys-color-tertiary: #EFBF87;
-	--md-sys-color-on-tertiary: #4A2A00;
-	--md-sys-color-tertiary-container: #673F00;
-	--md-sys-color-on-tertiary-container: #FFDDB3;
+	/* ---- Material 3 color scheme (dark, neutro office) ---- */
+	--md-sys-color-primary: #C9CED4;
+	--md-sys-color-on-primary: #15181C;
+	--md-sys-color-primary-container: #3E444B;
+	--md-sys-color-on-primary-container: #E4E7EB;
+	--md-sys-color-inverse-primary: #3A4149;
+	--md-sys-color-secondary: #C3BDB1;
+	--md-sys-color-on-secondary: #35322B;
+	--md-sys-color-secondary-container: #4B4740;
+	--md-sys-color-on-secondary-container: #E5DFD1;
+	--md-sys-color-tertiary: #D4C6AE;
+	--md-sys-color-on-tertiary: #3B3120;
+	--md-sys-color-tertiary-container: #544732;
+	--md-sys-color-on-tertiary-container: #E9E1CF;
 	--md-sys-color-error: #FFB4AB;
 	--md-sys-color-on-error: #690005;
 	--md-sys-color-error-container: #93000A;
 	--md-sys-color-on-error-container: #FFDAD6;
-	--md-sys-color-surface: #171318;
-	--md-sys-color-on-surface: #ECE0E4;
-	--md-sys-color-surface-variant: #4E4448;
-	--md-sys-color-on-surface-variant: #D4C2C7;
-	--md-sys-color-outline: #9C8E93;
-	--md-sys-color-outline-variant: #4E4448;
-	--md-sys-color-surface-container-lowest: #120F13;
-	--md-sys-color-surface-container-low: #1D191D;
-	--md-sys-color-surface-container: #211B20;
-	--md-sys-color-surface-container-high: #2B2529;
-	--md-sys-color-surface-container-highest: #362F34;
-	--md-sys-color-inverse-surface: #ECE0E4;
-	--md-sys-color-inverse-on-surface: #322D31;
+	--md-sys-color-surface: #1A1B1D;
+	--md-sys-color-on-surface: #E5E4E1;
+	--md-sys-color-surface-variant: #43454A;
+	--md-sys-color-on-surface-variant: #C3C5C9;
+	--md-sys-color-outline: #8E9094;
+	--md-sys-color-outline-variant: #43454A;
+	--md-sys-color-surface-container-lowest: #141517;
+	--md-sys-color-surface-container-low: #1E1F22;
+	--md-sys-color-surface-container: #232427;
+	--md-sys-color-surface-container-high: #2A2B2F;
+	--md-sys-color-surface-container-highest: #323337;
+	--md-sys-color-inverse-surface: #E5E4E1;
+	--md-sys-color-inverse-on-surface: #1D1E20;
 	--md-sys-color-scrim: #000000;
 	--md-sys-color-success-container: #0E5231;
 	--md-sys-color-on-success-container: #A7F8C4;
@@ -58,9 +58,9 @@
 	--md-sys-elevation-level3: 0 1px 3px rgba(0, 0, 0, .3), 0 4px 8px 3px rgba(0, 0, 0, .15);
 
 	/* ---- M3 state layers ---- */
-	--md-sys-state-hover: rgba(236, 224, 228, .08);
-	--md-sys-state-pressed: rgba(236, 224, 228, .12);
-	--md-sys-state-dragged: rgba(236, 224, 228, .16);
+	--md-sys-state-hover: rgba(229, 228, 225, .08);
+	--md-sys-state-pressed: rgba(229, 228, 225, .12);
+	--md-sys-state-dragged: rgba(229, 228, 225, .16);
 
 	/* ---- M3 typography (Roboto) ---- */
 	--md-sys-font: 'Roboto', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
@@ -75,34 +75,38 @@
 	--md-sys-typescale-label-medium: 12px/16px 500;
 	--md-sys-typescale-label-small: 11px/16px 500;
 
-	/* ---- Remap da identidade atual para superfícies M3 ---- */
-	--xb-bg: #171318;
-	--xb-bg-alt: #120F13;
-	--xb-card: #211B20;
-	--xb-card-2: #2B2529;
-	--xb-border: #4E4448;
-	--xb-text: #ECE0E4;
-	--xb-muted: #D4C2C7;
-	--xb-accent: #FF1493;
-	--xb-accent-d: #D30F7E;
+	/* ---- Remap da identidade para superfícies M3 (neutro office) ---- */
+	--xb-bg: #17181A;
+	--xb-bg-alt: #131416;
+	--xb-card: #212225;
+	--xb-card-2: #26272B;
+	--xb-border: #35373B;
+	--xb-text: #E5E4E1;
+	--xb-muted: #9A9791;
+	--xb-accent: #5A646E;
+	--xb-accent-d: #48515A;
 	--xb-radius: 12px;
 	--xb-radius-sm: 8px;
 
 	/* ---- Vidro (frosted glass estilo macOS) ---- */
-	--xb-glass-bg: rgba(33, 27, 32, 0.82);
-	--xb-glass-bg-dark: rgba(18, 15, 19, 0.72);
-	--xb-glass-border: rgba(255, 255, 255, 0.16);
+	--xb-glass-bg: rgba(35, 36, 39, 0.82);
+	--xb-glass-bg-dark: rgba(20, 21, 23, 0.72);
+	--xb-glass-border: rgba(255, 255, 255, 0.14);
 	--xb-glass-hl: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 	--xb-glass-blur: blur(24px) saturate(180%);
 	--xb-glass-blur-sm: blur(12px) saturate(160%);
 
-	/* ---- Cor viva / gradientes (DRY) — botões, ícones e glows M3 ---- */
-	--xb-accent-2: #9a6bff;
-	--xb-grad: linear-gradient(135deg, var(--xb-accent), var(--xb-accent-2));
-	--xb-grad-v: linear-gradient(180deg, var(--xb-accent), var(--xb-accent-2));
-	--xb-glow: 0 0 22px rgba(255, 20, 147, .5);
-	--xb-glow-soft: 0 8px 24px rgba(255, 20, 147, .22);
-	--xb-glow-v: 0 0 18px rgba(154, 107, 255, .45);
+	/* ---- Cor viva / gradientes (DRY) — botões, ícones e glows M3.
+	       grad vai accent -> accent-d (duas faces escuras): texto branco
+	       continua legível na ponta clara do gradiente animado. ---- */
+	--xb-accent-2: #8B949D;
+	--xb-accent-cyan: #6FA3B5;
+	--xb-grad: linear-gradient(135deg, var(--xb-accent), var(--xb-accent-d));
+	--xb-grad-v: linear-gradient(180deg, var(--xb-accent), var(--xb-accent-d));
+	--xb-glow: 0 4px 14px rgba(0, 0, 0, .5);
+	--xb-glow-soft: 0 8px 24px rgba(0, 0, 0, .35);
+	--xb-glow-v: 0 4px 12px rgba(0, 0, 0, .4);
+	--xb-logo-grad: linear-gradient(100deg, #8B949D, #E5E4E1, #8B949D);
 }
 
 /* --------------------------------------------------------------------------
@@ -230,7 +234,6 @@ a {
 
 .xb-actions .xb-action:hover i {
 	color: var(--md-sys-color-primary);
-	text-shadow: 0 0 10px rgba(255, 20, 147, .6);
 }
 
 .xb-action-upload {
@@ -291,7 +294,7 @@ a {
 	height: 3px;
 	background: var(--md-sys-color-primary);
 	border-radius: 3px 3px 0 0;
-	box-shadow: 0 2px 10px rgba(255, 20, 147, .55);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
 }
 
 /* Ícones vivos — Material Symbols preenchem + ganham cor/brilho no hover */
@@ -308,7 +311,6 @@ a {
 .xb-dropdown-view-all:hover .xb-ms-icon {
 	color: var(--md-sys-color-primary);
 	font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 20;
-	text-shadow: 0 0 10px rgba(255, 20, 147, .6);
 }
 
 /* --------------------------------------------------------------------------
@@ -359,7 +361,6 @@ a {
 .xb-nav-item.active .xb-nav-link .xb-nav-icon {
 	color: var(--md-sys-color-primary);
 	font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 20;
-	text-shadow: 0 0 10px rgba(255, 20, 147, .6);
 }
 
 .xb-nav-caret {
@@ -954,7 +955,7 @@ a:hover .thumb-overlay {
 	background-color: var(--md-sys-color-primary-container);
 	border-color: var(--md-sys-color-primary-container);
 	color: var(--md-sys-color-on-primary-container);
-	box-shadow: 0 0 12px rgba(255, 20, 147, .35);
+	box-shadow: var(--xb-glow-soft);
 }
 
 /* Chip de título/views: vidro fosco macOS (mesmos tokens do resto do tema) */
@@ -1200,7 +1201,7 @@ a:hover .thumb-overlay {
 	background-color: var(--md-sys-color-primary-container);
 	border-color: var(--md-sys-color-primary-container);
 	color: var(--md-sys-color-on-primary-container);
-	box-shadow: 0 0 14px rgba(255, 20, 147, .45);
+	box-shadow: var(--xb-glow-soft);
 }
 
 .page-item.disabled .page-link {
@@ -1238,7 +1239,7 @@ a:hover .thumb-overlay {
 	border: none;
 	border-bottom: 3px solid var(--md-sys-color-primary);
 	color: var(--md-sys-color-primary);
-	box-shadow: 0 6px 14px -6px rgba(255, 20, 147, .5);
+	box-shadow: 0 6px 14px -6px rgba(0, 0, 0, .45);
 }
 
 #commentsMediaModal .nav-tabs .nav-link.active,
@@ -1324,7 +1325,7 @@ a:hover .thumb-overlay {
 	font-weight: 600;
 	letter-spacing: .1px;
 	text-transform: none;
-	background: linear-gradient(90deg, #fff, #ffc2de 60%, var(--xb-accent-2));
+	background: linear-gradient(90deg, var(--xb-text), var(--xb-muted) 60%, var(--xb-accent-2));
 	-webkit-background-clip: text;
 	background-clip: text;
 	-webkit-text-fill-color: transparent;
@@ -1335,7 +1336,6 @@ a:hover .thumb-overlay {
 	-webkit-background-clip: text;
 	background-clip: text;
 	-webkit-text-fill-color: transparent;
-	filter: drop-shadow(0 0 8px rgba(255, 20, 147, .5));
 }
 
 .xb-section .xb-section-bar {
@@ -1343,7 +1343,7 @@ a:hover .thumb-overlay {
 	height: 22px;
 	border-radius: var(--md-sys-shape-corner-extra-small);
 	background: var(--xb-grad-v);
-	box-shadow: 0 0 12px rgba(255, 20, 147, .45);
+	box-shadow: var(--xb-glow-soft);
 }
 
 .xb-section .xb-section-link,
@@ -1495,7 +1495,7 @@ a:hover .thumb-overlay {
 .xb-mobnav a:hover i,
 .xb-mobnav a.active .xb-mobnav-icon,
 .xb-mobnav a:hover .xb-mobnav-icon {
-	text-shadow: 0 0 12px rgba(255, 20, 147, .7);
+	color: var(--md-sys-color-primary);
 }
 
 /* M3 bottom nav: ícone preenchido no item ativo */
@@ -1570,83 +1570,86 @@ button.xb-action {
 
 .xb-action-theme:hover .material-symbols-rounded {
 	color: var(--md-sys-color-primary);
-	text-shadow: 0 0 10px rgba(255, 20, 147, .6);
 }
 
 /* ==========================================================================
    TEMA CLARO (light) — html[data-theme="light"]
-   Definido pelo script inline do header.tpl (localStorage.avs_theme ou
-   prefers-color-scheme na 1ª visita). Aplica-se sobre TODOS os tokens M3.
+   Definido pelo script inline do header.tpl (localStorage.avs_theme;
+   sem chave gravada, a 1ª visita abre LIGHT — bege office é o padrão).
+   Aplica-se sobre TODOS os tokens M3.
    O mega menu (submenu do nav) e o player do mediabunny seguem o tema;
    dropdowns comuns (Bootstrap .dropdown-menu), autocomplete e modais
    permanecem ESCUROS nos dois temas — decisão de design do projeto.
    ========================================================================== */
 html[data-theme="light"] {
-	/* ---- Material 3 color scheme (light, seed #FF1493) ---- */
-	--md-sys-color-primary: #B60D66;
+	/* ---- Material 3 color scheme (light, bege office) ---- */
+	--md-sys-color-primary: #3A4149;
 	--md-sys-color-on-primary: #FFFFFF;
-	--md-sys-color-primary-container: #FFD9E3;
-	--md-sys-color-on-primary-container: #3B0022;
-	--md-sys-color-inverse-primary: #FFB1C9;
-	--md-sys-color-secondary: #79525C;
+	--md-sys-color-primary-container: #DEE2E7;
+	--md-sys-color-on-primary-container: #12161B;
+	--md-sys-color-inverse-primary: #C9CED4;
+	--md-sys-color-secondary: #6C675C;
 	--md-sys-color-on-secondary: #FFFFFF;
-	--md-sys-color-secondary-container: #FFD9E2;
-	--md-sys-color-on-secondary-container: #2B151D;
-	--md-sys-color-tertiary: #74523A;
+	--md-sys-color-secondary-container: #E5DFD1;
+	--md-sys-color-on-secondary-container: #25221B;
+	--md-sys-color-tertiary: #6E6353;
 	--md-sys-color-on-tertiary: #FFFFFF;
-	--md-sys-color-tertiary-container: #FFDDB3;
-	--md-sys-color-on-tertiary-container: #291800;
+	--md-sys-color-tertiary-container: #E9E1CF;
+	--md-sys-color-on-tertiary-container: #241E10;
 	--md-sys-color-error: #BA1A1A;
 	--md-sys-color-on-error: #FFFFFF;
 	--md-sys-color-error-container: #FFDAD6;
 	--md-sys-color-on-error-container: #410002;
-	--md-sys-color-surface: #FFF8F8;
-	--md-sys-color-on-surface: #1E1519;
-	--md-sys-color-surface-variant: #F3DEE3;
-	--md-sys-color-on-surface-variant: #524346;
-	--md-sys-color-outline: #847478;
-	--md-sys-color-outline-variant: #D2C3C7;
-	--md-sys-color-surface-container-lowest: #FFFFFF;
-	--md-sys-color-surface-container-low: #FEF1F2;
-	--md-sys-color-surface-container: #F8E9EC;
-	--md-sys-color-surface-container-high: #F2E3E6;
-	--md-sys-color-surface-container-highest: #ECDDDF;
-	--md-sys-color-inverse-surface: #33262B;
-	--md-sys-color-inverse-on-surface: #FBE4E8;
+	--md-sys-color-surface: #F5F1E9;
+	--md-sys-color-on-surface: #1D1B18;
+	--md-sys-color-surface-variant: #E6DFD1;
+	--md-sys-color-on-surface-variant: #57534A;
+	--md-sys-color-outline: #837C6E;
+	--md-sys-color-outline-variant: #C7C0B1;
+	--md-sys-color-surface-container-lowest: #FFFDF9;
+	--md-sys-color-surface-container-low: #F0EBE1;
+	--md-sys-color-surface-container: #EBE5DA;
+	--md-sys-color-surface-container-high: #E4DDD0;
+	--md-sys-color-surface-container-highest: #DBD3C4;
+	--md-sys-color-inverse-surface: #33302A;
+	--md-sys-color-inverse-on-surface: #F5F1E9;
 	--md-sys-color-scrim: #000000;
-	--md-sys-color-success-container: #A7F8C4;
+	--md-sys-color-success-container: #D3EDDD;
 	--md-sys-color-on-success-container: #0E5231;
 
 	/* ---- M3 state layers (light) ---- */
-	--md-sys-state-hover: rgba(30, 21, 25, .08);
-	--md-sys-state-pressed: rgba(30, 21, 25, .12);
-	--md-sys-state-dragged: rgba(30, 21, 25, .16);
+	--md-sys-state-hover: rgba(29, 27, 24, .08);
+	--md-sys-state-pressed: rgba(29, 27, 24, .12);
+	--md-sys-state-dragged: rgba(29, 27, 24, .16);
 
 	/* ---- Remap xb -> light (equivalentes de superfície) ---- */
-	--xb-bg: #FFF8F8;
-	--xb-bg-alt: #F8E9EC;
-	--xb-card: #FFFFFF;
-	--xb-card-2: #F2E3E6;
-	--xb-border: #D2C3C7;
-	--xb-text: #1E1519;
-	--xb-muted: #6C585D;
-	--xb-accent: #B60D66;
-	--xb-accent-d: #8A0B50;
+	--xb-bg: #F5F1E9;
+	--xb-bg-alt: #EEE9DE;
+	--xb-card: #FFFDF9;
+	--xb-card-2: #F0EBE1;
+	--xb-border: #DED7C8;
+	--xb-text: #1D1B18;
+	--xb-muted: #6B655A;
+	--xb-accent: #3A4149;
+	--xb-accent-d: #2A3037;
 
-	/* ---- Cor viva (gradiente saturado + glow suave p/ fundo claro) ---- */
-	--xb-accent-2: #7C4DFF;
-	--xb-accent-cyan: #0093CC;
-	--xb-glow: 0 0 22px rgba(182, 13, 102, .32);
-	--xb-glow-soft: 0 8px 24px rgba(182, 13, 102, .14);
-	--xb-glow-v: 0 0 18px rgba(124, 77, 255, .3);
+	/* ---- Cor viva (gradiente grafite + sombra suave p/ fundo claro).
+	       Os tokens --xb-glass-* NÃO são remapados de propósito: as janelas
+	       de vidro continuam escuras nos dois temas (decisão registrada). ---- */
+	--xb-accent-2: #5F6973;
+	--xb-accent-cyan: #4E7A8C;
+	--xb-glow: 0 4px 14px rgba(29, 27, 24, .14);
+	--xb-glow-soft: 0 8px 24px rgba(29, 27, 24, .10);
+	--xb-glow-v: 0 4px 12px rgba(29, 27, 24, .12);
+	--xb-logo-grad: linear-gradient(100deg, #5F6973, #1D1B18, #5F6973);
 }
 
-/* Aurora suave para o fundo claro (pink + violeta em vez de magenta forte) */
+/* Aurora suave para o fundo claro (grafite quente + bronze, sem cor viva) */
 html[data-theme="light"] body {
 	background-image:
-		radial-gradient(1200px 500px at 50% -200px, rgba(182, 13, 102, 0.05), transparent 60%),
-		radial-gradient(900px 600px at 92% -2%, rgba(124, 77, 255, 0.05), transparent 55%),
-		radial-gradient(700px 500px at 4% 0%, rgba(0, 147, 204, 0.035), transparent 55%);
+		radial-gradient(1200px 500px at 50% -200px, rgba(58, 65, 73, 0.05), transparent 60%),
+		radial-gradient(900px 600px at 92% -2%, rgba(95, 105, 115, 0.045), transparent 55%),
+		radial-gradient(700px 500px at 4% 0%, rgba(110, 99, 83, 0.04), transparent 55%);
 }
 
 /* Scrollbar clara */

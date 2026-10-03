@@ -5,9 +5,12 @@
  */
 
 :root {
-	--shorts-accent: #ff1493;
-	--shorts-accent-grad: linear-gradient(135deg, #ff1493, #7c4dff);
-	--shorts-glow: 0 0 20px rgba(255, 20, 147, 0.45);
+	/* A UI dos shorts é desenhada SOBRE o vídeo (fundo escuro) nos dois
+	   temas, então o accent é aço CLARO; pílulas ativas usam um gradiente
+	   de aço escuro com texto branco (--shorts-accent-grad). */
+	--shorts-accent: #C9CED4;
+	--shorts-accent-grad: linear-gradient(135deg, #465059, #5A646E);
+	--shorts-glow: 0 0 20px rgba(201, 206, 212, 0.25);
 	--shorts-bg-dark: #09090d;
 	--shorts-glass-bg: rgba(18, 18, 26, 0.78);
 	--shorts-glass-border: rgba(255, 255, 255, 0.12);
@@ -74,7 +77,7 @@ body:has(#avs-shorts-app) {
 }
 
 .avs-shorts-back:hover {
-	background: rgba(255, 20, 147, 0.3);
+	background: rgba(255, 255, 255, 0.16);
 	color: #fff;
 	transform: scale(1.05);
 }
@@ -203,7 +206,7 @@ body:has(#avs-shorts-app) {
 .avs-shorts-tab.active {
 	color: #fff;
 	background: var(--shorts-accent-grad);
-	box-shadow: 0 2px 10px rgba(255, 20, 147, 0.4);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, .4);
 	font-weight: 600;
 }
 
@@ -404,7 +407,7 @@ body:has(#avs-shorts-app) {
 }
 
 .avs-unmute-overlay-badge:hover {
-	background: rgba(255, 20, 147, 0.4);
+	background: rgba(255, 255, 255, 0.16);
 }
 
 .avs-unmute-overlay-badge.hidden {
@@ -432,11 +435,11 @@ body:has(#avs-shorts-app) {
 
 .avs-floating-heart {
 	position: absolute;
-	color: #ff1493;
+	color: var(--shorts-accent);
 	font-size: 90px;
 	transform: translate(-50%, -50%) scale(0);
 	animation: avsHeartBurst 0.9s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
-	filter: drop-shadow(0 0 15px rgba(255, 20, 147, 0.7));
+	filter: drop-shadow(0 0 15px rgba(201, 206, 212, 0.5));
 }
 
 @keyframes avsHeartBurst {
@@ -568,7 +571,7 @@ body:has(#avs-shorts-app) {
 	border-radius: 50%;
 	background: var(--shorts-accent);
 	border: 1.5px solid #fff;
-	color: #fff;
+	color: #15181C;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -603,7 +606,7 @@ body:has(#avs-shorts-app) {
 }
 
 .avs-action-btn:hover {
-	background: rgba(255, 20, 147, 0.25);
+	background: rgba(255, 255, 255, 0.14);
 	transform: scale(1.1);
 }
 
@@ -620,9 +623,9 @@ body:has(#avs-shorts-app) {
 
 /* Botão Like Ativo */
 .avs-btn-like.active {
-	color: #ff1493;
-	background: rgba(255, 20, 147, 0.2);
-	border-color: rgba(255, 20, 147, 0.4);
+	color: var(--shorts-accent);
+	background: rgba(201, 206, 212, 0.2);
+	border-color: rgba(201, 206, 212, 0.4);
 	animation: avsPop 0.3s ease;
 }
 
@@ -674,8 +677,8 @@ body:has(#avs-shorts-app) {
 .avs-short-progress-fill {
 	width: 0%;
 	height: 100%;
-	background: var(--shorts-accent-grad);
-	box-shadow: 0 0 8px rgba(255, 20, 147, 0.8);
+	background: var(--shorts-accent);
+	box-shadow: 0 0 8px rgba(201, 206, 212, 0.5);
 	transition: width 0.1s linear;
 }
 
@@ -752,7 +755,7 @@ body:has(#avs-shorts-app) {
 .avs-ad-slot-size {
 	font-size: 32px;
 	font-weight: 600;
-	color: var(--shorts-accent);
+	color: var(--md-sys-color-primary);
 }
 
 .avs-ad-next {
@@ -807,7 +810,7 @@ body:has(#avs-shorts-app) {
 	font-weight: 700;
 	letter-spacing: 1.2px;
 	text-transform: uppercase;
-	color: var(--shorts-accent);
+	color: var(--md-sys-color-primary);
 }
 
 .avs-ad-next-title {
@@ -991,7 +994,7 @@ body:has(#avs-shorts-app) {
 
 .avs-nav-btn:hover {
 	background: var(--shorts-accent-grad);
-	box-shadow: 0 4px 15px rgba(255, 20, 147, 0.4);
+	box-shadow: 0 4px 15px rgba(0, 0, 0, .45);
 	transform: scale(1.1);
 }
 
@@ -1017,7 +1020,7 @@ body:has(#avs-shorts-app) {
 	width: 32px;
 	height: 32px;
 	border: 3px solid rgba(255, 255, 255, 0.15);
-	border-top-color: var(--shorts-accent);
+	border-top-color: var(--md-sys-color-primary);
 	border-radius: 50%;
 	animation: avsSpin 0.8s linear infinite;
 }
@@ -1240,7 +1243,7 @@ body:has(#avs-shorts-app) {
 }
 
 .avs-comment-bubble-author:hover {
-	color: var(--shorts-accent);
+	color: var(--md-sys-color-primary);
 }
 
 .avs-comment-bubble-text {
@@ -1274,7 +1277,7 @@ body:has(#avs-shorts-app) {
 }
 
 .avs-comment-form:focus-within {
-	border-color: var(--shorts-accent);
+	border-color: var(--md-sys-color-primary);
 	background: rgba(255, 255, 255, 0.12);
 }
 
@@ -1333,7 +1336,7 @@ body:has(#avs-shorts-app) {
 	text-decoration: none;
 	font-weight: 600;
 	font-size: 12px;
-	box-shadow: 0 2px 8px rgba(255, 20, 147, 0.4);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
 }
 
 .avs-btn-login-prompt:hover {
@@ -1463,9 +1466,11 @@ html[data-theme="light"] .avs-action-btn {
 	color: var(--xb-text, #1E1519);
 }
 
-/* Hover dos botões de ação continua rosa (estado), como no escuro */
+/* Hover dos botões de ação vira preenchimento grafite (estado), como no
+   escuro — o accent dos shorts é aço claro e não serve de fundo com texto
+   branco. */
 html[data-theme="light"] .avs-action-btn:hover {
-	background: var(--shorts-accent);
+	background: #3A4149;
 	color: #fff;
 }
 

@@ -23,19 +23,19 @@ if (file_exists(__DIR__ . '/config.local.php')) {
 } elseif (isset($_ENV['DB_HOST']) || isset(getenv()['DB_HOST'])) {
     // Cloud Run / container environment — assemble config from env vars
     // with production-safe defaults matching the original config.local.php.
-    $config['site_name']      = getenv('SITE_NAME')      ?: 'Pornozinho';
-    $config['site_title']     = getenv('SITE_TITLE')     ?: 'Pornozinho';
+    $config['site_name']      = getenv('SITE_NAME')      ?: 'adulto.cloud';
+    $config['site_title']     = getenv('SITE_TITLE')     ?: 'adulto.cloud';
     $config['admin_name']     = getenv('ADMIN_USER')     ?: 'admin';
     $config['admin_pass']     = getenv('ADMIN_PASS')     ?: 'admin';
-    $config['noreply_email']  = getenv('NOREPLY_EMAIL')  ?: 'noreply@pornozinho.com';
-    $config['admin_email']    = getenv('ADMIN_EMAIL')    ?: 'admin@pornozinho.com';
+    $config['noreply_email']  = getenv('NOREPLY_EMAIL')  ?: 'noreply@adulto.cloud';
+    $config['admin_email']    = getenv('ADMIN_EMAIL')    ?: 'admin@adulto.cloud';
     $config['phppath']        = getenv('PHP_PATH')        ?: '/usr/bin/php';
     $config['ffmpeg']         = getenv('FFMPEG_PATH')     ?: '/usr/bin/ffmpeg';
     $config['ffprobe']        = getenv('FFPROBE_PATH')    ?: '/usr/bin/ffprobe';
     $config['thumbs_tool']    = 'ffmpeg';
     $config['processor']      = 'ffmpeg';
-    $config['meta_description'] = getenv('META_DESC')    ?: 'Free Porn Videos';
-    $config['meta_keywords']  = getenv('META_KEYWORDS')  ?: 'porn, sex, free videos, porn videos';
+    $config['meta_description'] = getenv('META_DESC')    ?: 'Vídeos pornos grátis';
+    $config['meta_keywords']  = getenv('META_KEYWORDS')  ?: 'pornô, sexo, porno, vídeos grátis, tube pornô, vídeos pornos, streaming grátis, filmes de sexo, free porn, porn videos, sex videos, free porn videos';
     $config['language']       = 'pt_BR';
     $config['multi_language'] = '0';
     $config['template']       = 'pornozinho';
@@ -71,7 +71,7 @@ if (file_exists(__DIR__ . '/config.local.php')) {
     $config['video_allowed_extensions'] = 'avi,mpg,mov,asf,mpeg,xvid,divx,3gp,mkv,3gpp,mp4,rmvb,rm,dat,wmv,flv,ogg,ogv,webm';
     $config['image_allowed_extensions'] = 'jpg,jpeg,png,gif,bmp';
     $config['image_max_size'] = '100000000000000';
-    $config['emailsender']    = 'Pornozinho';
+    $config['emailsender']    = 'adulto.cloud';
     $config['mailer']          = 'mail';
     $config['sendmail']        = '/usr/sbin/sendmail';
     $config['smtp']            = '';
