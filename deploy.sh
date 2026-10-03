@@ -17,7 +17,7 @@
 #
 set -euo pipefail
 
-PROJECT="${GCLOUD_PROJECT:-novinhasbr}"
+PROJECT="${GCLOUD_PROJECT:-pornozinho-510422}"
 REGION="${GCLOUD_REGION:-southamerica-east1}"
 SERVICE="${GCLOUD_SERVICE:-pornozinho}"
 SQL_INST="${GCLOUD_SQL_INST:-novinhasbr:southamerica-east1:pornozinho-sql}"
