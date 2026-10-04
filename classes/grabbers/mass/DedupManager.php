@@ -1,10 +1,13 @@
 <?php
 defined('_VALID') or die('Restricted Access!');
 
+require_once dirname(__FILE__) . '/BlocklistManager.php';
+
 /**
  * DedupManager - Multi-strategy deduplication for discovered videos.
  *
  * Strategy priority:
+ *   0. global blocklist           (rejected videos never come back)
  *   1. source_id + external_id  (primary identity)
  *   2. source_id + canonical_url (normalized URL)
  *   3. video.source_url in AVS (bridge to existing videos)
@@ -30,6 +33,18 @@ class DedupManager {
      * @return array ['is_duplicate' => bool, 'reason' => string, 'discovered_id' => int]
      */
     public function check($sourceId, $video) {
+        // Strategy 0: global blocklist - a rejected video is reported as a
+        // known duplicate so the scan neither inserts it nor refreshes it,
+        // and it is counted as "existing" for the frontier stop.
+        $blockMgr = new BlocklistManager();
+        if ($blockMgr->matchVideo($video) > 0) {
+            return array(
+                'is_duplicate'  => true,
+                'reason'        => 'BLOCKLIST',
+                'discovered_id' => 0,
+            );
+        }
+
         // Strategy 1: source_id + external_id
         if (!empty($video['external_id'])) {
             $rs = $this->safeExec("SELECT id, status FROM grabber_discovered_videos

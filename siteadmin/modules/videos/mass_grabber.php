@@ -153,6 +153,7 @@ if ($action === 'get_discovered') {
     $status = isset($_GET['status']) ? trim($_GET['status']) : null;
     $timeframe = isset($_GET['timeframe']) ? trim($_GET['timeframe']) : null;
     $sortBy = isset($_GET['sort']) ? trim($_GET['sort']) : 'newest';
+    $hideObtained = (isset($_GET['hide_obtained']) && $_GET['hide_obtained'] === '1');
     $page = 1;
     if (isset($_GET['limit']) && isset($_GET['offset'])) {
         $limit = max(1, intval($_GET['limit']));
@@ -173,9 +174,119 @@ if ($action === 'get_discovered') {
     if ($status) $filters['status'] = $status;
     if ($timeframe) $filters['timeframe'] = $timeframe;
     if ($sortBy) $filters['sort'] = $sortBy;
+    if ($hideObtained) $filters['hide_obtained'] = 1;
 
     $result = MassGrabberManager::discovery()->getDiscovered($sourceId, $filters, $limit, $offset);
     echo json_encode(array('status' => true, 'videos' => $result['videos'], 'total' => $result['total'], 'page' => $page));
+    exit();
+}
+
+// --- AJAX: Add videos to the global blocklist ---
+if ($action === 'block') {
+    header('Content-Type: application/json; charset=utf-8');
+    $blockMgr = MassGrabberManager::blocklist();
+
+    if (!$blockMgr->tableExists()) {
+        echo json_encode(array('status' => false, 'error' => 'Blocklist table missing. Run sql/migrations/20261003000003_add_grabber_blocklist.sql'));
+        exit();
+    }
+
+    $ids = (isset($_POST['ids']) && is_array($_POST['ids'])) ? array_map('intval', $_POST['ids']) : array();
+    $manualUrl = isset($_POST['url']) ? trim($_POST['url']) : '';
+
+    if (empty($ids)) {
+        if ($manualUrl === '') {
+            echo json_encode(array('status' => false, 'error' => 'Nothing to block'));
+            exit();
+        }
+        if (!preg_match('#^https?://#i', $manualUrl)) {
+            echo json_encode(array('status' => false, 'error' => 'URL must start with http:// or https://'));
+            exit();
+        }
+        $newId = $blockMgr->add(array('url' => $manualUrl, 'reason' => 'manual'));
+        $message = $newId > 0 ? 'URL added to the blocklist' : 'URL is already on the blocklist';
+        echo json_encode(array(
+            'status'  => true,
+            'created' => $newId > 0 ? 1 : 0,
+            'skipped' => $newId > 0 ? 0 : 1,
+            'message' => $message,
+            'total'   => $blockMgr->count(),
+        ));
+        exit();
+    }
+
+    $discMgr = new DiscoveryManager();
+    $created = 0;
+    $skipped = 0;
+    $idsCreated = array();
+    $idsSkipped = array();
+
+    foreach ($ids as $id) {
+        if ($id <= 0) continue;
+        $row = $discMgr->getById($id);
+        // Never pull a video away from an in-flight job.
+        if (!$row || $row['status'] === 'QUEUED' || $row['status'] === 'PROCESSING') {
+            $skipped++;
+            $idsSkipped[] = $id;
+            continue;
+        }
+        $newId = $blockMgr->add(array(
+            'url'           => !empty($row['canonical_url']) ? $row['canonical_url'] : $row['source_url'],
+            'external_id'   => $row['external_id'],
+            'title'         => $row['title'],
+            'source_id'     => $row['source_id'],
+            'discovered_id' => $row['id'],
+            'reason'        => 'rejected',
+        ));
+        if ($newId > 0) {
+            $created++;
+            $idsCreated[] = $id;
+        } else {
+            $skipped++;
+            $idsSkipped[] = $id;
+        }
+    }
+
+    echo json_encode(array(
+        'status'      => true,
+        'created'     => $created,
+        'skipped'     => $skipped,
+        'ids_created' => $idsCreated,
+        'ids_skipped' => $idsSkipped,
+        'total'       => $blockMgr->count(),
+        'message'     => $created . ' added to the blocklist' . ($skipped > 0 ? ', ' . $skipped . ' skipped' : ''),
+    ));
+    exit();
+}
+
+// --- AJAX: Remove an entry from the blocklist ---
+if ($action === 'unblock') {
+    header('Content-Type: application/json; charset=utf-8');
+    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+    $ok = MassGrabberManager::blocklist()->remove($id);
+    echo json_encode(array(
+        'status'  => $ok,
+        'message' => $ok ? 'Removed from the blocklist' : 'Entry not found',
+        'total'   => MassGrabberManager::blocklist()->count(),
+    ));
+    exit();
+}
+
+// --- AJAX: List blocklist entries ---
+if ($action === 'get_blocklist') {
+    header('Content-Type: application/json; charset=utf-8');
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $limit = isset($_GET['limit']) ? min(100, max(1, intval($_GET['limit']))) : 20;
+    $q = isset($_GET['q']) ? trim($_GET['q']) : '';
+
+    $result = MassGrabberManager::blocklist()->getAll(array('q' => $q), $limit, ($page - 1) * $limit);
+    echo json_encode(array(
+        'status' => true,
+        'items'  => $result['items'],
+        'total'  => $result['total'],
+        'page'   => $page,
+        'ready'  => MassGrabberManager::blocklist()->tableExists() ? 1 : 0,
+    ));
     exit();
 }
 
@@ -676,4 +787,7 @@ $smarty->assign('view', $view);
 $smarty->assign('grabbing', '');
 $smarty->assign('path', '');
 $smarty->assign('filesize', '');
+// Blocklist badge in the nav tab (all views)
+$smarty->assign('blocklist_total', MassGrabberManager::blocklist()->count());
+$smarty->assign('blocklist_ready', MassGrabberManager::blocklist()->tableExists() ? 1 : 0);
 ?>

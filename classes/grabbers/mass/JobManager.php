@@ -1,6 +1,8 @@
 <?php
 defined('_VALID') or die('Restricted Access!');
 
+require_once dirname(__FILE__) . '/BlocklistManager.php';
+
 /**
  * JobManager - Manages the grab job queue.
  */
@@ -33,6 +35,12 @@ class JobManager {
             return 0;
         }
         if ($dedupMgr->jobExists($discoveredVideoId)) {
+            return 0;
+        }
+        // Rejected videos are never queued (the scan and the listing already
+        // keep them out - this is the last line of defense).
+        $blockMgr = new BlocklistManager();
+        if ($blockMgr->isDiscoveredBlocked($discoveredVideoId)) {
             return 0;
         }
 

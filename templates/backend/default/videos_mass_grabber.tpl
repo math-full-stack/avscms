@@ -101,6 +101,7 @@
         <li{if $view == 'discover'} class="active"{/if}><a href="videos.php?m=mass_grabber&v=discover"><i class="fa fa-search"></i> Discover</a></li>
         <li{if $view == 'queue'} class="active"{/if}><a href="videos.php?m=mass_grabber&v=queue"><i class="fa fa-list"></i> Queue</a></li>
         <li{if $view == 'history'} class="active"{/if}><a href="videos.php?m=mass_grabber&v=history"><i class="fa fa-history"></i> History</a></li>
+        <li{if $view == 'blocklist'} class="active"{/if}><a href="videos.php?m=mass_grabber&v=blocklist"><i class="fa fa-ban"></i> Blocklist <span class="badge" id="mg_blk_badge"{if !isset($blocklist_total) || $blocklist_total <= 0} style="display:none"{/if}>{$blocklist_total|default:0}</span></a></li>
     </ul>
 </div>
 
@@ -305,6 +306,14 @@
                         </div>
                     </div>
                 </div>
+                <div class="row m-b-10">
+                    <div class="col-sm-12">
+                        <label class="control-label" style="font-size:12px;color:#888;margin-bottom:0;cursor:pointer">
+                            <input type="checkbox" id="mg_disc_hide_obtained" onchange="mgToggleHideObtained(this)"> <i class="fa fa-eye-slash"></i> Hide already obtained
+                        </label>
+                        <span class="text-muted" style="font-size:11px;margin-left:6px">leaves out imported and existing videos (use the Existing/Imported buttons to see them)</span>
+                    </div>
+                </div>
             <div class="grid-body no-border">
                 <div id="mg_disc_bulk_actions" style="display:none;margin-bottom:10px">
                     <div class="row">
@@ -315,6 +324,7 @@
                             <span class="pull-right" style="line-height:28px">
                                 <span class="m-r-10"><strong id="mg_selected_count" style="color:#333">0</strong> <span class="text-muted">selected</span></span>
                                 <button class="btn btn-primary" id="btn_bulk_grab" onclick="mgBulkGrab()" disabled><i class="fa fa-cloud-download"></i> GRAB SELECTED</button>
+                                <button class="btn btn-danger" id="btn_bulk_block" onclick="mgBulkBlock()" disabled title="Move the selected videos to the blocklist"><i class="fa fa-ban"></i> BLOCK SELECTED</button>
                             </span>
                         </div>
                     </div>
@@ -389,6 +399,41 @@
             </table>
             {else}
             <div class="alert alert-info"><i class="fa fa-info-circle"></i> No run history yet.</div>
+            {/if}
+        </div>
+    </div>
+</div>
+{/if}
+
+{if $view == 'blocklist'}
+<div id="mg-blocklist">
+    <div class="grid simple">
+        <div class="grid-title no-border">
+            <h4>Blocklist <span class="semi-bold">Rejected Videos</span> <small><span id="mg_blk_count">{$blocklist_total|default:0}</span> blocked</small></h4>
+            <div class="clearfix"></div>
+        </div>
+        <div class="grid-body no-border">
+            {if isset($blocklist_ready) && $blocklist_ready == 0}
+            <div class="alert alert-warning"><i class="fa fa-exclamation-triangle"></i> Table <code>grabber_blocklist</code> not found. Run <code>sql/migrations/20261003000003_add_grabber_blocklist.sql</code> against the database and reload.</div>
+            {else}
+            <div class="row m-b-10">
+                <div class="col-sm-7">
+                    <label class="control-label">Block a URL</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="mg_blk_url" placeholder="https://site.com/video/123">
+                        <span class="input-group-btn"><button class="btn btn-danger" type="button" onclick="mgBlockAddUrl()"><i class="fa fa-ban"></i> Block</button></span>
+                    </div>
+                    <span class="text-muted" style="font-size:11px">Blocked videos never show up in Discover again and can never be queued.</span>
+                </div>
+                <div class="col-sm-5">
+                    <label class="control-label">Filter</label>
+                    <input type="text" class="form-control" id="mg_blk_q" placeholder="Title, URL or external id..." oninput="mgBlockSearchInput()">
+                </div>
+            </div>
+            <div id="mg_blk_list"><p class="text-muted">Loading blocklist...</p></div>
+            <div id="mg_blk_pagination" style="display:none;text-align:center;margin-top:15px">
+                <ul id="mg_blk_pager" class="pagination pagination-sm" style="margin:0;display:inline-flex"></ul>
+            </div>
             {/if}
         </div>
     </div>
@@ -472,6 +517,11 @@ function mgSelSyncUI() {
     if (btn) {
         btn.disabled = n === 0;
         btn.innerHTML = n > 0 ? '<i class="fa fa-cloud-download"></i> GRAB SELECTED (' + n + ')' : '<i class="fa fa-cloud-download"></i> GRAB SELECTED';
+    }
+    var blk = document.getElementById('btn_bulk_block');
+    if (blk) {
+        blk.disabled = n === 0;
+        blk.innerHTML = n > 0 ? '<i class="fa fa-ban"></i> BLOCK SELECTED (' + n + ')' : '<i class="fa fa-ban"></i> BLOCK SELECTED';
     }
     var clr = document.getElementById('btn_mg_clear_sel');
     if (clr) clr.style.display = n > 0 ? 'inline-block' : 'none';
@@ -754,6 +804,59 @@ function mgGoToDiscover(sourceId) { window.location.href = 'videos.php?m=mass_gr
 
 // DISCOVER
 var mgCurrentFilter = 'videos';
+
+// "Hide already obtained" option: ON unless the browser says otherwise.
+var mgHideObtained = true;
+var mgHideObtainedKey = 'mg_disc_hide_obtained_v1';
+(function() {
+    try { var v = localStorage.getItem(mgHideObtainedKey); if (v !== null) mgHideObtained = (v === '1'); } catch(e) {}
+    var cb = document.getElementById('mg_disc_hide_obtained');
+    if (cb) cb.checked = mgHideObtained;
+})();
+function mgToggleHideObtained(cb) {
+    mgHideObtained = !!(cb && cb.checked);
+    try { localStorage.setItem(mgHideObtainedKey, mgHideObtained ? '1' : '0'); } catch(e) {}
+    mgLoadDiscovered(mgCurrentDiscStatus || '', 1);
+}
+
+// -------------------------------------------------------------------------
+// Blocklist actions (global: blocked videos disappear from every source)
+// -------------------------------------------------------------------------
+function mgUpdateBlocklistBadge(total) {
+    var badge = document.getElementById('mg_blk_badge');
+    if (!badge || typeof total !== 'number') return;
+    badge.textContent = total;
+    badge.style.display = total > 0 ? '' : 'none';
+}
+function mgBlockIds(ids) {
+    if (!ids || !ids.length) return;
+    var fd = new FormData();
+    for (var i = 0; i < ids.length; i++) fd.append('ids[]', ids[i]);
+    mgAjax('videos.php?m=mass_grabber&a=block', fd, function(err, data) {
+        if (err || !data || !data.status) {
+            showToast('Block failed: ' + (data && data.error ? data.error : (err ? err.message : 'Unknown error')), 'error');
+            return;
+        }
+        showToast(data.message, data.created > 0 ? 'success' : 'info');
+        mgUpdateBlocklistBadge(typeof data.total === 'number' ? data.total : null);
+        mgSelRemoveBulk((data.ids_created || []).concat(data.ids_skipped || []));
+        mgLoadDiscovered(mgCurrentDiscStatus || '', mgDiscPage);
+    });
+}
+function mgBlockSingle(id, evt) {
+    if (evt) evt.preventDefault();
+    mgBlockIds([id]);
+    return false;
+}
+function mgBulkBlock() {
+    var ids = [];
+    var entries = mgSelEntries();
+    for (var i = 0; i < entries.length; i++) ids.push(entries[i].id);
+    if (!ids.length) return;
+    if (!confirm('Add ' + ids.length + ' video(s) to the blocklist?\nThey will be hidden from discovery and never queued again.')) return;
+    mgBlockIds(ids);
+}
+
 (function() { var p = new URLSearchParams(window.location.search); var sid = p.get('source_id'); if (sid) { var s = document.getElementById('mg_disc_source'); if (s) { s.value = sid; } mgCurrentSourceId = parseInt(sid); mgSelLoad(); setTimeout(function(){ mgLoadDiscovered(''); }, 300); } })();
 if (document.getElementById('mg_disc_source')) {
     document.getElementById('mg_disc_source').addEventListener('change', function() {
@@ -842,6 +945,7 @@ function mgLoadDiscovered(status, page) {
     if (status) url += '&status=' + status;
     if (mgCurrentTimeframe) url += '&timeframe=' + mgCurrentTimeframe;
     if (mgCurrentSort) url += '&sort=' + mgCurrentSort;
+    if (mgHideObtained) url += '&hide_obtained=1';
     var list = document.getElementById('mg_disc_video_list'); list.innerHTML = '<p class="text-muted"><i class="fa fa-spinner fa-spin"></i> Loading...</p>';
     document.getElementById('mg_disc_results').style.display = 'block';
 mgAjaxGet(url, function(err, data) {
@@ -899,6 +1003,7 @@ mgAjaxGet(url, function(err, data) {
             html+='<tr><td><input type="checkbox" class="mg-disc-check" value="'+v.id+'" data-status="'+vStatus+'" onchange="mgSelToggleFromRow('+v.id+',this)" '+isChecked+cbDisabled+cbTitle+'></td><td>'+thumbHtml+'</td><td><a class="mg-title-link" onclick="mgPreviewVideo('+v.id+',event)"><strong>'+(v.title||'Untitled').substring(0,80)+'</strong></a>';
             if(v.source_url) html+='<br><small class="text-muted">'+v.source_url.substring(0,60)+'</small>'; html+='</td><td>'+(v.duration_formatted||v.duration+'s')+'</td><td><span class="mg-status mg-status-'+v.status.toLowerCase()+'">'+v.status+'</span></td><td>';
             html+='<button class="btn btn-xs btn-success" onclick="return mgGrabSingle('+v.id+',event)"><i class="fa fa-download"></i> Grab</button> ';
+            if(vStatus!=='QUEUED' && vStatus!=='PROCESSING') html+='<button class="btn btn-xs btn-danger" onclick="return mgBlockSingle('+v.id+',event)" title="Add to the blocklist - it will never show up in a scan again"><i class="fa fa-ban"></i> Block</button> ';
             if(v.video_id>0) html+='<a href="videos.php?m=view&VID='+v.video_id+'" class="btn btn-xs btn-default" target="_blank"><i class="fa fa-eye"></i></a>';
             html+='</td></tr>'; } html+='</tbody></table>'; list.innerHTML=html;
     });
@@ -1205,12 +1310,103 @@ function mgToggleRealtime() {
 // HISTORY
 function mgViewRunLogs(runId) { var c=document.getElementById('mg_log_content'); c.innerHTML='Loading logs...'; if(typeof jQuery!=='undefined') jQuery('#mg_log_modal').modal('show'); mgAjaxGet('videos.php?m=mass_grabber&a=get_logs&run_id='+runId,function(err,data){ if(err||!data||!data.status){c.innerHTML='Failed.';return;} if(data.logs.length===0){c.innerHTML='No logs.';return;} var t=''; for(var i=0;i<data.logs.length;i++){var l=data.logs[i]; var ts=new Date(l.created_at*1000).toLocaleTimeString(); var col=l.level==='ERROR'?'#ff6b6b':l.level==='WARNING'?'#ffd93d':l.level==='DEBUG'?'#888':'#e0e0e0'; t+='<span style="color:#888">['+ts+']</span> <span style="color:'+col+'">['+l.level+']</span> <span style="color:#6bc5ff">'+l.event+'</span> '+l.message+'\n';} c.innerHTML=t;}); }
 
+// BLOCKLIST PAGE
+var mgBlkPage = 1;
+var mgBlkPerPage = 20;
+var mgBlkTotal = 0;
+var mgBlkQ = '';
+var mgBlkTimer = null;
+
+function mgBlockSearchInput() {
+    if (mgBlkTimer) clearTimeout(mgBlkTimer);
+    mgBlkTimer = setTimeout(function() {
+        var q = document.getElementById('mg_blk_q');
+        mgBlkQ = q ? q.value.trim() : '';
+        mgLoadBlocklist(1);
+    }, 300);
+}
+function mgBlockAddUrl() {
+    var input = document.getElementById('mg_blk_url');
+    var url = input ? input.value.trim() : '';
+    if (!url) { showToast('Paste a URL to block', 'error'); return; }
+    var fd = new FormData();
+    fd.append('url', url);
+    mgAjax('videos.php?m=mass_grabber&a=block', fd, function(err, data) {
+        if (err || !data || !data.status) { showToast('Block failed: ' + (data && data.error ? data.error : (err ? err.message : 'Unknown error')), 'error'); return; }
+        showToast(data.message, data.created > 0 ? 'success' : 'info');
+        if (input) input.value = '';
+        mgUpdateBlocklistBadge(typeof data.total === 'number' ? data.total : null);
+        mgLoadBlocklist(1);
+    });
+}
+function mgUnblock(id) {
+    var fd = new FormData();
+    fd.append('id', id);
+    mgAjax('videos.php?m=mass_grabber&a=unblock', fd, function(err, data) {
+        if (err || !data || !data.status) { showToast('Remove failed: ' + (data && data.error ? data.error : 'Unknown error'), 'error'); return; }
+        showToast(data.message, 'success');
+        mgUpdateBlocklistBadge(typeof data.total === 'number' ? data.total : null);
+        mgLoadBlocklist(mgBlkPage);
+    });
+}
+function mgBlkGoPage(p) { mgLoadBlocklist(p); }
+function mgLoadBlocklist(page) {
+    page = page || 1;
+    mgBlkPage = page;
+    var list = document.getElementById('mg_blk_list');
+    if (!list) return;
+    list.innerHTML = '<p class="text-muted"><i class="fa fa-spinner fa-spin"></i> Loading...</p>';
+
+    var url = 'videos.php?m=mass_grabber&a=get_blocklist&page=' + page + '&limit=' + mgBlkPerPage;
+    if (mgBlkQ) url += '&q=' + encodeURIComponent(mgBlkQ);
+    mgAjaxGet(url, function(err, data) {
+        if (err || !data || !data.status) { list.innerHTML = '<p class="text-muted">Failed to load the blocklist</p>'; return; }
+
+        mgBlkTotal = data.total || 0;
+        var cnt = document.getElementById('mg_blk_count');
+        if (cnt) cnt.textContent = mgBlkTotal;
+        mgUpdateBlocklistBadge(mgBlkTotal);
+
+        var totalPages = Math.ceil(mgBlkTotal / mgBlkPerPage);
+        var pagDiv = document.getElementById('mg_blk_pagination');
+        if (totalPages > 1) {
+            pagDiv.style.display = 'block';
+            var h = '<li' + (page <= 1 ? ' class="disabled"' : '') + '><a href="javascript:void(0)" onclick="mgBlkGoPage(' + (page - 1) + ')"><i class="fa fa-chevron-left"></i></a></li>';
+            var s = Math.max(1, page - 2), e = Math.min(totalPages, page + 2);
+            if (s > 1) { h += '<li><a href="javascript:void(0)" onclick="mgBlkGoPage(1)">1</a></li>'; if (s > 2) h += '<li class="disabled"><a>...</a></li>'; }
+            for (var p = s; p <= e; p++) { h += (p === page) ? '<li class="active"><a>' + p + '</a></li>' : '<li><a href="javascript:void(0)" onclick="mgBlkGoPage(' + p + ')">' + p + '</a></li>'; }
+            if (e < totalPages) { if (e < totalPages - 1) h += '<li class="disabled"><a>...</a></li>'; h += '<li><a href="javascript:void(0)" onclick="mgBlkGoPage(' + totalPages + ')">' + totalPages + '</a></li>'; }
+            h += '<li' + (page >= totalPages ? ' class="disabled"' : '') + '><a href="javascript:void(0)" onclick="mgBlkGoPage(' + (page + 1) + ')"><i class="fa fa-chevron-right"></i></a></li>';
+            document.getElementById('mg_blk_pager').innerHTML = h;
+        } else { pagDiv.style.display = 'none'; }
+
+        if (!data.items || !data.items.length) {
+            list.innerHTML = '<p class="text-muted">' + (mgBlkQ ? 'No blocklist entry matches "' + mgEsc(mgBlkQ) + '".' : 'Blocklist is empty. Use the Block button in Discover or paste a URL above.') + '</p>';
+            return;
+        }
+        var html = '<table class="table mg-table"><thead><tr><th>Title</th><th>URL</th><th>Source</th><th>Blocked</th><th style="width:96px"></th></tr></thead><tbody>';
+        for (var i = 0; i < data.items.length; i++) {
+            var it = data.items[i];
+            html += '<tr><td>' + (it.title ? '<strong>' + mgEsc(it.title).substring(0, 70) + '</strong>' : '<span class="text-muted">Untitled</span>') + '</td>';
+            html += '<td><a href="' + mgEsc(it.url) + '" target="_blank" class="mg-title-link" style="font-size:12px">' + mgEsc(it.url).substring(0, 80) + '</a>';
+            if (it.external_id) html += '<br><small class="text-muted">id: ' + mgEsc(it.external_id) + '</small>';
+            html += '</td>';
+            html += '<td>' + (it.source_name ? mgEsc(it.source_name) : '<span class="text-muted">manual</span>') + '</td>';
+            html += '<td>' + (it.created_at ? new Date(it.created_at * 1000).toLocaleDateString() : '-') + '</td>';
+            html += '<td><button class="btn btn-xs btn-default" onclick="mgUnblock(' + it.id + ')" title="Remove from the blocklist"><i class="fa fa-undo"></i> Remove</button></td></tr>';
+        }
+        html += '</tbody></table>';
+        list.innerHTML = html;
+    });
+}
+
 // INIT
 document.addEventListener('DOMContentLoaded', function() {
     var st = document.getElementById('mg_src_schedule_type');
     if(st) st.addEventListener('change', function(){ var h=document.getElementById('mg_schedule_help'); if(!h)return; switch(this.value){case'hourly':h.textContent='Minutes between runs';break;case'daily':h.textContent='HH:MM for daily';break;case'weekly':h.textContent='Day name (e.g. monday)';break;case'interval':h.textContent='Seconds between runs (min 300)';break;} });
     if(mgCurrentView==='queue') mgLoadJobs('');
     if(mgCurrentView==='queue') mgGetRealtimeStatus();
+    if(mgCurrentView==='blocklist') mgLoadBlocklist(1);
 
     // Auto-fill Name + URL when provider dropdown changes (Add Source only)
     var provSelect = document.getElementById('mg_src_provider');

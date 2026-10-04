@@ -5,6 +5,7 @@ require_once dirname(__FILE__) . '/interfaces/DiscoveryProvider.php';
 require_once dirname(__FILE__) . '/SourceManager.php';
 require_once dirname(__FILE__) . '/DiscoveryManager.php';
 require_once dirname(__FILE__) . '/DedupManager.php';
+require_once dirname(__FILE__) . '/BlocklistManager.php';
 require_once dirname(__FILE__) . '/JobManager.php';
 require_once dirname(__FILE__) . '/RunManager.php';
 require_once dirname(__FILE__) . '/Logger.php';
@@ -244,6 +245,10 @@ class MassGrabberManager {
 
     public static function dedup() {
         return new DedupManager();
+    }
+
+    public static function blocklist() {
+        return new BlocklistManager();
     }
 
     public static function jobs() {

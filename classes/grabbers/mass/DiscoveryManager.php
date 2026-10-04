@@ -2,6 +2,7 @@
 defined('_VALID') or die('Restricted Access!');
 
 require_once dirname(__FILE__) . '/MassGrabberManager.php';
+require_once dirname(__FILE__) . '/BlocklistManager.php';
 
 /**
  * DiscoveryManager - Manages the discovery of videos from sources.
@@ -341,20 +342,33 @@ class DiscoveryManager {
      * Get discovered videos for a source, with optional filters.
      * 
      * @param int    $sourceId
-     * @param array  $filters  ['status' => string, 'timeframe' => string, 'sort' => string]
+     * @param array  $filters  ['status' => string, 'timeframe' => string, 'sort' => string,
+     *                          'hide_obtained' => bool]
      * @param int    $limit
      * @param int    $offset
      * @return array ['videos' => array, 'total' => int]
      */
     public function getDiscovered($sourceId, $filters = array(), $limit = 10, $offset = 0) {
         $where = "WHERE d.source_id = " . intval($sourceId);
-        
+
+        // Global blocklist: rejected videos never appear in the results,
+        // whatever their status or the source they were rejected from.
+        $blockMgr = new BlocklistManager();
+        $where .= $blockMgr->excludeSql('d');
+
         // Status filter
         $status = isset($filters['status']) ? trim($filters['status']) : null;
         if ($status) {
             $where .= " AND d.status = " . $this->db->qStr($status);
         }
-        
+
+        // Option: hide videos already obtained (imported into AVS, or already
+        // present in the site). Skipped when the caller explicitly asked for
+        // those statuses - otherwise the Existing/Imported tabs would be empty.
+        if (!empty($filters['hide_obtained']) && !in_array($status, array('IMPORTED', 'EXISTS'))) {
+            $where .= " AND d.status NOT IN ('IMPORTED','EXISTS')";
+        }
+
         // Timeframe filter
         $timeframe = isset($filters['timeframe']) ? trim($filters['timeframe']) : null;
         if ($timeframe) {

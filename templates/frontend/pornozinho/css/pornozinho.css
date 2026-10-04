@@ -1398,6 +1398,61 @@ a:hover .xb-thumb-meta {
 	animation-play-state: paused;
 }
 
+/* --------------------------------------------------------------------------
+   Card horizontal com altura igual ao portrait
+   No card de capa única o chip .xb-thumb-meta não chega a envolver os filhos:
+   .xb-thumb-views/.xb-thumb-title entram como filhos DIRETOS do overlay e, por
+   serem estáticos, viram item de flow — inflavam o card em ~25px (199px contra
+   os 174px do trio 16:9). Aqui a caixa é travada em 16:9 e os dois filhos ganham o
+   visual do chip em overlay, sem voltar a influenciar a altura. O seletor de
+   filho direto nunca casa dentro de .xb-thumb-meta (o pai seria o meta), então
+   os cards que funcionam não são tocados.
+   -------------------------------------------------------------------------- */
+.thumb-overlay.xb-landscape:not(.xb-hero-main) {
+	aspect-ratio: 16 / 9;
+}
+
+.thumb-overlay>.xb-thumb-views,
+.thumb-overlay>.xb-thumb-title {
+	position: absolute;
+	left: 8px;
+	bottom: 8px;
+	align-items: center;
+	gap: 8px;
+	max-width: calc(100% - 16px);
+	padding: 3px 10px;
+	border-radius: 20px;
+	background: var(--xb-glass-bg-dark);
+	backdrop-filter: var(--xb-glass-blur-sm);
+	-webkit-backdrop-filter: var(--xb-glass-blur-sm);
+	border: 1px solid var(--xb-glass-border);
+	box-shadow: var(--xb-glass-hl);
+	color: #e8e8e8;
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: .3px;
+	white-space: nowrap;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 3;
+}
+
+.thumb-overlay>.xb-thumb-title {
+	display: none;
+}
+
+a:hover .thumb-overlay>.xb-thumb-views {
+	display: none;
+}
+
+a:hover .thumb-overlay>.xb-thumb-title {
+	display: inline-flex;
+	/* Reserva a faixa do .duration (bottom/right 8px, z-index 4) — mesma
+	   folga de 110px usada pelo .xb-thumb-meta no hover, para o marquee do
+	   título nunca entrar por baixo do chip de tempo. */
+	max-width: calc(100% - 110px);
+}
+
 .label-private {
 	background: rgba(0, 0, 0, .65);
 	color: #fff;
