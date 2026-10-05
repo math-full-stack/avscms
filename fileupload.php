@@ -7,7 +7,11 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
 require 'include/config.paths.php';
-require 'include/config.local.php';
+if (file_exists('include/config.local.php')) {
+    require 'include/config.local.php';
+} elseif (file_exists('include/config.php')) {
+    require 'include/config.php';
+}
 
 $basedir = $config['BASE_DIR'];				
 $targetDir = $config['VDO_DIR'];

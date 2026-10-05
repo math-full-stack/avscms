@@ -4,29 +4,9 @@ define('_VALID', true);
 header('Cache-Control: no-cache, must-revalidate');
 header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
 
-require 'include/config.paths.php';
-// Load .env before config.db.php reads DB env vars — otherwise every
-// ajax.php?module=* endpoint connects without DB_PASSWORD (fail-closed)
-// and returns an HTML error instead of JSON, which the JS silently drops.
-require 'include/dotenv.php';
-require 'include/config.db.php';
-require 'include/config.local.php';
-require 'include/security.php';
-require 'include/function_global.php';
-// O handler de sessão é em DB e usa o $conn global (session.class.php). Sem a
-// conexão, Session::read() devolve '' e o admin AJAX perde a autenticação à
-// toda chamada (301 -> login.php => o JS engole o HTML e "nada acontece").
-require $config['BASE_DIR']. '/include/adodb/adodb.inc.php';
-require $config['BASE_DIR']. '/include/dbconn.php';
-require 'include/sessions.php';
-require $config['BASE_DIR']. '/classes/redirect.class.php';
-
-disableRegisterGlobals();
-require $config['BASE_DIR']. '/include/function_language.php';
-if (!isset($_SESSION['language'])) {
-    $_SESSION['language'] = $config['language'];
-}
-require $config['BASE_DIR']. '/language/'.$_SESSION['language'].'.lang.php';
+// Load full config bootstrap (env-aware) instead of unguarded config.local.php
+require 'include/config.php';
+require_once 'include/function_global.php';
 
 // Support module via query parameter (ajax.php?module=admin_get_video)
 // or via path info (ajax.php/admin_get_video) as fallback

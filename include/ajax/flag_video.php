@@ -5,7 +5,9 @@ require $config['BASE_DIR']. '/classes/filter.class.php';
 require $config['BASE_DIR']. '/include/compat/json.php';
 require $config['BASE_DIR']. '/include/adodb/adodb.inc.php';
 require $config['BASE_DIR']. '/include/dbconn.php';
-require_once $config['BASE_DIR']. '/include/config.local.php';
+if (file_exists($config['BASE_DIR'] . '/include/config.local.php')) {
+    require_once $config['BASE_DIR'] . '/include/config.local.php';
+}
 
 $data   = array('status' => 0, 'msg' => '', 'debug' => '');
 if ( isset($_POST['item_id']) && isset($_POST['flag_id']) && isset($_POST['message']) ) {
