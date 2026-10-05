@@ -6,6 +6,7 @@
 	<head prefix="og: http://ogp.me/ns#">
 {else}
 	<head>
+	<meta name="juicyads-site-verification" content="92caa29c70f0ffcc3ff667c66333b93a">
 {/if}
 	{if $view}
 		{assign var='vtags' value=$video.keyword}
