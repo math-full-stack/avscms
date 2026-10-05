@@ -56,6 +56,12 @@ if (isset($request['0'])) {
         require 'index.php';
     } elseif (isset($loaders[$page])) {
         require $page. '.php';
+    } elseif (preg_match('/^[a-zA-Z0-9_-]+$/', $page) && is_dir($page)) {
+        // Real subdirectory without trailing slash (/siteadmin, /media).
+        // The server-level rewrite in httpd.conf sends it here instead of
+        // letting mod_dir add the slash, so do it here.
+        header('Location: ' . $relative . '/' . $page . '/', TRUE, 301);
+        die();
     } else {
 		header('HTTP/1.0 404 Not Found');
   		die();

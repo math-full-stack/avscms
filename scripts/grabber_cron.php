@@ -25,6 +25,7 @@ require_once $basedir . '/include/function_global.php';
 require_once $basedir . '/classes/image.class.php';
 require_once $basedir . '/classes/grabbers/GrabberManager.php';
 require_once $basedir . '/classes/grabbers/mass/MassGrabberManager.php';
+require_once $basedir . '/classes/grabbers/mass/MetadataMerger.php';
 
 @set_time_limit(0);
 @ini_set('max_execution_time', 0);
@@ -131,10 +132,41 @@ if ($available > 0) {
             $categoryId = 1; // Default category
         }
 
-        $title = $info['title'];
-        $description = isset($info['description']) ? $info['description'] : '';
-        $tags = isset($info['tags']) ? $info['tags'] : '';
-        $duration = isset($info['duration']) ? intval($info['duration']) : 0;
+        // Discovery and the re-fetch parse the same page with different code and
+        // disagree (measured: every sampled pair differed), so the admin approved
+        // a tag set that never reached `video`. Merge both, discovered first.
+        // The re-fetch stays the only source of technical data.
+        $merged = MetadataMerger::merge(
+            array(
+                'title'       => isset($job['disc_title']) ? $job['disc_title'] : '',
+                'description' => isset($job['disc_description']) ? $job['disc_description'] : '',
+                'tags'        => isset($job['disc_tags']) ? $job['disc_tags'] : '',
+                'duration'    => isset($job['disc_duration']) ? $job['disc_duration'] : 0,
+            ),
+            array(
+                'title'       => $info['title'],
+                'description' => isset($info['description']) ? $info['description'] : '',
+                'tags'        => isset($info['tags']) ? $info['tags'] : '',
+                'duration'    => isset($info['duration']) ? $info['duration'] : 0,
+            )
+        );
+
+        $logger->info(0, $jobId, $sourceId, 'METADATA_MERGED',
+            'title from ' . $merged['report']['title_origin'] . ', desc from ' . $merged['report']['desc_origin']
+            . ' (' . $merged['report']['desc_chars'] . ' chars), tags ' . $merged['report']['tags_kept']
+            . '/' . ($merged['report']['tags_disc'] + $merged['report']['tags_fetch'])
+            . ' kept, ' . $merged['report']['tags_deduped'] . ' deduped',
+            $merged['report']);
+
+        if ($merged['needs_description']) {
+            $logger->warning(0, $jobId, $sourceId, 'METADATA_NO_DESCRIPTION',
+                'No usable description after sanitize - video will need one written or re-fetched');
+        }
+
+        $title = $merged['title'];
+        $description = $merged['description'];
+        $tags = $merged['tags'];
+        $duration = $merged['duration'];
         $thumbUrl = isset($info['thumbnail']) ? $info['thumbnail'] : '';
         if (empty($title)) $title = 'Untitled Video';
 
