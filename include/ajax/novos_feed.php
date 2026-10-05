@@ -40,19 +40,20 @@ foreach ( $videos as $k => $v ) {
     $videos[$k]['keywords'] = array_values(array_filter(array_map('trim', explode(',', $v['keyword']))));
 }
 
-// Renderiza o MESMO card da home (video_card.tpl)
-$smarty->assign('card_cols', 'col-6 col-sm-6 col-md-4 col-lg-3');
-$smarty->assign('show_tags', 1);
-$html = '';
-foreach ( $videos as $k => $v ) {
-    $smarty->assign('v', $v);
-    $html .= $smarty->fetch('video_card.tpl');
-    // Anúncio intercalado no grid (a cada 8 cards) — MESMA cadência do index.tpl.
-    if ( ( ($page - 1) * $per_page + $k + 1 ) % 8 == 0 ) {
-        $smarty->assign('group', 'index_feed');
-        $html .= $smarty->fetch('ad_feed.tpl');
-    }
-}
+// Renderiza o MESMO grid da home em uma única fonte de verdade (feed_grid.tpl):
+// linhas de 4 cards e faixa de anúncio (index_feed) a cada 3 linhas, sempre
+// como IRMÃ da linha — nunca dentro dela. `grid_offset` é a posição global do
+// 1º card desta página: mantém as linhas fechando alinhadas com a 1ª página
+// (renderizada pelo index.php com o mesmo items_per_front_page).
+// band=0 desliga a faixa de anúncio deste lote (kill-switch manual). A tag do
+// anúncio só renderiza porque o xb-home-feed.js recria os <script> do lote —
+// innerHTML não os executa.
+$band = isset($_REQUEST['band']) ? intval($_REQUEST['band']) : 1;
+$smarty->assign('videos', $videos);
+$smarty->assign('group', 'index_feed');
+$smarty->assign('grid_offset', $offset);
+$smarty->assign('grid_band', $band);
+$html = count($videos) ? $smarty->fetch('feed_grid.tpl') : '';
 
 header('Content-Type: application/json; charset=utf-8');
 echo json_encode(array(

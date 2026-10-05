@@ -73,7 +73,7 @@
     <script type="text/javascript" src="{$relative_tpl}/js/md3-ripple.js"></script>
     <script type="text/javascript" src="{$relative_tpl}/js/xb-tags-rail.js?ver=1.0.0"></script>
 	{if $index}
-    <script type="text/javascript" src="{$relative_tpl}/js/xb-home-feed.js?ver=1.0.2"></script>
+    <script type="text/javascript" src="{$relative_tpl}/js/xb-home-feed.js?ver=1.0.4"></script>
 	{/if}
 <script>
 	{literal}

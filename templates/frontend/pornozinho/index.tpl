@@ -70,58 +70,49 @@
 	</div>
 	{/if}
 
-	{* Seção Novos Vídeos *}
-	<div class="xb-section">
-		<span class="xb-section-bar"></span>
-		<h2><i class="fas fa-calendar-plus"></i>Novos</h2>
-		<a class="xb-section-link" href="{$relative}/videos?sort=recent">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
-	</div>
+{* Seção Novos Vídeos *}
+<div class="xb-section">
+	<span class="xb-section-bar"></span>
+	<h2><i class="fas fa-calendar-plus"></i>Novos</h2>
+	<a class="xb-section-link" href="{$relative}/videos?sort=recent">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
+</div>
 
-	{if $novos_videos}
-	<div class="row content-row" id="novos-feed">
-		{section name=n loop=$novos_videos}
-			{if $smarty.section.n.iteration <= 6}{assign var=fetch_prio value='high'}{else}{assign var=fetch_prio value='lazy'}{/if}
-			{include file='video_card.tpl' v=$novos_videos[n] card_cols='col-12 col-sm-6 col-md-4 col-lg-3' show_tags=1 fetchpriority=$fetch_prio}
-			{if $smarty.section.n.iteration is div by 8}
-			{include file='ad_feed.tpl' group='index_feed'}
-			{/if}
-		{/section}
-	</div>
-	<div class="xb-feed-more-wrap">
-		<button type="button" id="novos-feed-more" class="xb-feed-more-btn">
-			<span class="material-symbols-rounded" aria-hidden="true">expand_more</span>
-			<span class="xb-feed-more-label">Exibir mais</span>
-		</button>
-	</div>
-	{else}
-	<div class="well well-sm">
-		<span class="text-danger">{t c='videos.no_videos_found'}.</span>
-	</div>
-	{/if}
+{if $novos_videos}
+<div id="novos-feed">
+	{* Grid do feed: linhas de 4 cards e faixa de anúncio (index_feed) a cada 3
+	   linhas. A geometria vive em feed_grid.tpl e é a MESMA usada pelo scroll
+	   infinito (include/ajax/novos_feed.php) — o anúncio é sempre irmão da
+	   linha, nunca filho dela. *}
+	{include file='feed_grid.tpl' videos=$novos_videos group='index_feed'}
+</div>
+<div class="xb-feed-more-wrap">
+	<button type="button" id="novos-feed-more" class="xb-feed-more-btn">
+		<span class="material-symbols-rounded" aria-hidden="true">expand_more</span>
+		<span class="xb-feed-more-label">Exibir mais</span>
+	</button>
+</div>
+{else}
+<div class="well well-sm">
+	<span class="text-danger">{t c='videos.no_videos_found'}.</span>
+</div>
+{/if}
 
-	{* Seção Destaques (hero) removida a pedido. O CSS .xb-hero-* ficou dormente
-	   em pornozinho.css e a query $hero_videos segue em index.php sem consumidor. *}
-	<div class="xb-section">
-		<span class="xb-section-bar"></span>
-		<h2><i class="fas fa-thumbs-up"></i>Para Você</h2>
-		<a class="xb-section-link" href="{$relative}/videos">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
-	</div>
+{* Seção Para Você *}
+<div class="xb-section">
+	<span class="xb-section-bar"></span>
+	<h2><i class="fas fa-thumbs-up"></i>Para Você</h2>
+	<a class="xb-section-link" href="{$relative}/videos">{t c='global.view_more'} <i class="fas fa-chevron-right"></i></a>
+</div>
 
-	{if $home_feed_videos}
-	<div class="row content-row" id="home-feed">
-		{section name=i loop=$home_feed_videos}
-			{if $smarty.section.i.iteration <= 6}{assign var=fetch_prio value='high'}{else}{assign var=fetch_prio value='lazy'}{/if}
-			{include file='video_card.tpl' v=$home_feed_videos[i] card_cols='col-12 col-sm-6 col-md-4 col-lg-3' show_tags=1 fetchpriority=$fetch_prio}
-			{if $smarty.section.i.iteration is div by 8}
-			{include file='ad_feed.tpl' group='index_feed'}
-			{/if}
-		{/section}
-	</div>
-	{else}
-	<div class="well well-sm">
-		<span class="text-danger">{t c='videos.no_videos_found'}.</span>
-	</div>
-	{/if}
+{if $home_feed_videos}
+<div id="home-feed">
+	{include file='feed_grid.tpl' videos=$home_feed_videos group='index_feed'}
+</div>
+{else}
+<div class="well well-sm">
+	<span class="text-danger">{t c='videos.no_videos_found'}.</span>
+</div>
+{/if}
 
 	{if $random_category && $random_cat_videos}
 	{assign var=random_cat_link value=$relative|cat:"/videos/"|cat:$random_category.slug}

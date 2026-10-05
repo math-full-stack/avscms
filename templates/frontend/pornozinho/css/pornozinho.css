@@ -247,7 +247,7 @@ a:active {
 	border-bottom: 1px solid #1f1f1f;
 	position: sticky;
 	top: 0;
-	z-index: 1030;
+	z-index: 9999;
 	transition: background-color .3s ease, box-shadow .3s ease, border-color .3s ease, backdrop-filter .3s ease, -webkit-backdrop-filter .3s ease, transform .28s cubic-bezier(.4, 0, .2, 1);
 }
 
@@ -259,7 +259,7 @@ a:active {
 	.xb-header {
 		position: sticky;
 		top: 0;
-		z-index: 1030;
+		z-index: 9999;
 	}
 
 	.xb-header .xb-topbar {
@@ -1486,12 +1486,17 @@ a:hover .thumb-overlay>.xb-thumb-title {
 
 /* Faixa de anúncio intercalada no grid (index_feed/videos_feed, via ad_feed.tpl).
    Ocupa a MESMA altura de uma linha de cards no desktop (o título é oculto no
-   grid, então a linha ≈ altura do thumb 16:9) e o banner/placeholder preenche
-   a faixa inteira, centralizados. */
+   grid, então a linha ≈ altura do thumb 16:9) e o banner preenche a faixa
+   inteira, centralizado. Sem anúncio ativo a faixa não é renderizada, então as
+   regras .ad-body abaixo só valem para os slots laterais (que usam placeholder). */
 .xb-feed-ad {
 	display: flex;
 	align-items: stretch;
 	min-height: 176px;
+	padding-bottom: 0;
+	margin-bottom: 0;
+	width: 100%;
+	clear: both;
 }
 
 .xb-feed-ad .ad-body {
@@ -1622,6 +1627,10 @@ a:hover .thumb-overlay>.xb-thumb-title {
 	align-items: center;
 	gap: 6px;
 	margin-top: 7px;
+	/* Respiro abaixo das tags. O grid cancela o padding-bottom da linha
+	   (.content-row{margin-bottom:-16px}), então sem isto a linha seguinte
+	   começa colada na base das tags. 12px vale em todos os breakpoints. */
+	margin-bottom: 12px;
 }
 
 .xb-tags-rail .xb-tags {
@@ -3117,6 +3126,10 @@ a:hover .thumb-overlay>.xb-thumb-title {
 	   dos cards cresce — acompanha com uma faixa mais alta. */
 	.xb-feed-ad {
 		min-height: 220px;
+		padding-bottom: 0;
+		margin-bottom: 0;
+		width: 100%;
+		clear: both;
 	}
 }
 
@@ -3165,9 +3178,14 @@ a:hover .thumb-overlay>.xb-thumb-title {
 		padding-right: 16px;
 	}
 
-	/* Grid 2-col mais apertado */
+	/* Grid 2-col mais apertado. O cancelamento do padding acompanha (10px),
+	   senão a linha seguinte invade a base do card. */
 	.row.content-row > [class*="col-"] {
 		padding-bottom: 10px;
+	}
+
+	.row.content-row {
+		margin-bottom: -10px;
 	}
 
 	/* Hero principal: overlay e tipos calibrados */
@@ -3234,6 +3252,10 @@ a:hover .thumb-overlay>.xb-thumb-title {
 	/* Faixa de ad no celular: 2-col (row ~170px) — mantém a linha preenchida */
 	.xb-feed-ad {
 		min-height: 180px;
+		padding-bottom: 0;
+		margin-bottom: 0;
+		width: 100%;
+		clear: both;
 	}
 }
 

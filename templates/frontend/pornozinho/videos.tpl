@@ -82,16 +82,12 @@
 	<div class="row">	
 		<div class="content-left">
             {if $videos}		
-			<div class="row content-row">
 			{capture name=videos_cols}col-12 col-sm-6 col-md-4 col-lg-4 col-xl-4 col-xxl-4 col-xxxl-4{/capture}
-            {section name=i loop=$videos}
-				{include file='video_card.tpl' v=$videos[i] card_cols=$smarty.capture.videos_cols show_tags=0}
-				{if $smarty.section.i.iteration is div by 8}
-				{include file='ad_feed.tpl' group='videos_feed'}
-				{/if}
-            {/section}
-			
-			</div>
+			{* Mesma geometria do feed da home (feed_grid.tpl): 3 cards por linha aqui
+			   e 1 faixa de anúncio (videos_feed) a cada 4 linhas = 12 cards, sempre
+			   irmã da linha — dentro do .row a faixa vira item de flex e estoura a
+			   largura das colunas. *}
+			{include file='feed_grid.tpl' videos=$videos group='videos_feed' grid_cols=$smarty.capture.videos_cols grid_show_tags=0 grid_per_row=3 grid_ad_rows=4}
             {else}
 			<div class="well well-sm">
 				<span class="text-danger">{t c='videos.no_videos_found'}.</span>
