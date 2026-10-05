@@ -17,6 +17,13 @@ require_once dirname(__FILE__) . '/AbstractGrabber.php';
 class PornoMineiroGrabber extends AbstractGrabber {
     use DownloadStrategy;
 
+    /**
+     * O CDN do site recusa (403) o download do MP4 quando a requisicao chega
+     * com o Referer do proprio site; sem Referer o mesmo arquivo responde 200.
+     * O fetch de HTML continua enviando o Referer normalmente.
+     */
+    protected $directDownloadReferer = false;
+
     public function __construct() {
         $this->referer = 'https://www.pornomineiro.com/';
         parent::__construct();
@@ -52,6 +59,7 @@ class PornoMineiroGrabber extends AbstractGrabber {
         $thumbnail   = '';
         $duration    = 0;
         $embedUrl    = '';
+        $streamUrl   = '';
         $author      = '';
         $tags        = array();
 
@@ -129,9 +137,48 @@ class PornoMineiroGrabber extends AbstractGrabber {
             }
         }
 
-        // 5. Embed URL from <iframe> (videos.pornomineiro.com/embed/{id})
-        if (empty($embedUrl) && preg_match('/<iframe[^>]+src="(https?:\/\/videos\.pornomineiro\.com\/embed\/\d+[^"]*)"/i', $html, $iframeMatch)) {
+        // 5. Embed URL. O site declara o embed como link (`embedUrl" href="..."`)
+        // e o host do player deixou de ser videos.pornomineiro.com - aceita as
+        // duas formas (a antiga continua valendo se o layout voltar).
+        if (empty($embedUrl) && preg_match('/embedUrl"\s*href="(https?:\/\/[^"]*pornomineiro\.com\/embed\/\d+\/?[^"]*)"/i', $html, $embedMatch)) {
+            $embedUrl = $embedMatch[1];
+        }
+        if (empty($embedUrl) && preg_match('/<iframe[^>]+src="(https?:\/\/(?:videos|www)\.pornomineiro\.com\/embed\/\d+[^"]*)"/i', $html, $iframeMatch)) {
             $embedUrl = $iframeMatch[1];
+        }
+
+        // 5b. Stream direto do iframe do player. Hoje o player vem de
+        // cdn.sources.network/e?...&v=<url assinada do MP4>: a URL do parâmetro
+        // `v` responde 302 para o MP4 final e toca sem depender do Referer do
+        // site. Sem isto o fetchInfo só devolvia embed_url e o preview caía no
+        // aviso "não foi possível reproduzir".
+        if (empty($streamUrl) && preg_match_all('/<iframe[^>]+src="([^"]+)"/i', $html, $iframes)) {
+            foreach ($iframes[1] as $rawSrc) {
+                $src = html_entity_decode($rawSrc, ENT_QUOTES);
+                $query = parse_url($src, PHP_URL_QUERY);
+                if (empty($query)) {
+                    continue;
+                }
+                parse_str($query, $qs);
+                if (!empty($qs['v']) && preg_match('#^https?://#i', $qs['v'])) {
+                    $streamUrl = trim($qs['v']);
+                    break;
+                }
+            }
+        }
+
+        // 5c. Player de embed antigo (videos.pornomineiro.com/embed/{video_id}).
+        // Parte dos posts ainda usa esse iframe, que NAO tem o parametro `v` -
+        // o yt-dlp nao suporta a pagina do site nem extrai dali (medido: o
+        // formato achado e sempre o mesmo MP4 do embed). A pagina de embed
+        // expoe o MP4 direto no padrao KVS (/get_file/.../{id}_{q}.mp4/), que
+        // ja responde video/mp4. Sem isto esses videos nunca baixam.
+        if (empty($streamUrl) && preg_match('/<iframe[^>]+src="(https?:\/\/videos\.pornomineiro\.com\/embed\/\d+[^"]*)"/i', $html, $embIframe)) {
+            $embedPage = html_entity_decode($embIframe[1], ENT_QUOTES);
+            $embedHtml = $this->fetchHtml($embedPage);
+            if ($embedHtml && preg_match('#https?://videos\.pornomineiro\.com/get_file/[^\s"\'<>]+\.mp4/?#i', $embedHtml, $mp4Match)) {
+                $streamUrl = $mp4Match[0];
+            }
         }
 
         // 6. Clean title: remove site name suffixes
@@ -164,7 +211,7 @@ class PornoMineiroGrabber extends AbstractGrabber {
             'thumbnail'          => $thumbnail,
             'qualities'          => $qualities,
             'embed_url'          => $embedUrl,
-            'stream_url'         => '',
+            'stream_url'         => $streamUrl,
             'author'             => $author,
             'views'              => 0,
             'likes'              => 0,

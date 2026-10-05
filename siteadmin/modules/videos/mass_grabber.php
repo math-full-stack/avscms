@@ -165,11 +165,7 @@ if ($action === 'get_discovered') {
         $offset = ($page - 1) * $limit;
     }
 
-    if ($sourceId <= 0) {
-        echo json_encode(array('status' => false, 'error' => 'Invalid source ID'));
-        exit();
-    }
-
+    // source_id=0 is allowed: means "all sources"
     $filters = array();
     if ($status) $filters['status'] = $status;
     if ($timeframe) $filters['timeframe'] = $timeframe;
@@ -178,6 +174,58 @@ if ($action === 'get_discovered') {
 
     $result = MassGrabberManager::discovery()->getDiscovered($sourceId, $filters, $limit, $offset);
     echo json_encode(array('status' => true, 'videos' => $result['videos'], 'total' => $result['total'], 'page' => $page));
+    exit();
+}
+
+// --- AJAX: Update discovered video metadata (modal de edição) ---
+if ($action === 'update_discovered') {
+    header('Content-Type: application/json; charset=utf-8');
+    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+    if ($id <= 0) {
+        echo json_encode(array('status' => false, 'error' => 'Invalid ID'));
+        exit();
+    }
+    $meta = array();
+    if (isset($_POST['title']))       $meta['title']       = $_POST['title'];
+    if (isset($_POST['tags']))        $meta['tags']        = $_POST['tags'];
+    if (isset($_POST['description'])) $meta['description'] = $_POST['description'];
+    $ok = MassGrabberManager::discovery()->updateMeta($id, $meta);
+    echo json_encode(array('status' => $ok, 'message' => $ok ? 'Metadata updated' : 'Nothing to update'));
+    exit();
+}
+
+// --- AJAX: Update metadata AND enqueue (grab_with_meta) ---
+if ($action === 'grab_with_meta') {
+    header('Content-Type: application/json; charset=utf-8');
+    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+    $sourceId = isset($_POST['source_id']) ? intval($_POST['source_id']) : 0;
+    $runId = isset($_POST['run_id']) ? intval($_POST['run_id']) : 0;
+    if ($id <= 0) {
+        echo json_encode(array('status' => false, 'error' => 'Invalid ID'));
+        exit();
+    }
+    // Save metadata first
+    $meta = array();
+    if (isset($_POST['title']))       $meta['title']       = $_POST['title'];
+    if (isset($_POST['tags']))        $meta['tags']        = $_POST['tags'];
+    if (isset($_POST['description'])) $meta['description'] = $_POST['description'];
+    if (!empty($meta)) {
+        MassGrabberManager::discovery()->updateMeta($id, $meta);
+    }
+    // Discover which source owns this video if not provided
+    if ($sourceId <= 0) {
+        $discRow = MassGrabberManager::discovery()->getById($id);
+        if ($discRow) $sourceId = intval($discRow['source_id']);
+    }
+    // Enqueue
+    $jobMgr = new JobManager();
+    $result = $jobMgr->createBulk(array($id), $sourceId, $runId);
+    echo json_encode(array(
+        'status'  => true,
+        'created' => $result['created'],
+        'skipped' => $result['skipped'],
+        'message' => $result['created'] > 0 ? 'Queued for grab' : 'Already queued or imported',
+    ));
     exit();
 }
 
@@ -402,8 +450,32 @@ if ($action === 'bulk_grab') {
         exit();
     }
 
+    $ids = array_map('intval', $ids);
     $jobMgr = new JobManager();
-    $result = $jobMgr->createBulk(array_map('intval', $ids), $sourceId, $runId);
+
+    if ($sourceId > 0) {
+        $result = $jobMgr->createBulk($ids, $sourceId, $runId);
+    } else {
+        // "All sources" view: each job must carry the source that owns the
+        // video, otherwise the worker loses per-source quality/category/
+        // watermark settings (create() stores whatever source_id it gets).
+        $discMgr = new DiscoveryManager();
+        $created = 0; $skipped = 0; $createdIds = array(); $skippedIds = array();
+        foreach ($ids as $vid) {
+            if ($vid <= 0) { continue; }
+            $row = $discMgr->getById($vid);
+            if (!$row) { $skipped++; $skippedIds[] = $vid; continue; }
+            $one = $jobMgr->createBulk(array($vid), intval($row['source_id']), $runId);
+            if ($one['created'] > 0) { $created++; $createdIds[] = $vid; }
+            else { $skipped++; $skippedIds[] = $vid; }
+        }
+        $result = array(
+            'created'     => $created,
+            'skipped'     => $skipped,
+            'ids_created' => $createdIds,
+            'ids_skipped' => $skippedIds,
+        );
+    }
 
     echo json_encode(array(
         'status'      => true,

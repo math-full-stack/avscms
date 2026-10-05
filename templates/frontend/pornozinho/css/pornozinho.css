@@ -3075,6 +3075,12 @@ a:hover .thumb-overlay>.xb-thumb-title {
 		max-height: 36px;
 	}
 
+	/* Tags populares: fora do mobile (pedido do usuário) — o bloco inteiro
+	   some, incluindo o cabeçalho da seção. */
+	.xb-home-tags {
+		display: none;
+	}
+
 	/* Cabeçalhos de seção mais compactos */
 	.xb-section {
 		margin: 24px 0 14px;
@@ -3216,12 +3222,6 @@ a:hover .thumb-overlay>.xb-thumb-title {
 
 	.xb-cat-info {
 		padding: 8px 10px;
-	}
-
-	/* Tags populares menores */
-	.xb-tags-lg a {
-		font-size: 12px;
-		padding: 4px 10px;
 	}
 
 	/* Carousel temático ocupa a tela com folga menor */

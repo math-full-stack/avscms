@@ -105,9 +105,12 @@
       "publisher": {
         "@type": "Organization",
         "name": "{$site_name}",
+        "url": "{$baseurl}/",
         "logo": {
           "@type": "ImageObject",
-          "url": "{$baseurl}/images/logo/logo.png"
+          "url": "{$baseurl}/images/logo/logo.png",
+          "width": 512,
+          "height": 512
         }
       },
       "interactionStatistic": {
@@ -121,7 +124,9 @@
         "ratingValue": {$video.rate},
         "reviewCount": {$video.rate_count|default:0}
       }
-      {/if}
+      {/if},
+      "inLanguage": "pt-BR",
+      "isFamilyFriendly": false
     }
     </script>
     {elseif $index}
@@ -131,7 +136,7 @@
       "@type": "WebSite",
       "name": "{$site_name}",
       "url": "{$baseurl}/",
-      "description": "Assista aos melhores vídeos pornô grátis no adulto.cloud. Milhares de filmes em HD: amador, anal, MILF, lésbicas, trans e muito mais. Sem cadastro, streaming rápido.",
+      "description": "Assista aos melhores vídeos adultos grátis no adulto.cloud. Milhares de filmes em HD: amador, anal, MILF, lésbicas, trans e muito mais. Sem cadastro, streaming rápido.",
       "potentialAction": {
         "@type": "SearchAction",
         "target": {
@@ -143,11 +148,18 @@
       "publisher": {
         "@type": "Organization",
         "name": "{$site_name}",
+        "url": "{$baseurl}/",
         "logo": {
           "@type": "ImageObject",
-          "url": "{$baseurl}/images/logo/logo.png"
-        }
-      }
+          "url": "{$baseurl}/images/logo/logo.png",
+          "width": 512,
+          "height": 512
+        },
+        "sameAs": [
+          "https://twitter.com/adultocloud"
+        ]
+      },
+      "inLanguage": "pt-BR"
     }
     </script>
     {elseif $video_listing || $categories_page || $tags_page}
@@ -162,7 +174,8 @@
         "@type": "WebSite",
         "name": "{$site_name}",
         "url": "{$baseurl}/"
-      }
+      },
+      "inLanguage": "pt-BR"
     }
     </script>
     {/if}
@@ -176,6 +189,14 @@
     <meta name="revisit-after" content="1 days" />
     <meta name="keywords" content="{if isset($self_keywords) && $self_keywords != ''}{$self_keywords|escape:'html'}{else}{$meta_keywords}{/if}" />
     <meta name="description" content="{if isset($self_description) && $self_description != ''}{$self_description|escape:'html'}{else}{$meta_description}{/if}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="preconnect" href="{$baseurl}" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="dns-prefetch" href="https://storage.googleapis.com">
+    <link rel="alternate" hreflang="pt-BR" href="{$current_url|escape:'html'}">
+    <link rel="alternate" hreflang="x-default" href="{$baseurl}/">
 
 	<link rel="Shortcut Icon" type="image/ico" href="{$baseurl}/images/favicons/favicon.ico" />
 	<link rel="apple-touch-icon" sizes="57x57" href="{$baseurl}/images/favicons/apple-icon-57x57.png">
@@ -192,9 +213,11 @@
 	<link rel="icon" type="image/png" sizes="96x96" href="{$baseurl}/images/favicons/favicon-96x96.png">
 	<link rel="icon" type="image/png" sizes="16x16" href="{$baseurl}/images/favicons/favicon-16x16.png">
 	<link rel="manifest" href="{$baseurl}/images/favicons/manifest.json">
-	<meta name="msapplication-TileColor" content="#080808">
+	<meta name="msapplication-TileColor" content="#17181A">
 	<meta name="msapplication-TileImage" content="{$baseurl}/images/favicons/ms-icon-144x144.png">
-	<meta name="theme-color" content="#080808">		
+	<meta name="theme-color" content="#17181A" media="(prefers-color-scheme: dark)">
+	<meta name="theme-color" content="#F5F1E9" media="(prefers-color-scheme: light)">
+	<meta name="theme-color" content="#5A646E">		
 
     <script type="text/javascript">
     var base_url = "{$baseurl}";
@@ -241,7 +264,7 @@
 	<link rel="stylesheet" href="{$relative_tpl}/css/easy-autocomplete.themes.min.css">	
 	
 	<link href="{$relative_tpl}/css/style.css?ver=1.0.1" rel="stylesheet">
-	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.33" rel="stylesheet">
+	<link href="{$relative_tpl}/css/pornozinho.css?ver=1.0.34" rel="stylesheet">
 	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
 	<!-- Material Design 3 -->
@@ -266,6 +289,13 @@
 		try { stored = localStorage.getItem(KEY); } catch (e) {}
 		var theme = (stored === 'light' || stored === 'dark') ? stored : 'dark';
 		root.setAttribute('data-theme', theme);
+		function syncThemeColor() {
+			var cur = root.getAttribute('data-theme');
+			var meta = document.querySelector('meta[name="theme-color"]:not([media])');
+			if (meta) {
+				meta.setAttribute('content', cur === 'dark' ? '#17181A' : '#F5F1E9');
+			}
+		}
 		function syncIcon() {
 			var cur = root.getAttribute('data-theme');
 			var s = document.querySelector('[data-theme-toggle] .material-symbols-rounded');
@@ -278,8 +308,12 @@
 			root.setAttribute('data-theme', next);
 			try { localStorage.setItem(KEY, next); } catch (e) {}
 			syncIcon();
+			syncThemeColor();
 		});
-		document.addEventListener('DOMContentLoaded', syncIcon);
+		document.addEventListener('DOMContentLoaded', function () {
+			syncIcon();
+			syncThemeColor();
+		});
 	})();
 	{/literal}
 	</script>

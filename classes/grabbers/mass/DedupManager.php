@@ -77,30 +77,26 @@ class DedupManager {
 
         // Strategy 3: Check AVS video.source_url (cross-system dedup)
         if (!empty($video['source_url'])) {
-            $rs = $this->safeExec("SELECT VID FROM video
-                                      WHERE source_url = " . $this->db->qStr($video['source_url']) . "
-                                      LIMIT 1");
-            if ($rs && !$rs->EOF) {
+            $vid = $this->matchAvsSourceUrl($video['source_url']);
+            if ($vid > 0) {
                 return array(
                     'is_duplicate' => true,
                     'reason'       => 'AVS_SOURCE_URL',
                     'discovered_id' => 0,
-                    'video_id'     => intval($rs->fields['VID']),
+                    'video_id'     => $vid,
                 );
             }
         }
 
         // Also check canonical URL against AVS source_url
         if (!empty($video['canonical_url']) && $video['canonical_url'] !== $video['source_url']) {
-            $rs = $this->safeExec("SELECT VID FROM video
-                                      WHERE source_url = " . $this->db->qStr($video['canonical_url']) . "
-                                      LIMIT 1");
-            if ($rs && !$rs->EOF) {
+            $vid = $this->matchAvsSourceUrl($video['canonical_url']);
+            if ($vid > 0) {
                 return array(
                     'is_duplicate' => true,
                     'reason'       => 'AVS_CANONICAL_URL',
                     'discovered_id' => 0,
-                    'video_id'     => intval($rs->fields['VID']),
+                    'video_id'     => $vid,
                 );
             }
         }
@@ -110,6 +106,29 @@ class DedupManager {
             'reason'       => '',
             'discovered_id' => 0,
         );
+    }
+
+    /**
+     * Procura um video do AVS com a mesma URL.
+     *
+     * A comparacao usa a MESMA normalizacao da BlocklistManager (lowercase +
+     * trim + '/' final) e testa tambem a variante COM '/' para ficar dentro do
+     * indice src_url - comparar a string crua dava falso negativo em
+     * "HTTP://Site/Video" vs "http://site/video" e varria a tabela inteira.
+     * Query string (utm_*, ?t=30) continua fora do alcance: quem pega isso e
+     * o pHash do VideoDuplicate.
+     *
+     * @param  string $url
+     * @return int    VID encontrado, ou 0
+     */
+    private function matchAvsSourceUrl($url) {
+        $norm = BlocklistManager::normalizeUrl($url);
+        if ($norm === '') return 0;
+
+        $rs = $this->safeExec("SELECT VID FROM video
+                                  WHERE source_url IN (" . $this->db->qStr($norm) . ", " . $this->db->qStr($norm . '/') . ")
+                                  LIMIT 1");
+        return ($rs && !$rs->EOF) ? intval($rs->fields['VID']) : 0;
     }
 
     /**

@@ -27,6 +27,7 @@ require_once $basedir . '/include/function_watermark.php';
 require_once $basedir . '/classes/image.class.php';
 require_once $basedir . '/classes/grabbers/GrabberManager.php';
 require_once $basedir . '/classes/grabbers/mass/MassGrabberManager.php';
+require_once $basedir . '/classes/VideoDuplicate.php';
 require_once $basedir . '/include/function_global.php';
 
 @set_time_limit(0);
@@ -157,6 +158,33 @@ grabber_log("Download OK size=$space");
 
 // Atualiza espaço e garante source_url salvo
 $conn->execute("UPDATE video SET space = '" . $space . "', source_url = " . $conn->qStr($url) . " WHERE VID = " . intval($vid) . " LIMIT 1");
+
+// Deduplicação por conteúdo (pHash). Roda ANTES de mover o arquivo e antes de
+// enfileirar a conversão: se o conteúdo já existe no site, o download vai
+// embora e o vídeo fica inativo (active=0), visível no admin. A URL também vai
+// para a Blocklist, que o admin destrava em um clique.
+// Só no pipeline automático de job ($jobId > 0): reprocess manual do admin não
+// é bloqueado, senão um re-encode legítimo mataria o próprio vídeo.
+if ($jobId > 0 && VideoDuplicate::enabled()) {
+    $fileDur = probe_video_duration($tmpVideoDst);
+    $hash    = VideoDuplicate::computePhash($tmpVideoDst, $fileDur);
+    if ($hash !== '') {
+        $conn->execute("UPDATE video SET phash = " . $conn->qStr($hash) . " WHERE VID = " . intval($vid) . " LIMIT 1");
+        $dup = VideoDuplicate::findDuplicate($hash, $fileDur > 0 ? $fileDur : $videoRow['duration'], $vid);
+        if (!empty($dup)) {
+            grabber_log("DUPLICADO: conteudo igual ao VID {$dup['vid']} (distancia {$dup['distance']}/64, duracao {$fileDur}s) - download descartado");
+            $conn->execute("UPDATE video SET active = '0', last_update = " . time() . " WHERE VID = " . intval($vid) . " LIMIT 1");
+            $blockMgr = new BlocklistManager();
+            $blockMgr->add(array('url' => $url, 'title' => $title, 'reason' => 'DUPLICATE'));
+            worker_fail_job($jobId, $jobMgr, 'DUPLICATE', "Conteudo duplicado do VID {$dup['vid']} (distancia {$dup['distance']}/64)");
+            worker_cleanup_tmp($uniqId);
+            exit(1);
+        }
+        grabber_log("pHash $hash - sem duplicata");
+    } else {
+        grabber_log("pHash nao calculado - segue sem dedup de conteudo");
+    }
+}
 
 // Move para pasta definitiva
 $vdoname = $vid . '.mp4';

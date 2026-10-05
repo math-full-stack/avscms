@@ -339,9 +339,9 @@ class DiscoveryManager {
     }
 
     /**
-     * Get discovered videos for a source, with optional filters.
-     * 
-     * @param int    $sourceId
+     * Get discovered videos for a source (or all sources when $sourceId=0).
+     *
+     * @param int    $sourceId  0 = all sources
      * @param array  $filters  ['status' => string, 'timeframe' => string, 'sort' => string,
      *                          'hide_obtained' => bool]
      * @param int    $limit
@@ -349,7 +349,10 @@ class DiscoveryManager {
      * @return array ['videos' => array, 'total' => int]
      */
     public function getDiscovered($sourceId, $filters = array(), $limit = 10, $offset = 0) {
-        $where = "WHERE d.source_id = " . intval($sourceId);
+        $sourceId = intval($sourceId);
+        $where = $sourceId > 0
+            ? "WHERE d.source_id = " . $sourceId
+            : "WHERE 1=1";
 
         // Global blocklist: rejected videos never appear in the results,
         // whatever their status or the source they were rejected from.
@@ -373,10 +376,10 @@ class DiscoveryManager {
         $timeframe = isset($filters['timeframe']) ? trim($filters['timeframe']) : null;
         if ($timeframe) {
             $timeframeMap = array(
-                'today'     => 86400,        // 24 hours
-                'week'      => 604800,       // 7 days
-                'month'     => 2592000,      // 30 days
-                '3months'   => 7776000,      // 90 days
+                'today'     => 86400,
+                'week'      => 604800,
+                'month'     => 2592000,
+                '3months'   => 7776000,
             );
             if (isset($timeframeMap[$timeframe])) {
                 $since = time() - $timeframeMap[$timeframe];
@@ -402,19 +405,59 @@ class DiscoveryManager {
         );
         $orderBy = isset($orderByMap[$sortBy]) ? $orderByMap[$sortBy] : 'd.id DESC';
 
-        // Get page — JOIN with video table using video_id to detect existing imports
-        $sql = "SELECT d.*, v.VID AS avs_video_id, v.active AS avs_active
-                FROM grabber_discovered_videos d
-                LEFT JOIN video v ON v.VID = d.video_id
-                " . $where .
-               " ORDER BY " . $orderBy . " LIMIT " . intval($limit) . " OFFSET " . intval($offset);
+        // JOIN grabber_sources to return source_name (needed for "all sources" view)
+        if ($sourceId > 0) {
+            $sql = "SELECT d.*, gs.name AS source_name,
+                           v.VID AS avs_video_id, v.active AS avs_active
+                    FROM grabber_discovered_videos d
+                    LEFT JOIN grabber_sources gs ON gs.id = d.source_id
+                    LEFT JOIN video v ON v.VID = d.video_id
+                    " . $where .
+                   " ORDER BY " . $orderBy . " LIMIT " . intval($limit) . " OFFSET " . intval($offset);
+        } else {
+            // "All sources": merge the feeds round-robin instead of stacking one
+            // source on top of the other (the flat newest-first order was
+            // dominated by whichever source had scraped the most).
+            // rr = position of the row inside its own source, so round 1 holds
+            // the top row of every source, round 2 the second of every source,
+            // and so on. Rounds are ordered by src_done (completed grabs), which
+            // puts the most used sources first. (rr, src_done, source_id) is a
+            // total order, so OFFSET paging stays stable: no row is ever skipped
+            // or repeated while scrolling.
+            // The inner query keeps the `d` alias so $where (built with `d.`,
+            // including the blocklist NOT EXISTS) and $orderBy apply unchanged.
+            // NOTE: the chosen sort applies inside each source, not globally.
+            $sql = "SELECT x.*, gs.name AS source_name,
+                           v.VID AS avs_video_id, v.active AS avs_active
+                    FROM (
+                        SELECT d.*,
+                               ROW_NUMBER() OVER (PARTITION BY d.source_id ORDER BY " . $orderBy . ") AS rr,
+                               COALESCE(sc.done_count, 0) AS src_done
+                        FROM grabber_discovered_videos d
+                        LEFT JOIN (
+                            SELECT source_id, COUNT(*) AS done_count
+                            FROM grabber_jobs
+                            WHERE status = 'COMPLETED'
+                            GROUP BY source_id
+                        ) sc ON sc.source_id = d.source_id
+                        " . $where . "
+                    ) x
+                    LEFT JOIN grabber_sources gs ON gs.id = x.source_id
+                    LEFT JOIN video v ON v.VID = x.video_id
+                    ORDER BY x.rr ASC, x.src_done DESC, x.source_id ASC
+                    LIMIT " . intval($limit) . " OFFSET " . intval($offset);
+        }
         $rs = $this->safeExec($sql);
 
         $videos = array();
         if ($rs && !$rs->EOF) {
             while (!$rs->EOF) {
                 $row = $rs->fields;
+                // Round-robin helpers only exist to order the merge - keep them
+                // out of the payload the admin UI receives.
+                unset($row['rr'], $row['src_done']);
                 $row['duration_formatted'] = $this->formatDuration(intval($row['duration']));
+                $row['source_name'] = isset($row['source_name']) ? $row['source_name'] : '';
 
                 // Auto-update status based on AVS video table
                 $avsVid = isset($row['avs_video_id']) ? intval($row['avs_video_id']) : 0;
@@ -441,10 +484,6 @@ class DiscoveryManager {
 
                 // Check completed job only if status wasn't just reset from IMPORTED
                 if (!$justReset && ($row['status'] === 'NEW' || $row['status'] === 'QUEUED')) {
-                    // Only re-mark as imported when the completed job's video
-                    // still exists in AVS - a leftover COMPLETED job whose video
-                    // was deleted would otherwise resurrect the IMPORTED state
-                    // and block re-importing the entry.
                     $jobRs = $this->safeExec("SELECT j.id, j.video_id
                                               FROM grabber_jobs j
                                               LEFT JOIN video v ON v.VID = j.video_id
@@ -467,6 +506,32 @@ class DiscoveryManager {
         }
 
         return array('videos' => $videos, 'total' => $total);
+    }
+
+    /**
+     * Update editable metadata of a discovered video (title, tags, description).
+     * Only updates fields that are explicitly passed (non-null).
+     *
+     * @param int   $id
+     * @param array $meta  Keys: title, tags, description
+     * @return bool
+     */
+    public function updateMeta($id, $meta) {
+        $id = intval($id);
+        if ($id <= 0) return false;
+        $sets = array('updated_at = ' . time());
+        if (array_key_exists('title', $meta)) {
+            $sets[] = 'title = ' . $this->db->qStr($this->stripEmoji(trim($meta['title'])));
+        }
+        if (array_key_exists('tags', $meta)) {
+            $sets[] = 'tags = ' . $this->db->qStr($this->stripEmoji(trim($meta['tags'])));
+        }
+        if (array_key_exists('description', $meta)) {
+            $sets[] = 'description = ' . $this->db->qStr($this->stripEmoji(trim($meta['description'])));
+        }
+        if (count($sets) === 1) return false; // only updated_at
+        $this->safeExec('UPDATE grabber_discovered_videos SET ' . implode(', ', $sets) . ' WHERE id = ' . $id . ' LIMIT 1');
+        return true;
     }
 
     /**

@@ -1,7 +1,7 @@
 {* Card de vídeo dos grids (home, lista de vídeos). Recebe `v` = item do vídeo.
    `card_cols` (classes Bootstrap da coluna, default 4-col), `show_tags` (default 1),
    `fetchpriority` (default 'lazy' — usar 'high' só nas primeiras 4-6 do feed above-the-fold). *}
-<div class="{if $card_cols}{$card_cols}{else}col-6 col-sm-6 col-md-4 col-lg-3 col-xxl-2 col-xxxl-2{/if}">
+<div class="{if $card_cols}{$card_cols}{else}col-12 col-sm-6 col-md-4 col-lg-3 col-xxl-2 col-xxxl-2{/if}">
 	<a href="{$relative}/video/{$v.VID}/{$v.title|clean}">
 <div class="thumb-overlay{if isset($v.orientation) && $v.orientation == 'portrait'} xb-portrait{/if}" {if $v.vthumbs == '1'} id="playvthumb_{$v.VID}"{/if}>
 			{assign var=fp value=$fetchpriority|default:'lazy'}

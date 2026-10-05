@@ -83,7 +83,7 @@
 		<div class="content-left">
             {if $videos}		
 			<div class="row content-row">
-			{capture name=videos_cols}{if $min_col == '2'}col-6 {/if}col-sm-6 col-md-4 col-lg-4 col-xl-4 col-xxl-4 col-xxxl-4{/capture}
+			{capture name=videos_cols}col-12 col-sm-6 col-md-4 col-lg-4 col-xl-4 col-xxl-4 col-xxxl-4{/capture}
             {section name=i loop=$videos}
 				{include file='video_card.tpl' v=$videos[i] card_cols=$smarty.capture.videos_cols show_tags=0}
 				{if $smarty.section.i.iteration is div by 8}

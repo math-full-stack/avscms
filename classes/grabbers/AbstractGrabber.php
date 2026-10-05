@@ -20,6 +20,14 @@ abstract class AbstractGrabber implements GrabberInterface {
     /** Referer usado nos downloads (curl) e fetch de HTML. */
     protected $referer = '';
 
+    /**
+     * Enviar o Referer tambem no download direto do arquivo (stream_url).
+     * Alguns CDNs usam uma regra de hotlink ingenua que REJEITA (403) a
+     * requisicao quando ela chega com o Referer do proprio site - nesses casos
+     * o grabber desliga isto. Nao afeta o fetch de HTML, que segue com Referer.
+     */
+    protected $directDownloadReferer = true;
+
     protected $pythonBinary = null;
     protected $ytdlpScript = null;
 
@@ -339,7 +347,7 @@ abstract class AbstractGrabber implements GrabberInterface {
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-        if (!empty($this->referer)) {
+        if ($this->directDownloadReferer && !empty($this->referer)) {
             curl_setopt($ch, CURLOPT_REFERER, $this->referer);
         }
         curl_setopt($ch, CURLOPT_TIMEOUT, 300);

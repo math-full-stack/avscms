@@ -26,6 +26,7 @@ require_once $basedir . '/classes/image.class.php';
 require_once $basedir . '/classes/grabbers/GrabberManager.php';
 require_once $basedir . '/classes/grabbers/mass/MassGrabberManager.php';
 require_once $basedir . '/classes/grabbers/mass/MetadataMerger.php';
+require_once $basedir . '/classes/grabbers/mass/BlocklistManager.php';
 
 @set_time_limit(0);
 @ini_set('max_execution_time', 0);
@@ -170,9 +171,12 @@ if ($available > 0) {
         $thumbUrl = isset($info['thumbnail']) ? $info['thumbnail'] : '';
         if (empty($title)) $title = 'Untitled Video';
 
-        // Dedup: check if a video with this source_url already exists
+        // Dedup: check if a video with this source_url already exists.
+        // Mesma normalizacao da DedupManager (lowercase/trim/'/' final) para as
+        // duas pontas concordarem, e com o indice src_url no lugar do scan.
         $existingVid = 0;
-        $existingRs = $conn->Execute("SELECT VID, active FROM video WHERE source_url = " . $conn->qStr($sourceUrl) . " ORDER BY VID DESC LIMIT 1");
+        $normUrl = BlocklistManager::normalizeUrl($sourceUrl);
+        $existingRs = $conn->Execute("SELECT VID, active FROM video WHERE source_url IN (" . $conn->qStr($normUrl) . ", " . $conn->qStr($normUrl . '/') . ") ORDER BY VID DESC LIMIT 1");
         if ($existingRs && !$existingRs->EOF) {
             $existingActive = intval($existingRs->fields['active']);
             $existingVid = intval($existingRs->fields['VID']);
