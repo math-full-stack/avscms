@@ -48,8 +48,8 @@ if (file_exists(__DIR__ . '/config.local.php')) {
     $config['q_limit']        = '4';
     $config['q_timeout']      = '6';
     $config['gcs_enabled']    = '1';
-    $config['gcs_bucket']     = getenv('GCS_BUCKET') ?: 'pornozinho-cdn1';
-    $config['gcs_streaming_url'] = getenv('GCS_STREAMING_URL') ?: 'https://storage.googleapis.com/pornozinho-cdn1';
+    $config['gcs_bucket']     = getenv('GCS_BUCKET') ?: 'pornozinho-media';
+    $config['gcs_streaming_url'] = getenv('GCS_STREAMING_URL') ?: 'https://storage.googleapis.com/pornozinho-media';
     $config['gcs_key_path']   = '';
     $config['gcs_acl']        = 'publicRead';
     $config['gcs_cache_control'] = 'public, max-age=31536000';

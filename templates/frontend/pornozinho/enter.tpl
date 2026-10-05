@@ -4,13 +4,13 @@
 <head>
     <title>{if isset($self_title) && $self_title != ''}{$self_title|escape:'html'}{else}{$site_name}{/if}</title>
     <meta charset="utf-8">
-    <!-- Tema claro/escuro: aplica antes da 1ª pintura (evita flash); padrão é claro -->
+    <!-- Tema claro/escuro: aplica antes da 1ª pintura (evita flash); padrão é escuro -->
     <script type="text/javascript">
     {literal}
     (function () {
         var t = null;
         try { t = localStorage.getItem('avs_theme'); } catch (e) {}
-        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
     })();
     {/literal}
     </script>

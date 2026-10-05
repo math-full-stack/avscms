@@ -180,10 +180,10 @@ $config['g_cid'] = '';
 $config['recaptcha_site_key'] = '';
 $config['recaptcha_secret_key'] = '';
 
-// --- Google Cloud Storage (media via bucket pornozinho-cdn1) ---
+// --- Google Cloud Storage (media via bucket pornozinho-media) ---
 $config['gcs_enabled'] = '1';
-$config['gcs_bucket'] = 'pornozinho-cdn1';
-$config['gcs_streaming_url'] = 'https://storage.googleapis.com/pornozinho-cdn1';
+$config['gcs_bucket'] = 'pornozinho-media';
+$config['gcs_streaming_url'] = 'https://storage.googleapis.com/pornozinho-media';
 // Chave GCS fica FORA do webroot (/etc/avscms/gcs-service-account.json na VM)
 // ou inline via env GCS_KEY_JSON (Cloud Run). Nunca dentro de include/ (exposto).
 $config['gcs_key_path'] = getenv('GCS_KEY_PATH') ?: '/etc/avscms/gcs-service-account.json';

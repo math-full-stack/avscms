@@ -24,7 +24,7 @@ class GCS
 
     /**
      * @param string $keyFilePath Absolute path to the service account JSON key file
-     * @param string $bucket      GCS bucket name (e.g. "pornozinho-cdn1")
+     * @param string $bucket      GCS bucket name (e.g. "pornozinho-media")
      */
     public function __construct($keyFilePath, $bucket)
     {
@@ -656,7 +656,7 @@ class GCS
     /**
      * Generates the gs:// URI for an object in this bucket.
      * @param string $objectName
-     * @return string e.g. "gs://pornozinho-cdn1/18_1080p.mp4"
+     * @return string e.g. "gs://pornozinho-media/18_1080p.mp4"
      */
     public function getGsUri($objectName)
     {
@@ -667,7 +667,7 @@ class GCS
      * Generates the public HTTPS URL for an object (only works if the bucket
      * or object is publicly readable).
      * @param string $objectName
-     * @return string e.g. "https://storage.googleapis.com/pornozinho-cdn1/18_1080p.mp4"
+     * @return string e.g. "https://storage.googleapis.com/pornozinho-media/18_1080p.mp4"
      */
     public function getPublicUrl($objectName)
     {

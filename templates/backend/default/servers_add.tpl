@@ -102,8 +102,8 @@
 										<div class="form-group">
 											<label class="col-lg-4 control-label">Bucket Name</label>
 											<div class="col-lg-8">
-												<input class="form-control" name="gcs_bucket" id="srv_gcs_bucket" type="text" value="{$server.gcs_bucket|escape:'html'}" placeholder="meu-bucket-cdn">
-												<span class="help">Nome do bucket no Google Cloud Storage (ex: <code>pornozinho-cdn1</code>)</span>
+												<input class="form-control" name="gcs_bucket" id="srv_gcs_bucket" type="text" value="{$server.gcs_bucket|escape:'html'}" placeholder="meu-bucket-de-midia">
+												<span class="help">Nome do bucket no Google Cloud Storage (ex: <code>pornozinho-media</code>)</span>
 											</div>
 											<div class="clearfix"></div>
 										</div>
@@ -122,9 +122,9 @@
 										<div class="form-group">
 											<label class="col-lg-4 control-label">Video Streaming URL</label>
 											<div class="col-lg-8">
-												<input class="form-control" name="video_url" id="srv_video_url_gcs" type="text" value="{$server.video_url|escape:'html'}" placeholder="https://storage.googleapis.com/meu-bucket-cdn">
-												<span class="help">URL pública do bucket para streaming. O player usará esta base + nome do arquivo.<br>
-												Exemplo: <code>https://storage.googleapis.com/pornozinho-cdn1</code></span>
+												<input class="form-control" name="video_url" id="srv_video_url_gcs" type="text" value="{$server.video_url|escape:'html'}" placeholder="https://adulto.cloud">
+												<span class="help">Base pública que o player usa para montar a URL do arquivo. Em produção aponta para o domínio na frente do CDN, não para o storage.<br>
+												Exemplo: <code>https://adulto.cloud</code></span>
 											</div>
 											<div class="clearfix"></div>
 										</div>

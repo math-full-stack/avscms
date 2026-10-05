@@ -264,7 +264,7 @@
 		var root = document.documentElement;
 		var stored = null;
 		try { stored = localStorage.getItem(KEY); } catch (e) {}
-		var theme = (stored === 'light' || stored === 'dark') ? stored : 'light';
+		var theme = (stored === 'light' || stored === 'dark') ? stored : 'dark';
 		root.setAttribute('data-theme', theme);
 		function syncIcon() {
 			var cur = root.getAttribute('data-theme');

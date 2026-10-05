@@ -759,11 +759,18 @@ function upload_video_formats_gcs($vid, $formats, $server)
             // (gcs_streaming_url), então sem publicRead a reprodução dá 403.
             // R2: objeto público — a base r2.dev/domínio próprio é o caminho de
             // leitura, então o cache pode ser longo (mídia imutável por VID).
+            //
+            // O GCS NÃO pode levar 'no-store': sem cache o browser re-baixa do
+            // byte 0 a cada seek/troca de qualidade, e cada leitura abortada
+            // vira ReadObject|CANCELLED no bucket — bytes enviados e cobrados
+            // que ninguém viu. 30 dias (e não immutable/1 ano) porque a fila de
+            // conversão pode re-encodear o mesmo h264/{vid}/{label}.mp4; um
+            // TTL limitado faz o cache se auto-curar.
             $gsUri = $gcs->upload($localFile, $object, 'video/mp4', array(
                 'acl' => 'publicRead',
                 'cacheControl' => $isR2
                     ? 'public, max-age=31536000'
-                    : 'private, max-age=0, no-store'
+                    : 'public, max-age=2592000'
             ));
 
             if ($gsUri !== false) {
@@ -780,8 +787,9 @@ function upload_video_formats_gcs($vid, $formats, $server)
     }
 
     if ($success) {
-        // A video_url do servidor GCS deve ser a URL pública do bucket
-        // ex: https://storage.googleapis.com/pornozinho-cdn1
+        // A video_url do servidor GCS deve ser a base pública que o player usa
+        // para montar a URL do arquivo. Em produção é o domínio na frente do
+        // CDN (ex: https://adulto.cloud), não a URL do bucket no storage.
         $videoUrl = rtrim($server['video_url'], '/');
         $conn->execute("UPDATE video SET server = " . $conn->qStr($videoUrl) . " WHERE VID = " . intval($vid) . " LIMIT 1");
         update_server($server);
