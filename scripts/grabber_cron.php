@@ -46,12 +46,16 @@ $pid = getmypid();
 
 // Single-instance guard: concurrent runs (web "Process Now" clicks, cron
 // overlap) must never claim/reset the same jobs at the same time.
-$lockFile = $config['LOG_DIR'] . '/grabber_cron.lock';
-$lockH = @fopen($lockFile, 'c');
-if ($lockH && !flock($lockH, LOCK_EX | LOCK_NB)) {
+// Use atomic mkdir for lock (works on all filesystems, unlike flock).
+$lockDir = $config['LOG_DIR'] . '/grabber_cron.lock';
+if (!@mkdir($lockDir, 0755)) {
     echo "[" . date('Y-m-d H:i:s') . "] Another grabber_cron instance is already running - skipping.\n";
     exit(0);
 }
+// Ensure lock dir is removed on exit (normal or error)
+register_shutdown_function(function() use ($lockDir) {
+    @rmdir($lockDir);
+});
 
 echo "[" . date('Y-m-d H:i:s') . "] Mass Grabber Cron started (PID: $pid)\n";
 
@@ -345,6 +349,11 @@ if ($tmpCleaned > 0) {
 // grandes (100-400MB) levam mais de 30 min para converter e o
 // check_q() só atualiza last_update ao INICIAR a conversão, não durante.
 // Resetar no meio da conversão órfã o ffmpeg e trava o vídeo em loop.
+//
+// TAMBÉM: não resetar grabber jobs PROCESSING cujo vídeo associado
+// já está na fila de conversão (o job foi completado pelo worker mas
+// a conversão ainda roda). O resetStaleJobs() usa o mesmo timeout
+// e re-queueria o job indefinidamente (attempts=0 -> claim -> reset).
 $stuckTimeout = 1800; // 30 minutos (worker agora tem timeout de 5 min no yt-dlp)
 $stuckCutoff = time() - $stuckTimeout;
 
@@ -377,7 +386,10 @@ $conn->Execute($sql);
 $stuckReset += $conn->Affected_Rows();
 
 // Reset jobs PROCESSING há mais de 30 min (crash recovery)
-$stuckReset += $jobMgr->resetStaleJobs($stuckTimeout);
+// MAS: não resetar jobs cujo vídeo já está na fila de conversão
+// (o worker completou o job e enfileirou a conversão; resetar
+// aqui criaria loop infinito de re-download).
+$stuckReset += $jobMgr->resetStaleJobs($stuckTimeout, $conn);
 
 // Limpar arquivos parciais de vídeos stuck (mídia local sem conversão/upload)
 if (!empty($stuckVids)) {

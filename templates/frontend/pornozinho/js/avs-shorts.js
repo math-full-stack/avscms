@@ -805,8 +805,8 @@
 
 			card.innerHTML = [
 				'<div class="avs-ambient-bg" style="background-image: url(\'' + escapeHtml(v.poster_url) + '\');" aria-hidden="true"></div>',
-				(v.ad_meta ? '<div class="avs-ad-side avs-ad-side-left">' + v.ad_meta + '</div>'
-					+ '<div class="avs-ad-side avs-ad-side-right">' + v.ad_meta + '</div>' : ''),
+				(v.ad_left ? '<div class="avs-ad-side avs-ad-side-left">' + v.ad_left + '</div>' : '')
+					+ (v.ad_right ? '<div class="avs-ad-side avs-ad-side-right">' + v.ad_right + '</div>' : ''),
 				'<div class="avs-player-wrapper ' + vertClass + '"' + (v.aspect ? ' style="--avs-video-ar: ' + v.aspect + '"' : '') + '>',
 				'  <video class="avs-video-el" src="' + escapeHtml(v.video_url) + '" poster="' + escapeHtml(v.poster_url) + '" playsinline webkit-playsinline loop preload="none" muted></video>',
 				'  <div class="avs-play-pulse" aria-hidden="true">',
@@ -819,8 +819,8 @@
 				'    <span>Toque para ativar o som</span>',
 				'  </button>',
 				'  <div class="avs-short-meta-bottom">',
-				(v.ad_meta
-					? '    <div class="avs-ad-meta-band"><span class="avs-ad-tag avs-ad-tag-sm">Anúncio</span>' + v.ad_meta + '</div>'
+				(v.ad_bottom
+					? '    <div class="avs-ad-meta-band"><span class="avs-ad-tag avs-ad-tag-sm">Anúncio</span>' + v.ad_bottom + '</div>'
 					: '    <div class="avs-short-title-wrap">'
 						+ '      <h2 class="avs-short-title">' + escapeHtml(v.title) + '</h2>'
 						+ (v.description ? '      <p class="avs-short-desc">' + escapeHtml(v.description) + '</p>' : '')

@@ -72,7 +72,11 @@ INSERT INTO `adv_group` (`advgrp_id`, `advgrp_name`, `total_advs`, `advgrp_rotat
 (18, 'videos_bottom', 0, '1', '1', 728, 90),
 (19, 'index_feed', 0, '1', '1', 0, 0),
 (20, 'videos_feed', 0, '1', '1', 0, 0),
-(21, 'shorts_feed', 0, '1', '1', 0, 0);
+(21, 'shorts_feed', 0, '1', '1', 0, 0),
+(22, 'novos_feed', 0, '1', '1', 0, 0),
+(23, 'shorts_left', 0, '1', '1', 0, 0),
+(24, 'shorts_right', 0, '1', '1', 0, 0),
+(25, 'shorts_bottom', 0, '1', '1', 0, 0);
 
 -- --------------------------------------------------------
 

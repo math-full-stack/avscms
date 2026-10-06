@@ -319,7 +319,7 @@
                         <label class="control-label" style="font-size:12px;color:#888;margin-bottom:0;cursor:pointer">
                             <input type="checkbox" id="mg_disc_hide_obtained" onchange="mgToggleHideObtained(this)"> <i class="fa fa-eye-slash"></i> Hide already obtained
                         </label>
-                        <span class="text-muted" style="font-size:11px;margin-left:6px">leaves out imported and existing videos (use the Existing/Imported buttons to see them)</span>
+                        <span class="text-muted" style="font-size:11px;margin-left:6px">leaves out imported, existing, queued and processing videos (use the Existing/Imported buttons to see them)</span>
                     </div>
                 </div>
             <div class="grid-body no-border">

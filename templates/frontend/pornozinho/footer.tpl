@@ -467,7 +467,7 @@
 	   da página do vídeo. No embed/view o mini interno do player já está na página, daí
 	   o !$view; e o avs-mini.js remove o shell em qualquer página que tenha player. *}
 	{if isset($smarty.cookies.avs_mini) && $smarty.cookies.avs_mini == '1' && !$view}
-	<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=3.2.12">
+	<link rel="stylesheet" href="{$baseurl}/media/player/mediabunny/avs-player.css?ver=3.2.16">
 	<div id="avs-mini-floating" class="avs-player avs-mini-mode avs-fallback" style="display:none">
 		<svg class="avs-sprite" aria-hidden="true">
 			<symbol id="avs-i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></symbol>
@@ -550,7 +550,7 @@
 	<script type="text/javascript" src="{$baseurl}/media/player/mediabunny/avs-mini.js?ver=2.1.0"></script>
 	<script type="text/javascript" src="{$relative_tpl}/js/avs-disguise.js?ver=1.0.0"></script>
 	{if isset($shorts_page) && $shorts_page}
-	<script type="text/javascript" src="{$relative_tpl}/js/avs-shorts.js?ver=1.0.7"></script>
+	<script type="text/javascript" src="{$relative_tpl}/js/avs-shorts.js?ver=1.0.8"></script>
 	{/if}
 	{include file='../../../templates/backend/default/analytics/analytics.tpl'}
 </body>

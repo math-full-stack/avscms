@@ -3,6 +3,7 @@ defined('_VALID') or die('Restricted Access!');
 
 require_once dirname(__FILE__) . '/GrabberInterface.php';
 require_once dirname(__FILE__) . '/YoutubeGrabber.php';
+require_once dirname(__FILE__) . '/TikTokGrabber.php';
 require_once dirname(__FILE__) . '/XfreeGrabber.php';
 require_once dirname(__FILE__) . '/SonovinhasbrGrabber.php';
 require_once dirname(__FILE__) . '/PornolandiaGrabber.php';
@@ -20,6 +21,7 @@ class GrabberManager {
         if (self::$grabbers === null) {
             self::$grabbers = array(
                 new YoutubeGrabber(),
+                new TikTokGrabber(),
                 new XfreeGrabber(),
                 new SonovinhasbrGrabber(),
                 new PornolandiaGrabber(),

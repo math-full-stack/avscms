@@ -359,14 +359,30 @@ class JobManager {
     /**
      * Reset stale processing jobs (crash recovery).
      * @param int $timeoutSeconds  Default 1800 (30 min)
+     * @param object $conn         Optional DB connection for conversion queue check
      * @return int  Number of jobs reset
      */
-    public function resetStaleJobs($timeoutSeconds = 1800) {
+    public function resetStaleJobs($timeoutSeconds = 1800, $conn = null) {
         $cutoff = time() - $timeoutSeconds;
         // Reconcile before re-queueing: jobs whose video is already processed
         // become COMPLETED, so a stuck job is never sent back for a redundant
         // re-download of an active=1 video.
         $this->completeProcessedJobs();
+
+        // Build exclusion: don't reset jobs whose video is in conversion queue
+        // (worker completed the job, conversion is running; resetting would
+        // cause infinite re-download loop).
+        $exclusionSql = '';
+        if ($conn) {
+            $exclusionSql = " AND j.id NOT IN (
+                SELECT j2.id FROM grabber_jobs j2
+                JOIN grabber_discovered_videos d2 ON j2.discovered_video_id = d2.id
+                JOIN video v2 ON v2.source_url = d2.source_url AND d2.source_url <> ''
+                WHERE v2.VID IN (SELECT VID FROM conversion_queue_fp)
+                   OR v2.VID IN (SELECT VID FROM conversion_queue_sp)
+            )";
+        }
+
         // Attempts are reset so a job whose PROCESSING run crashed on its last
         // attempt (attempts == max_attempts) can be claimed again - otherwise
         // it would sit PENDING forever and block the queue.
@@ -380,7 +396,8 @@ class JobManager {
                             error_message = '',
                             updated_at = " . time() . "
                             WHERE status = 'PROCESSING'
-                            AND started_at < " . intval($cutoff));
+                            AND started_at < " . intval($cutoff)
+                            . $exclusionSql);
 
         $reset = $this->db->Affected_Rows();
 

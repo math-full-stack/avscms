@@ -365,11 +365,12 @@ class DiscoveryManager {
             $where .= " AND d.status = " . $this->db->qStr($status);
         }
 
-        // Option: hide videos already obtained (imported into AVS, or already
-        // present in the site). Skipped when the caller explicitly asked for
-        // those statuses - otherwise the Existing/Imported tabs would be empty.
-        if (!empty($filters['hide_obtained']) && !in_array($status, array('IMPORTED', 'EXISTS'))) {
-            $where .= " AND d.status NOT IN ('IMPORTED','EXISTS')";
+        // Option: hide videos already obtained (imported into AVS, already
+        // present in the site, or already queued/processing). Skipped when the
+        // caller explicitly asked for those statuses - otherwise the
+        // Existing/Imported tabs would be empty.
+        if (!empty($filters['hide_obtained']) && !in_array($status, array('IMPORTED', 'EXISTS', 'QUEUED', 'PROCESSING'))) {
+            $where .= " AND d.status NOT IN ('IMPORTED','EXISTS','QUEUED','PROCESSING')";
         }
 
         // Timeframe filter

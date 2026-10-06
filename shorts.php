@@ -30,17 +30,25 @@ if (!in_array($tab, array('foryou', 'trending', 'recent'))) {
 $uid = isset($_SESSION['uid']) ? intval($_SESSION['uid']) : 0;
 $active_cond = ($config['approve'] == '1') ? " AND v.active = '1'" : "";
 
-// Anúncio reutilizado nos CARDS de vídeo: faixa no lugar do título/descrição +
-// companheiros laterais (desktop). UMA resolução por request para TODOS os
-// cards (mesmo grupo 'shorts_feed'); '' desliga quando o config de anúncios
-// estiver off. Também é o que vale para o card full-screen entre shorts (que
-// leva uma segunda chamada própria, para poder variar a peça).
-$adv_card_html = '';
-$adv_card_res = insert_adv(array('group' => 'shorts_feed'));
-if ($adv_card_res) {
-    $adv_card_html = !empty($adv_card_res['ad']) ? $adv_card_res['ad']
+// Anúncios dos CARDS de vídeo: cada slot lateral/inferior tem o SEU grupo
+// (shorts_left / shorts_right / shorts_bottom), resolvido UMA vez por request e
+// reutilizado em TODOS os cards (mesma peça por slot); '' desliga quando o
+// config de anúncios estiver off ou o grupo não existir. O card full-screen
+// entre shorts continua no grupo 'shorts_feed' (chamada própria abaixo).
+function shorts_slot_ad_html($group)
+{
+    $res = insert_adv(array('group' => $group));
+    if (!$res) {
+        return '';
+    }
+    return !empty($res['ad']) ? $res['ad']
         : '<div class="avs-ad-slot-hint"><span>PATROCINADORES</span><span class="avs-ad-slot-size">Auto &times; Auto</span></div>';
 }
+$adv_slots = array(
+    'left'   => shorts_slot_ad_html('shorts_left'),
+    'right'  => shorts_slot_ad_html('shorts_right'),
+    'bottom' => shorts_slot_ad_html('shorts_bottom'),
+);
 
 // Função para formatar contadores de shorts
 function shorts_fmt_num($num) {
@@ -159,7 +167,9 @@ if ($initial_vid > 0) {
                 'is_liked' => false,
                 'is_fav' => false,
                 'share_url' => $config['BASE_URL'] . '/shorts?v=' . $initial_vid,
-                'ad_meta' => $adv_card_html
+                'ad_left' => $adv_slots['left'],
+                'ad_right' => $adv_slots['right'],
+                'ad_bottom' => $adv_slots['bottom']
             );
             $exclude_vids[$initial_vid] = $initial_vid;
         }
@@ -233,7 +243,9 @@ if ($rs) {
                 'is_liked' => false,
                 'is_fav' => false,
                 'share_url' => $config['BASE_URL'] . '/shorts?v=' . $vid,
-                'ad_meta' => $adv_card_html
+                'ad_left' => $adv_slots['left'],
+                'ad_right' => $adv_slots['right'],
+                'ad_bottom' => $adv_slots['bottom']
             );
             $exclude_vids[$vid] = $vid;
         }

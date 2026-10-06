@@ -88,6 +88,57 @@
     overflow: hidden;
 }
 
+/* Fundo desfocado para vídeos verticais (estilo .xb-portrait-bg dos cards).
+   Fica atrás do canvas/video (z-index: 0) e usa a imagem do poster. */
+.avs-player .avs-vertical-bg {
+    position: absolute;
+    inset: -12px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(18px) brightness(0.62) saturate(1.2);
+    transform: scale(1.12);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Vídeo vertical: o vídeo fica com object-fit: contain para mostrar o quadro
+   inteiro e o fundo desfocado (avs-vertical-bg) aparece nas laterais. Sem o
+   `background: transparent` aqui, o canvas/vídeo opaco cobre o fundo e ele
+   some — que era o caso antes. */
+.avs-player.avs-vertical canvas,
+.avs-player.avs-vertical .avs-fallback-video {
+    object-fit: contain;
+    background: transparent;
+}
+
+/* Preview clip em vídeo vertical também em contain e sem fundo opaco */
+.avs-player.avs-vertical .avs-preview-video {
+    object-fit: contain;
+    background: transparent;
+}
+
+/* Poster em vídeo vertical: contain para não cortar e transparente nas bordas */
+.avs-player.avs-vertical .avs-poster {
+    object-fit: contain;
+    background: transparent;
+}
+
+/* Mosaico placeholder em vídeo vertical: contain e sem fundo opaco para o
+   desfoque aparecer pelas bordas. */
+.avs-player.avs-vertical .avs-poster.avs-cover,
+.avs-player.avs-vertical .avs-poster.avs-cover .xb-trio {
+    background: transparent;
+}
+
+.avs-player.avs-vertical .avs-poster.avs-cover .xb-trio img {
+    object-fit: contain;
+}
+
+/* Play central em vídeo vertical */
+.avs-player.avs-vertical .avs-big-play {
+    z-index: 4;
+}
+
 /* Preview clip (video.mp4/webm das thumbs): toca mudo atrás do play central */
 .avs-player .avs-preview-video {
     position: absolute;
@@ -806,20 +857,9 @@
     }
 }
 
-/* Vertical videos: constrain by HEIGHT instead of width, so a 9:16 source
-   never grows to ~1.8x the column width in height. width:min() derives the
-   largest width whose height (width / ratio) still fits the viewport; the
-   --avs-ratio var is set from JS alongside the inline aspect-ratio. */
-.avs-player.avs-vertical {
-    width: min(100%, calc(72vh * var(--avs-ratio, 0.5625)));
-    margin: 0 auto;
-}
-
-@media (max-width: 767px) {
-    .avs-player.avs-vertical {
-        width: min(100%, calc(68vh * var(--avs-ratio, 0.5625)));
-    }
-}
+/* Vídeo vertical: o box do player mantém a proporção padrão 16:9 do site em
+   qualquer tela. O vídeo entra letterboxed (object-fit: contain, regra acima)
+   e o fundo desfocado preenche as laterais — o layout da página não muda. */
 
 /* Short landscape screens (phones rotated): slim the control bar. */
 @media (orientation: landscape) and (max-height: 500px) {

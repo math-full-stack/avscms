@@ -29,8 +29,12 @@ import {
     ALL_FORMATS
 } from './mediabunny.min.js?ver=1.55.6';
 
+console.log('[AVS Mediabunny] MODULE LOADED');
+
 (() => {
     'use strict';
+
+    console.log('[AVS Mediabunny] SCRIPT START');
 
     // Sinaliza que o módulo (e portanto o import do mediabunny no CDN) subiu.
     // O fallback do video_mbplayer.tpl usa este flag para diferenciar "script
@@ -47,7 +51,10 @@ import {
         ? vid_files
         : (typeof window !== 'undefined' ? window.vid_files : null);
 
+    console.log('[AVS Mediabunny] init', { player: !!player, vidFiles: !!vidFiles, vidFilesType: typeof vidFiles });
+
     if (!player || !vidFiles) {
+        console.warn('[AVS Mediabunny] missing player element or vid_files', { player: !!player, vidFiles: !!vidFiles });
         return;
     }
 
@@ -122,6 +129,32 @@ import {
     const centerRw = player.querySelector('.avs-center-rw');
     const centerFw = player.querySelector('.avs-center-fw');
 
+    console.log('[AVS Mediabunny] DOM elements found', {
+        canvas: !!canvas,
+        posterImg: !!posterImg,
+        errorBox: !!errorBox,
+        playBtn: !!playBtn,
+        muteBtn: !!muteBtn,
+        fullBtn: !!fullBtn,
+        settingsBtn: !!settingsBtn,
+        miniBtn: !!miniBtn,
+        repeatBtn: !!repeatBtn,
+        dlWrap: !!dlWrap,
+        volumeSlider: !!volumeSlider,
+        seekBar: !!seekBar,
+        controlsBar: !!controlsBar,
+        seekFill: !!seekFill,
+        seekBuffer: !!seekBuffer,
+        currentEl: !!currentEl,
+        durationEl: !!durationEl,
+        qualitySel: !!qualitySel,
+        settingsPanel: !!settingsPanel,
+        centerEl: !!centerEl,
+        centerToggle: !!centerToggle,
+        centerRw: !!centerRw,
+        centerFw: !!centerFw,
+    });
+
     // Troca o ícone de um botão que envolve <svg><use>, apontando o <use>
     // para outro <symbol> do sprite.
     const setIcon = (el, id) => {
@@ -132,22 +165,15 @@ import {
 
     const context2d = canvas.getContext('2d');
     const autoplay = player.dataset.autoplay === '1';
-    const startMuted = (typeof window.player_start_muted !== 'undefined') ? window.player_start_muted === '1' : true;
     const poster = player.dataset.poster || '';
     if (poster) {
         posterImg.src = poster;
         posterImg.style.display = '';
     }
 
-    // Iniciar com som: preferência do usuário (override do admin).
-    // Se ativo, ignora player_start_muted e começa com som.
-    let startWithSound = (() => {
-        try {
-            return localStorage.getItem('avs_start_with_sound') === '1';
-        } catch (e) {
-            return false;
-        }
-    })();
+    // Iniciar com som: removido. O player NUNCA começa com som — inicia sempre
+    // mudo (autoplay mudo) e o som só entra no primeiro gesto do usuário
+    // (ensureAudible em play/seek), como exigem os navegadores.
 
     // Repetir (loop): desligado por padrão, persistido por usuário em
     // localStorage (mesmo padrão das demais preferências de reprodução).
@@ -234,13 +260,13 @@ import {
         // timeline/sprite preview) even in fallback mode.
         fallbackVideo.controls = false;
         fallbackVideo.playsInline = true;
-        fallbackVideo.muted = startMuted;
+        fallbackVideo.muted = true;
         fallbackVideo.loop = repeat;
         if (poster) fallbackVideo.poster = poster;
         player.insertBefore(fallbackVideo, player.firstChild);
         posterImg.style.display = 'none';
         player.classList.add('avs-fallback');
-        setIcon(muteBtn, startMuted ? 'avs-i-vol-mute' : 'avs-i-vol-high');
+        setIcon(muteBtn, 'avs-i-vol-mute');
         setupFallbackControls();
         markPlaybackReady();
         return fallbackVideo;
@@ -364,10 +390,17 @@ import {
     let muteTouched = false;
     let playbackRate = 1;
 
-    // Start muted (configurable in admin playeredit), but user can override with "start with sound"
-    if (startMuted && !startWithSound) {
-        volumeMuted = true;
-    }
+    // Nunca iniciar com som: começa sempre mudo. O som entra no primeiro gesto
+    // do usuário (ensureAudible), nunca no autoplay.
+    volumeMuted = true;
+
+    // Sincroniza o ícone de volume com o estado inicial (antes do init assíncrono)
+    // para evitar que o ícone do template (sempre 'alto') persista quando o player
+    // inicia mutado por configuração ou preferência. Precisa vir DEPOIS das
+    // declarações `let volume`/`let volumeMuted` acima — antes delas é TDZ e o
+    // módulo inteiro abortava na inicialização (nenhum botão respondia).
+    setIcon(muteBtn, (volumeMuted || volume === 0) ? 'avs-i-vol-mute' : (volume < 0.5 ? 'avs-i-vol-low' : 'avs-i-vol-high'));
+
     let seeking = false;
     let endedFired = false;
     const queuedAudioNodes = new Set();
@@ -785,8 +818,9 @@ import {
     };
 
     const play = async () => {
+        console.log('[AVS Mediabunny] play() called', { fileLoaded, playing, fallbackVideo: !!fallbackVideo });
         hidePauseAd();
-        if (!fileLoaded) return;
+        if (!fileLoaded && !fallbackVideo) return;
         if (audioContext.state === 'suspended') {
             await audioContext.resume();
         }
@@ -813,6 +847,7 @@ import {
     };
 
     const pause = () => {
+        console.log('[AVS Mediabunny] pause() called', { playing, fallbackVideo: !!fallbackVideo });
         playbackTimeAtStart = getPlaybackTime();
         playing = false;
         if (audioBufferIterator) audioBufferIterator.return();
@@ -832,6 +867,7 @@ import {
     };
 
     const togglePlay = () => {
+        console.log('[AVS Mediabunny] togglePlay called', { playing, fileLoaded, fallbackVideo: !!fallbackVideo });
         if (previewVideo) {
             stopAndHidePreview();
         }
@@ -925,11 +961,35 @@ import {
         seekBuffer.style.width = `${Math.max(0, Math.min(100, ((bufferedEnd - firstTimestamp) / range) * 100))}%`;
     };
 
-    // Player box SEMPRE 16:9 (padrão de layout do site), independente da
-    // proporção real do vídeo (vertical ou 4:3 letterboxa dentro do box).
-    const applyAspectRatio = () => {
+    // Box do player SEMPRE 16:9 (proporção padrão do site), inclusive para
+    // verticais: o vídeo entra letterboxed (object-fit: contain) com o fundo
+    // desfocado preenchendo as laterais. Assim a moldura do player não muda de
+    // proporção nem de tamanho por causa do vídeo.
+    const applyAspectRatio = (w, h) => {
         player.style.aspectRatio = '16 / 9';
-        player.classList.remove('avs-vertical');
+        if (w > 0 && h > 0 && h > w) {
+            player.classList.add('avs-vertical');
+            setupVerticalBackground();
+        } else {
+            player.classList.remove('avs-vertical');
+            removeVerticalBackground();
+        }
+    };
+
+    // Fundo desfocado para vídeos verticais (usa a imagem do poster).
+    const setupVerticalBackground = () => {
+        if (player.querySelector('.avs-vertical-bg')) return;
+        const posterUrl = player.dataset.poster;
+        if (!posterUrl) return;
+        const bg = document.createElement('div');
+        bg.className = 'avs-vertical-bg';
+        bg.style.backgroundImage = `url("${posterUrl}")`;
+        player.insertBefore(bg, player.firstChild);
+    };
+
+    const removeVerticalBackground = () => {
+        const bg = player.querySelector('.avs-vertical-bg');
+        if (bg) bg.remove();
     };
 
     const disposePlayback = () => {
@@ -976,15 +1036,19 @@ import {
     // ------------------------------------------------------------------
     // 8. Event listeners
     // ------------------------------------------------------------------
-    playBtn.addEventListener('click', togglePlay);
+    if (playBtn) playBtn.addEventListener('click', (e) => {
+        console.log('[AVS Mediabunny] playBtn click');
+        togglePlay();
+    });
     if (bigPlayBtn) {
         bigPlayBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            console.log('[AVS Mediabunny] bigPlayBtn click');
             togglePlay();
         });
     }
-    muteBtn.addEventListener('click', () => { muteTouched = true; volumeMuted = !volumeMuted; updateVolume(); });
+    if (muteBtn) muteBtn.addEventListener('click', () => { muteTouched = true; volumeMuted = !volumeMuted; updateVolume(); });
     const toggleFullscreen = () => {
         if (document.fullscreenElement) {
             void document.exitFullscreen();
@@ -992,7 +1056,7 @@ import {
             player.requestFullscreen().catch(() => {});
         }
     };
-    fullBtn.addEventListener('click', toggleFullscreen);
+    if (fullBtn) fullBtn.addEventListener('click', toggleFullscreen);
     // Duplo clique = fullscreen (YouTube). O clique do player suprime o toggle
     // de play quando vem logo atrás de outro (parte de um dblclick), senão o
     // dblclick pausaria o vídeo por engano.
@@ -1010,10 +1074,11 @@ import {
         const now = Date.now();
         if (now - lastPlayerClick < 350) { lastPlayerClick = now; return; }
         lastPlayerClick = now;
+        console.log('[AVS Mediabunny] player click (toggle)');
         togglePlay();
     });
 
-    seekBar.addEventListener('pointerdown', (e) => {
+    if (seekBar) seekBar.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         player.classList.add('avs-dragging');
         const rect = seekBar.getBoundingClientRect();
@@ -1196,8 +1261,8 @@ import {
             if (wasPlaying) flashCenter();
             else showCenter();
         };
-        centerRw.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); seekCenterBy(-10); });
-        centerFw.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); seekCenterBy(10); });
+        if (centerRw) centerRw.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); seekCenterBy(-10); });
+        if (centerFw) centerFw.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); seekCenterBy(10); });
     }
 
     // Idle auto-hide (só desktop com hover): esconde controles e cursor
@@ -1221,6 +1286,11 @@ import {
         player.addEventListener('mousemove', () => {
             if (!playing) return;
             cancelIdle();
+            armIdle();
+        });
+        // Arm idle immediately when mouse leaves the player area
+        player.addEventListener('mouseleave', () => {
+            if (!playing) return;
             armIdle();
         });
     }
@@ -1302,7 +1372,6 @@ import {
         if (id === 'repeat') return repeat;
         if (id === 'mini') return miniPref;
         if (id === 'autoplayNext') return autoplayNext;
-        if (id === 'startWithSound') return startWithSound;
         return false;
     };
 
@@ -1465,17 +1534,6 @@ import {
             nextItem.dataset.playbackId = 'autoplayNext';
             playbackGroup.appendChild(nextItem);
 
-            const startSoundItem = buildSettingsItem(
-                'Iniciar com som',
-                startWithSound ? '1' : '0',
-                () => {
-                    startWithSound = !startWithSound;
-                    try { localStorage.setItem('avs_start_with_sound', startWithSound ? '1' : '0'); } catch (e) { /* noop */ }
-                    markPlayback();
-                }
-            );
-            startSoundItem.dataset.playbackId = 'startWithSound';
-            playbackGroup.appendChild(startSoundItem);
         }
         markSpeed(playbackRate);
         syncRepeatUi();
@@ -2816,6 +2874,16 @@ import {
     // ------------------------------------------------------------------
     // 10. Go
     // ------------------------------------------------------------------
+    console.log('[AVS Mediabunny] starting player, supportsWebCodecs:', supportsWebCodecs);
+
+    // Marca verticais antes do metadata usando as dimensões do servidor
+    // (data-source-w/h): o poster já entra com object-fit: contain e o fundo
+    // desfocado, sem o corte do poster padrão (cover) até o vídeo carregar.
+    // O box segue 16:9 — só o enquadramento muda.
+    if (cfg.sourceW > 0 && cfg.sourceH > 0 && cfg.sourceH > cfg.sourceW) {
+        applyAspectRatio(cfg.sourceW, cfg.sourceH);
+    }
+
     markWatched();
     populateAutoplayCard();
     populateSettings();

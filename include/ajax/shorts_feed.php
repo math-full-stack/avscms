@@ -240,15 +240,24 @@ $shorts_cond = " AND v.duration > 0 AND v.duration < 100 AND v.orientation = 'po
 
 $videos_out = array();
 
-// Anúncio reutilizado nos CARDS de vídeo (faixa no lugar do título/descrição +
-// companheiros laterais no desktop) — mesma resolução única por request que o
-// shorts.php. '' = anúncios desligados no config.
-$adv_card_html = '';
-$adv_card_res = insert_adv(array('group' => 'shorts_feed'));
-if ($adv_card_res) {
-    $adv_card_html = !empty($adv_card_res['ad']) ? $adv_card_res['ad']
+// Anúncios dos CARDS de vídeo: cada slot lateral/inferior tem o SEU grupo
+// (shorts_left / shorts_right / shorts_bottom), resolvido uma vez por request e
+// reutilizado em todos os cards — mesma resolução única que o shorts.php.
+// '' = anúncios desligados no config ou grupo inexistente.
+function shorts_slot_ad_html($group)
+{
+    $res = insert_adv(array('group' => $group));
+    if (!$res) {
+        return '';
+    }
+    return !empty($res['ad']) ? $res['ad']
         : '<div class="avs-ad-slot-hint"><span>PATROCINADORES</span><span class="avs-ad-slot-size">Auto &times; Auto</span></div>';
 }
+$adv_slots = array(
+    'left'   => shorts_slot_ad_html('shorts_left'),
+    'right'  => shorts_slot_ad_html('shorts_right'),
+    'bottom' => shorts_slot_ad_html('shorts_bottom'),
+);
 
 // Se for a primeira página e houver initial_vid requisitado, buscá-lo prioritariamente
 if ($page === 1 && $initial_vid > 0 && !isset($exclude_vids[$initial_vid])) {
@@ -259,7 +268,9 @@ if ($page === 1 && $initial_vid > 0 && !isset($exclude_vids[$initial_vid])) {
     if ($rs_init && !$rs_init->EOF) {
         $item = build_short_item($rs_init->fields, $conn, $config, $uid, $default_res);
         if ($item) {
-            $item['ad_meta'] = $adv_card_html;
+            $item['ad_left'] = $adv_slots['left'];
+            $item['ad_right'] = $adv_slots['right'];
+            $item['ad_bottom'] = $adv_slots['bottom'];
             $videos_out[] = $item;
             $exclude_vids[$initial_vid] = $initial_vid;
         }
@@ -302,7 +313,9 @@ if ($rs) {
         $row = $rs->fields;
         $item = build_short_item($row, $conn, $config, $uid, $default_res);
         if ($item) {
-            $item['ad_meta'] = $adv_card_html;
+            $item['ad_left'] = $adv_slots['left'];
+            $item['ad_right'] = $adv_slots['right'];
+            $item['ad_bottom'] = $adv_slots['bottom'];
             $videos_out[] = $item;
             $exclude_vids[$item['vid']] = $item['vid'];
         }

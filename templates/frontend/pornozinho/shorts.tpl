@@ -63,10 +63,13 @@
 					<div class="avs-ambient-bg" style="background-image: url('{$v.poster_url}');" aria-hidden="true"></div>
 
 					<!-- Companheiros laterais do anúncio (desktop, enquanto couber).
-					     Mesma peça do grupo; só renderizam quando ad_meta existe. -->
-					{if $v.ad_meta}
-						<div class="avs-ad-side avs-ad-side-left">{$v.ad_meta}</div>
-						<div class="avs-ad-side avs-ad-side-right">{$v.ad_meta}</div>
+					     Cada lado tem o SEU grupo (shorts_left / shorts_right); só
+					     renderizam quando o respectivo slot existe. -->
+					{if $v.ad_left}
+						<div class="avs-ad-side avs-ad-side-left">{$v.ad_left}</div>
+					{/if}
+					{if $v.ad_right}
+						<div class="avs-ad-side avs-ad-side-right">{$v.ad_right}</div>
 					{/if}
 
 					<!-- Container Central do Vídeo -->
@@ -102,10 +105,10 @@
 							   já vive na barra lateral de ações (.avs-action-profile). *}
 
 							<!-- Título & Descrição / Faixa do anúncio -->
-							{if $v.ad_meta}
+							{if $v.ad_bottom}
 								<div class="avs-ad-meta-band">
 									<span class="avs-ad-tag avs-ad-tag-sm">Anúncio</span>
-									{$v.ad_meta}
+									{$v.ad_bottom}
 								</div>
 							{else}
 							<div class="avs-short-title-wrap">
