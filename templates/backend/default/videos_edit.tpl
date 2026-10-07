@@ -145,6 +145,77 @@
 												<div class="clearfix"></div>
 											</div>
 										{/if}
+										<div class="col-xs-12 m-b-5" style="border-bottom:1px solid #eee;padding-bottom:6px">
+											<h4><i class="fa fa-cog"></i> Processamento <small class="text-muted">corte e watermark aplicados no próximo reprocessar</small></h4>
+										</div>
+										<div class="form-group">
+											<label class="col-lg-4 control-label">Config</label>
+											<div class="col-lg-8">
+												<select id="proc-cfg_source" name="cfg_manual" class="form-control">
+													<option value="1"{if $video[0].cfg_manual} selected="selected"{/if}>Manual (este vídeo)</option>
+													<option value="0"{if !$video[0].cfg_manual} selected="selected"{/if}>Herdar da fonte (grabber)</option>
+												</select>
+											</div>
+											<div class="clearfix"></div>
+										</div>
+										<input type="hidden" id="proc-watermark_cfg" value="{$video[0].watermark_cfg|escape:'html'}">
+										<input type="hidden" name="wm_positions" id="wm_positions" value="">
+										<div id="proc-fields">
+											<div class="form-group">
+												<label class="col-lg-4 control-label">Cut start (sec)</label>
+												<div class="col-lg-8">
+													<input name="cut" id="proc-cut" type="number" min="0" max="86400" value="{$video[0].cut}" class="form-control {if isset($err.proc) && $err.proc}error{/if}" title="Segundos removidos do início (ex.: 4s de vinheta)">
+												</div>
+												<div class="clearfix"></div>
+											</div>
+											<div class="form-group">
+												<label class="col-lg-4 control-label">Cut end (sec)</label>
+												<div class="col-lg-8">
+													<input name="cut_out" id="proc-cut_out" type="number" min="0" max="86400" value="{$video[0].cut_out}" class="form-control" title="Segundos removidos do fim (ex.: 2s de outro)">
+												</div>
+												<div class="clearfix"></div>
+											</div>
+											<div class="form-group">
+												<label class="col-lg-4 control-label">Watermark</label>
+												<div class="col-lg-8">
+													<select name="wm_enabled" id="proc-wm_enabled" class="form-control">
+														<option value="0">OFF</option>
+														<option value="1">ON</option>
+													</select>
+												</div>
+												<div class="clearfix"></div>
+											</div>
+											<div class="form-group">
+												<label class="col-lg-4 control-label">Opacity %</label>
+												<div class="col-lg-8">
+													<input name="wm_opacity" id="proc-wm_opacity" type="number" min="0" max="100" value="60" class="form-control">
+												</div>
+												<div class="clearfix"></div>
+											</div>
+											<div class="form-group">
+												<label class="col-lg-4 control-label">Width (px)</label>
+												<div class="col-lg-8">
+													<input name="wm_size" id="proc-wm_size" type="number" min="8" max="4096" value="120" class="form-control" title="Largura da logo em pixels — fixa, independente da resolução do vídeo">
+												</div>
+												<div class="clearfix"></div>
+											</div>
+											<div class="form-group">
+												<label class="col-lg-4 control-label">Margin px</label>
+												<div class="col-lg-8">
+													<input name="wm_margin" id="proc-wm_margin" type="number" min="0" max="200" value="12" class="form-control">
+												</div>
+												<div class="clearfix"></div>
+											</div>
+											<div class="form-group">
+												<label class="col-lg-4 control-label">Position schedule</label>
+												<div class="col-lg-8">
+													<div id="proc-wm_rows"></div>
+													<button type="button" class="btn btn-xs btn-default" id="proc-wm_add"><i class="fa fa-plus"></i> Add position</button>
+													<div class="text-muted" style="font-size:11px;margin-top:4px">1 linha = posição fixa; várias linhas com segundos = alterna em loop</div>
+												</div>
+												<div class="clearfix"></div>
+											</div>
+										</div>
 										<div class="form-group">
 											<label class="col-lg-4 control-label">Like Rate</label>
 											<div class="col-lg-8">

@@ -361,7 +361,19 @@ function log_in_back ($file_path, $text) {
     if( !file_exists($file_dir) or !is_dir($file_dir) or !is_writable($file_dir) ) {
         return false;
     }
-                    
+
+    // tmp/logs é 777 sem sticky bit e os logs por VID são 644 de dono
+    // cruzado (daemon × math). Um fopen('w') em arquivo alheio falha com
+    // "Permission denied"; remover e recriar deixa o log gravável para os
+    // dois usuários (mesmo padrão de grabber_cron.php / admin_reprocess_video.php).
+    if( file_exists($file_path) && is_file($file_path) && !is_writable($file_path) ) {
+        @unlink($file_path);
+    }
+    if( !file_exists($file_path) ) {
+        @touch($file_path);
+        @chmod($file_path, 0666);
+    }
+
     $write_mode = 'w';
     if( file_exists($file_path) && is_file($file_path) && is_writable($file_path) ) {
         $write_mode = 'a';

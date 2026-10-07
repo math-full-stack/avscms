@@ -46,6 +46,8 @@ HEADERS = {
 TAG_STOPLIST = set([
     'porno', 'xxx', 'mais videos porno', 'videos porno', 'sexo', 'gratis',
     'novinhas', 'mulheres nuas',
+    # fontes/domínios das fontes (espelha MetadataMerger::isSourceTag)
+    'buceteiro', 'buceteiro.com', 'cnnamador', 'cnnamador.com', 'mixvazadas', 'mixvazadas.com', 'naoconto', 'naoconto.com', 'pornobrasil', 'pornobrasil.com', 'pornolandia', 'pornolandia.xxx', 'pornomineiro', 'pornomineiro.com', 'sonovinhasbr', 'sonovinhasbr.com', 'xfree', 'xfree.com', 'onlyfans', 'pornhub', 'xvideos', 'xnxx', 'redtube', 'youporn', 'nudo', 'telegram', 'whatsapp', 'linktree', 'tiktok', 'youtube', 'instagram',
 ])
 
 # Prefixo do card na listagem (para split por bloco e manter id/título juntos).
@@ -134,24 +136,37 @@ def clean_tags(tag_list):
 
 
 def extract_tags(html):
-    """Tags da página de vídeo: links de busca (search_query) e categorias.
+    """Tags da página de vídeo: links de busca (search_query).
 
     O markup usa <a class="tag..."> tanto para categorias (/videos/{slug}/)
-    quanto para palavras-chave de busca (/search/videos?search_query=...).
+    quanto para palavras-chave de busca; as categorias vão para
+    extract_category e NUNCA viram tag.
     """
     tags = []
     for m in re.finditer(r'<a[^>]+class="tag[^"]*"[^>]*>(.*?)</a>', html, re.S | re.I):
         href = re.search(r'href="([^"]+)"', m.group(0))
         if not href:
             continue
-        # Só tags reais de conteúdo (categoria ou busca); ignora canal/"mais videos".
+        # Só palavras-chave de busca; ignora canal/"mais videos"/categoria.
         h = href.group(1)
-        if not (h.startswith('/videos/') or 'search_query=' in h):
+        if 'search_query=' not in h:
             continue
         label = re.sub(r'<[^>]+>', '', m.group(1)).strip()
         if label:
             tags.append(label)
     return tags
+
+
+def extract_category(html, source_url=""):
+    """Categoria: links /videos/{slug}/ do breadcrumb (marcações <a class="tag...">)."""
+    for m in re.finditer(r'<a[^>]+class="tag[^"]*"[^>]*>(.*?)</a>', html, re.S | re.I):
+        href = re.search(r'href="([^"]+)"', m.group(0))
+        if not href or not href.group(1).startswith('/videos/'):
+            continue
+        label = re.sub(r'<[^>]+>', '', m.group(1)).strip()
+        if label:
+            return label
+    return ''
 
 
 def parse_listing(html, page_url):
@@ -161,6 +176,13 @@ def parse_listing(html, page_url):
 
     # Divide pelos cards e lê href/título/miniatura/duração de cada bloco.
     chunks = html.split(CARD_START)[1:]
+
+    # Listagem por categoria: /videos/{categoria}/N → todos os cards dela.
+    list_cat = ''
+    cm = re.search(r'/videos/([^/?]+?)/?(?:\d+)?/?$', page_url.split('?')[0])
+    if cm and cm.group(1) not in ('videos', 'page'):
+        list_cat = cm.group(1)
+
     for chunk in chunks:
         m = re.search(r'href="(https://www\.pornolandia\.xxx/video/(\d+)/[^"]+)"', chunk)
         if not m:
@@ -196,6 +218,7 @@ def parse_listing(html, page_url):
             'title': title,
             'description': '',
             'tags': '',
+            'category': list_cat,
             'duration': duration,
             'duration_formatted': fmt_duration(duration),
             'thumbnail_url': thumbnail,
@@ -225,6 +248,11 @@ def enrich_video(video):
         tags = clean_tags(extract_tags(html))
         if tags:
             video['tags'] = tags
+
+    if not video.get('category'):
+        category = extract_category(html, video.get('source_url', ''))
+        if category:
+            video['category'] = category
 
 
 def build_page_url(url, page):

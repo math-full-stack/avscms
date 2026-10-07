@@ -201,6 +201,20 @@ function get_categories($parent_only = false, $parent_id = 0)
     return $categories;
 }
 
+/**
+ * Só FOLHAS da árvore (parent_id > 0) — para selects onde um PAI seria um
+ * valor inválido (ex.: Mass Grabber, cujo resolver recusa categorias pai).
+ */
+function get_leaf_categories()
+{
+    global $conn;
+
+    $sql = "SELECT CHID, name, slug, parent_id, sort_order, is_featured FROM channel WHERE parent_id > 0 ORDER BY sort_order ASC, name ASC";
+    $rs = $conn->execute($sql);
+
+    return $rs->getrows();
+}
+
 function get_category_parents()
 {
     global $conn;

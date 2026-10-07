@@ -51,8 +51,14 @@ $conn->execute("SET NAMES 'utf8mb4'");
 
 // Auto-expire idle connections after 5 minutes (300s) - long enough for tunnel stability,
 // short enough to not exhaust max_connections. 60s was too aggressive causing "gone away".
-$conn->execute("SET SESSION wait_timeout = 300");
-$conn->execute("SET SESSION interactive_timeout = 300");
+// CLI é diferente: processos longos (grabber_worker baixando ~13min, ffmpeg
+// minutos) ficam OCIOSOS na conexão enquanto trabalham, e 300s derrubava a
+// conexão no meio — o UPDATE seguinte morria com "MySQL server has gone away"
+// e o script abortava (jobs presos em PROCESSING por 30min, conversões perdidas).
+// Sessão CLI é dedicada e de vida curta, então não riscar max_connections.
+$cliTimeout = (PHP_SAPI === 'cli') ? 7200 : 300;
+$conn->execute("SET SESSION wait_timeout = " . $cliTimeout);
+$conn->execute("SET SESSION interactive_timeout = " . $cliTimeout);
 
 // Do NOT register a shutdown function to close the DB connection.
 // PHP destroys objects in an undefined order during shutdown — a custom

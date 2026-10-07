@@ -138,6 +138,7 @@ class MixvazadasGrabber extends AbstractGrabber {
             'title'              => $this->sanitizeText($title),
             'description'        => $description,
             'tags'               => $tagsStr,
+            'category'           => $this->extractCategory($html, $url),
             'duration'           => $duration,
             'duration_formatted' => $this->formatDuration($duration),
             'thumbnail'          => $thumbnail,

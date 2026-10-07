@@ -115,33 +115,51 @@ class JobManager {
      */
     public function claimNext($workerPid = '') {
         $now = time();
-        $timeout = 1800; // 30 min
 
-        // Find and claim next job
-        $sql = "UPDATE grabber_jobs SET
+        // 1) Escolhe o candidato ANTES de reclamar.
+        // ARMADILHA (bug real): o UPDATE ... LIMIT 1 reclamava UM job qualquer e o
+        // SELECT seguinte procurava "PROCESSING AND worker_pid = $pid ORDER BY id".
+        // O mesmo processo (cron) claima vários jobs enquanto os workers rodam em
+        // background com o MESMO pid, então o SELECT devolvia um job ANTIGO (id
+        // menor) já em PROCESSING e o recém-reclamado ficava órfão para sempre:
+        // zero logs, sem vídeo, e ocupando slot de maxConcurrent — era por isso
+        // que jobs "não iam para a fila".
+        $rs = $this->safeExec("SELECT id FROM grabber_jobs
+                               WHERE status = 'PENDING'
+                               AND scheduled_at <= " . $now . "
+                               AND attempts < max_attempts
+                               ORDER BY priority ASC, scheduled_at ASC, id ASC
+                               LIMIT 1");
+        if (!$rs || $rs->EOF) {
+            return null;
+        }
+        $candidateId = intval($rs->fields['id']);
+
+        // 2) Claim atômico: o guard status='PENDING' impede double-claim entre
+        // processos concorrentes (o perdedor simplesmente não ganha a linha).
+        $this->safeExec("UPDATE grabber_jobs SET
                 status = 'PROCESSING',
                 started_at = " . $now . ",
                 worker_pid = " . intval($workerPid) . ",
                 attempts = attempts + 1,
                 updated_at = " . $now . "
-                WHERE status = 'PENDING'
-                AND scheduled_at <= " . $now . "
-                AND attempts < max_attempts
-                ORDER BY priority ASC, scheduled_at ASC
-                LIMIT 1";
+                WHERE id = " . $candidateId . "
+                AND status = 'PENDING'");
 
-        $this->safeExec($sql);
+        if ($this->db->Affected_Rows() != 1) {
+            return null;
+        }
 
-        // Get the claimed job
+        // 3) Lê EXATAMENTE o job que acabamos de reclamar (nunca por pid).
         $rs = $this->safeExec("SELECT j.*, d.external_id, d.source_url, d.canonical_url,
                                          d.title AS disc_title, d.description AS disc_description,
                                          d.tags AS disc_tags, d.duration AS disc_duration,
+                                         d.external_category AS disc_category,
                                          d.thumbnail_url AS disc_thumbnail, d.metadata_json
                                   FROM grabber_jobs j
                                   LEFT JOIN grabber_discovered_videos d ON j.discovered_video_id = d.id
-                                  WHERE j.status = 'PROCESSING'
-                                  AND j.worker_pid = " . intval($workerPid) . "
-                                  ORDER BY j.id ASC
+                                  WHERE j.id = " . $candidateId . "
+                                  AND j.status = 'PROCESSING'
                                   LIMIT 1");
 
         if ($rs && !$rs->EOF) {
@@ -372,11 +390,17 @@ class JobManager {
         // Build exclusion: don't reset jobs whose video is in conversion queue
         // (worker completed the job, conversion is running; resetting would
         // cause infinite re-download loop).
+        //
+        // ARMADILHA (bug real): o subquery NÃO pode referenciar grabber_jobs —
+        // o MySQL recusa com "You can't specify target table for update in FROM
+        // clause". E como safeExec() engole a exceção, o erro era silencioso e
+        // Affected_Rows() voltava 0: a auto-recuperação de jobs presos nunca
+        // funcionou quando $conn era passado (grabber_cron.php). Filtrar pelo
+        // discovered_video_id dá o mesmo resultado sem autorreferência.
         $exclusionSql = '';
         if ($conn) {
-            $exclusionSql = " AND j.id NOT IN (
-                SELECT j2.id FROM grabber_jobs j2
-                JOIN grabber_discovered_videos d2 ON j2.discovered_video_id = d2.id
+            $exclusionSql = " AND j.discovered_video_id NOT IN (
+                SELECT d2.id FROM grabber_discovered_videos d2
                 JOIN video v2 ON v2.source_url = d2.source_url AND d2.source_url <> ''
                 WHERE v2.VID IN (SELECT VID FROM conversion_queue_fp)
                    OR v2.VID IN (SELECT VID FROM conversion_queue_sp)
@@ -386,7 +410,7 @@ class JobManager {
         // Attempts are reset so a job whose PROCESSING run crashed on its last
         // attempt (attempts == max_attempts) can be claimed again - otherwise
         // it would sit PENDING forever and block the queue.
-        $this->safeExec("UPDATE grabber_jobs SET
+        $this->safeExec("UPDATE grabber_jobs j SET
                             status = 'PENDING',
                             attempts = 0,
                             started_at = 0,
@@ -395,11 +419,14 @@ class JobManager {
                             error_code = '',
                             error_message = '',
                             updated_at = " . time() . "
-                            WHERE status = 'PROCESSING'
-                            AND started_at < " . intval($cutoff)
+                            WHERE j.status = 'PROCESSING'
+                            AND j.started_at < " . intval($cutoff)
                             . $exclusionSql);
 
         $reset = $this->db->Affected_Rows();
+        if ($reset === null || $reset < 0) {
+            $reset = 0;
+        }
 
         // Also revive zombie PENDING jobs: a PENDING job whose attempts hit
         // max_attempts can never be claimed again (claimNext requires

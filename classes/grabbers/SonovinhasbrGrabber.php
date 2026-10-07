@@ -137,6 +137,7 @@ class SonovinhasbrGrabber extends AbstractGrabber {
             'title'              => $this->sanitizeText($title),
             'description'        => $description,
             'tags'               => $tagsStr,
+            'category'           => $this->extractCategory($html, $url),
             'duration'           => $duration,
             'duration_formatted' => $durationFormatted,
             'thumbnail'          => $thumbnail,

@@ -10,6 +10,7 @@ require_once dirname(__FILE__) . '/JobManager.php';
 require_once dirname(__FILE__) . '/RunManager.php';
 require_once dirname(__FILE__) . '/Logger.php';
 require_once dirname(__FILE__) . '/Scheduler.php';
+require_once dirname(__FILE__) . '/CategoryResolver.php';
 
 /**
  * MassGrabberManager - Central coordinator for the Mass Video Grabber system.

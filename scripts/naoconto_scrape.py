@@ -41,6 +41,8 @@ HEADERS = {
 TAG_STOPLIST = set([
     'porno', 'xxx', 'videos porno', 'sexo', 'gratis',
     'novinhas', 'mulheres nuas', 'putaria', 'nude',
+    # fontes/domínios das fontes (espelha MetadataMerger::isSourceTag)
+    'buceteiro', 'buceteiro.com', 'cnnamador', 'cnnamador.com', 'mixvazadas', 'mixvazadas.com', 'naoconto', 'naoconto.com', 'pornobrasil', 'pornobrasil.com', 'pornolandia', 'pornolandia.xxx', 'pornomineiro', 'pornomineiro.com', 'sonovinhasbr', 'sonovinhasbr.com', 'xfree', 'xfree.com', 'onlyfans', 'pornhub', 'xvideos', 'xnxx', 'redtube', 'youporn', 'nudo', 'telegram', 'whatsapp', 'linktree', 'tiktok', 'youtube', 'instagram',
 ])
 
 
@@ -130,6 +132,19 @@ def extract_tags(html):
     return tags
 
 
+def extract_category(html, source_url=""):
+    """Categoria do vídeo: link WP rel="category tag" ou breadcrumb /categoria/."""
+    for m in re.finditer(r'<a[^>]+rel="(?:category\s+tag|tag\s+category)"[^>]*>([^<]+)</a>', html, re.I):
+        label = m.group(1).strip()
+        if label:
+            return label
+    for m in re.finditer(r'<a[^>]+href="[^"]*/(?:category|categoria)/([^/"]+)"[^>]*>([^<]+)</a>', html, re.I):
+        label = m.group(2).strip()
+        if label:
+            return label
+    return ''
+
+
 def clean_tags(tag_list):
     out = []
     for t in tag_list:
@@ -214,6 +229,7 @@ def parse_listing(html, page_url):
             'title': title,
             'description': '',
             'tags': '',
+            'category': '',
             'duration': 0,
             'duration_formatted': '',
             'thumbnail_url': thumbnail,
@@ -237,6 +253,7 @@ def parse_listing(html, page_url):
                 'title': title_raw.strip(),
                 'description': '',
                 'tags': '',
+                'category': '',
                 'duration': 0,
                 'duration_formatted': '',
                 'thumbnail_url': '',
@@ -285,6 +302,11 @@ def enrich_video(video):
         tags = clean_tags(extract_tags(html))
         if tags:
             video['tags'] = tags
+
+    if not video.get('category'):
+        category = extract_category(html, video.get('source_url', ''))
+        if category:
+            video['category'] = category
 
     # Try og:image for thumbnail
     if not video['thumbnail_url']:

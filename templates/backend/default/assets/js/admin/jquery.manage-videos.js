@@ -542,18 +542,22 @@ $(document).ready(function(){
 			var split = id.split('_');
 			var video_id = split[2];
 			$('#' + id).html('<i class="small-loader"></i>');
-			$.post(base_url + '/ajax.php?module=admin_reprocess_video', { video_id: video_id },
+			$.post(base_url + '/ajax.php?module=admin_reprocess_video', { video_id: video_id, mode: 'auto' },
 				function (response) {
 					if (response.status) {
 						Messenger().post({
 							message: response.message || 'Video <b>ID ' + video_id + '</b>: Reprocessamento iniciado!',
 							type: 'success'
 						});
-						$('#status_video_' + video_id).attr('data-status', 2);
-						$('#status_video_' + video_id).attr('alt', 'Baixando');
-						$('#status_video_' + video_id).attr('title', 'Baixando - aguarde');
-						$('#status_video_' + video_id).html('<i class="fas fa-download"></i>');
-						$('#status-' + video_id).html('<span class="text-warning" alt="Baixando" title="Baixando"><i class="fas fa-download"></i> Baixando</span>');
+						if (response.mode === 'local') {
+							$('#status_video_' + video_id).attr({'data-status': 3, 'alt': 'Na Fila', 'title': 'Na Fila'});
+							$('#status_video_' + video_id).html('<i class="fas fa-hourglass-half"></i>');
+							$('#status-' + video_id).html('<span class="text-info" alt="Na Fila" title="Na Fila"><i class="fas fa-circle-notch fa-spin"></i> Na Fila</span>');
+						} else {
+							$('#status_video_' + video_id).attr({'data-status': 2, 'alt': 'Baixando', 'title': 'Baixando - aguarde'});
+							$('#status_video_' + video_id).html('<i class="fas fa-download"></i>');
+							$('#status-' + video_id).html('<span class="text-warning" alt="Baixando" title="Baixando"><i class="fas fa-download"></i> Baixando</span>');
+						}
 					} else {
 						Messenger().post({
 							message: response.error || 'Video <b>ID ' + video_id + '</b>: Falha ao reprocessar!',
@@ -632,6 +636,7 @@ $(document).ready(function(){
 					$('#edit-likes').val(response.likes);
 					$('#edit-dislikes').val(response.dislikes);
 					$('#edit-viewnumber').val(response.viewnumber);
+					editWmLoad(response);
 
 					//Adjust margin left to integer value - Center
 					var modal_ml = parseInt(($(window).width()-$('#editModalDialog').width())/2);					
@@ -678,6 +683,7 @@ $(document).ready(function(){
 					$('#edit-likes').val(response.likes);
 					$('#edit-dislikes').val(response.dislikes);
 					$('#edit-viewnumber').val(response.viewnumber);
+					editWmLoad(response);
 					
 				} else {
 					Messenger().post({
@@ -688,82 +694,234 @@ $(document).ready(function(){
 		}, "json"); 					
 	});	
 	
-	//Edit Save
-	$("body").on('click', "button[id='edit-save']", function(event) {		
-		event.preventDefault();
-		var video_id = $('#edit-id').val();
-		if (!hasErrors("input[id*='edit-']") && !hasErrors("textarea[id*='edit-']")) {
-			//save code
-			$('#edit_video_' + video_id).html('<i class="small-loader"></i>');			
-			var videoData = {
-				id 		    : $('#edit-id').val(),
-				title 		: $('#edit-title').val(),
-				description : $('#edit-description').val(),
-				tags		: $('#edit-tags').val().replace(/\n/g, " ").replace(/\r/g, " ").replace(/\t/g, " "),
-				category	: $('#edit-category').val(),
-				type		: $('input[name="edit-type"]:checked').val(),
-				active		: $('input[name="edit-active"]:checked').val(),
-				featured	: $('input[name="edit-featured"]:checked').val(),
-				be_comment	: $('input[name="edit-be_comment"]:checked').val(),
-				be_rated	: $('input[name="edit-be_rated"]:checked').val(),
-				embed		: $('input[name="edit-embed"]:checked').val(),
-				server		: $('#edit-server').val(),
-				likes		: $('#edit-likes').val(),
-				dislikes	: $('#edit-dislikes').val(),
-				viewnumber	: $('#edit-viewnumber').val()
-			};
-			
-			$.post(base_url + '/ajax.php?module=admin_save_video', { data: videoData },
-				function (response) {					
-					$('#editModal').modal('hide');
-					if (response.status) {
-						Messenger().post({
-							message: 'Video <b>ID ' + video_id + '</b>: Successfully updated2!',
-							type: 'success'
-						});
-						$('#title-' + video_id).text(videoData.title);
-						if (videoData.active == 1) {
-							$('#status_video_' + video_id).attr('data-status', 1);							
-							$('#status_video_' + video_id).attr('alt', 'Suspender');
-							$('#status_video_' + video_id).attr('title', 'Suspender');
-							$('#status_video_' + video_id).html('<i class="fa fa-times"></i>');
-							$('#status-' + video_id).html('<span class="text-success" alt="Ativo" title="Ativo"><i class="fa fa-check-circle"></i> Ativo</span>');							
-						} else if (videoData.active == 2) {
-							$('#status_video_' + video_id).attr('data-status', 2);
-							$('#status_video_' + video_id).attr('alt', 'Baixando');
-							$('#status_video_' + video_id).attr('title', 'Baixando');
-							$('#status_video_' + video_id).html('<i class="fas fa-download"></i>');
-							$('#status-' + video_id).html('<span class="text-warning" alt="Baixando" title="Baixando"><i class="fas fa-download"></i> Baixando</span>');
-						} else if (videoData.active == 3) {
-							$('#status_video_' + video_id).attr('data-status', 3);
-							$('#status_video_' + video_id).attr('alt', 'Na Fila');
-							$('#status_video_' + video_id).attr('title', 'Na Fila');
-							$('#status_video_' + video_id).html('<i class="fas fa-hourglass-half"></i>');
-							$('#status-' + video_id).html('<span class="text-info" alt="Na Fila" title="Na Fila"><i class="fas fa-circle-notch fa-spin"></i> Na Fila</span>');
-						} else {
-							$('#status_video_' + video_id).attr('data-status', 0);
-							$('#status_video_' + video_id).attr('alt', 'Ativar');
-							$('#status_video_' + video_id).attr('title', 'Ativar');
-							$('#status_video_' + video_id).html('<i class="fa fa-check"></i>');
-							$('#status-' + video_id).html('<span class="text-danger" alt="Inativo" title="Inativo"><i class="fa fa-times-circle"></i> Inativo</span>');
-						}
-						if (videoData.type == 'public') {
-							$('#private-' + video_id).html('');
-						} else {
-							$('#private-' + video_id).html('<div class="item-private">PRIVATE</div>');
-						}						
-						$('#views-' + video_id).text(videoData.viewnumber);
-					} else {
-						Messenger().post({
-							message: 'Video <b>ID ' + video_id + '</b>: Failed updating!',
-							type: 'error'
-						});
-					}
-					$('#edit_video_' + video_id).html('<i class="fa fa-pencil"></i>');	
-			}, "json");			
+	//Edit Save — processamento por vídeo (corte + watermark)
+	var editWmPositions = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'];
+
+	function editWmRowHtml(pos, dur) {
+		var opts = '';
+		for (var i = 0; i < editWmPositions.length; i++) {
+			opts += '<option value="' + editWmPositions[i] + '"' + (editWmPositions[i] === pos ? ' selected' : '') + '>' + editWmPositions[i] + '</option>';
 		}
-		
+		return '<div class="edit-wm-row" style="display:flex;margin-bottom:6px;gap:6px">' +
+			'<select class="form-control edit-wm-pos" style="flex:1">' + opts + '</select>' +
+			'<input type="number" class="form-control edit-wm-dur" value="' + (dur || '') + '" min="0" max="3600" placeholder="sec" style="width:90px" title="Segundos nesta posição (0/vazio = até o fim do ciclo)">' +
+			'<button type="button" class="btn btn-default edit-wm-del" title="Remover"><i class="fa fa-times"></i></button>' +
+			'</div>';
+	}
+
+	function editWmAddRow(pos, dur) {
+		$('#edit-wm_rows').append(editWmRowHtml(pos || 'top-right', dur || 0));
+	}
+
+	function editProcToggle() {
+		var manual = $('#edit-cfg_source').val() === '1';
+		$('#edit-proc-fields input, #edit-proc-fields select, #edit-proc-fields button').prop('disabled', !manual);
+		$('#edit-proc-fields').toggleClass('text-muted', !manual);
+	}
+
+	function editWmLoad(response) {
+		var wm = {};
+		try { wm = response.watermark_cfg ? JSON.parse(response.watermark_cfg) : {}; } catch (e) { wm = {}; }
+		$('#edit-cfg_source').val(parseInt(response.cfg_manual, 10) === 1 ? '1' : '0');
+		$('#edit-cut').val(parseFloat(response.cut) || 0);
+		$('#edit-cut_out').val(parseInt(response.cut_out, 10) || 0);
+		$('#edit-wm_enabled').val(parseInt(wm.enabled, 10) === 1 ? '1' : '0');
+		$('#edit-wm_opacity').val(wm.opacity != null ? wm.opacity : 60);
+		$('#edit-wm_size').val(wm.size != null ? wm.size : 120);
+		$('#edit-wm_margin').val(wm.margin != null ? wm.margin : 12);
+		$('#edit-wm_rows').empty();
+		var rows = (wm.positions && wm.positions.length) ? wm.positions : [{ pos: 'top-right', dur: 0 }];
+		for (var i = 0; i < rows.length; i++) {
+			editWmAddRow(rows[i].pos, rows[i].dur);
+		}
+		editProcToggle();
+	}
+
+	function editWmCollect() {
+		var rows = [];
+		$('#edit-wm_rows .edit-wm-row').each(function () {
+			rows.push({
+				pos: $(this).find('.edit-wm-pos').val(),
+				dur: parseInt($(this).find('.edit-wm-dur').val(), 10) || 0
+			});
+		});
+		return JSON.stringify(rows);
+	}
+
+	function saveEditVideo(reprocess) {
+		var video_id = $('#edit-id').val();
+		if (hasErrors("input[id*='edit-']") || hasErrors("textarea[id*='edit-']")) {
+			return;
+		}
+		$('#edit_video_' + video_id).html('<i class="small-loader"></i>');
+		var videoData = {
+			id 		    : $('#edit-id').val(),
+			title 		: $('#edit-title').val(),
+			description : $('#edit-description').val(),
+			tags		: $('#edit-tags').val().replace(/\n/g, " ").replace(/\r/g, " ").replace(/\t/g, " "),
+			category	: $('#edit-category').val(),
+			type		: $('input[name="edit-type"]:checked').val(),
+			active		: $('input[name="edit-active"]:checked').val(),
+			featured	: $('input[name="edit-featured"]:checked').val(),
+			be_comment	: $('input[name="edit-be_comment"]:checked').val(),
+			be_rated	: $('input[name="edit-be_rated"]:checked').val(),
+			embed		: $('input[name="edit-embed"]:checked').val(),
+			server		: $('#edit-server').val(),
+			likes		: $('#edit-likes').val(),
+			dislikes	: $('#edit-dislikes').val(),
+			viewnumber	: $('#edit-viewnumber').val(),
+			cfg_manual  : $('#edit-cfg_source').val(),
+			cut         : $('#edit-cut').val(),
+			cut_out     : $('#edit-cut_out').val(),
+			wm_enabled  : $('#edit-wm_enabled').val(),
+			wm_opacity  : $('#edit-wm_opacity').val(),
+			wm_size     : $('#edit-wm_size').val(),
+			wm_margin   : $('#edit-wm_margin').val(),
+			wm_positions: editWmCollect()
+		};
+
+		$.post(base_url + '/ajax.php?module=admin_save_video', { data: videoData },
+			function (response) {
+				$('#editModal').modal('hide');
+				if (response.status) {
+					Messenger().post({
+						message: 'Video <b>ID ' + video_id + '</b>: Successfully updated!',
+						type: 'success'
+					});
+					$('#title-' + video_id).text(videoData.title);
+					if (videoData.active == 1) {
+						$('#status_video_' + video_id).attr('data-status', 1);
+						$('#status_video_' + video_id).attr('alt', 'Suspender');
+						$('#status_video_' + video_id).attr('title', 'Suspender');
+						$('#status_video_' + video_id).html('<i class="fa fa-times"></i>');
+						$('#status-' + video_id).html('<span class="text-success" alt="Ativo" title="Ativo"><i class="fa fa-check-circle"></i> Ativo</span>');
+					} else if (videoData.active == 2) {
+						$('#status_video_' + video_id).attr('data-status', 2);
+						$('#status_video_' + video_id).attr('alt', 'Baixando');
+						$('#status_video_' + video_id).attr('title', 'Baixando');
+						$('#status_video_' + video_id).html('<i class="fas fa-download"></i>');
+						$('#status-' + video_id).html('<span class="text-warning" alt="Baixando" title="Baixando"><i class="fas fa-download"></i> Baixando</span>');
+					} else if (videoData.active == 3) {
+						$('#status_video_' + video_id).attr('data-status', 3);
+						$('#status_video_' + video_id).attr('alt', 'Na Fila');
+						$('#status_video_' + video_id).attr('title', 'Na Fila');
+						$('#status_video_' + video_id).html('<i class="fas fa-hourglass-half"></i>');
+						$('#status-' + video_id).html('<span class="text-info" alt="Na Fila" title="Na Fila"><i class="fas fa-circle-notch fa-spin"></i> Na Fila</span>');
+					} else {
+						$('#status_video_' + video_id).attr('data-status', 0);
+						$('#status_video_' + video_id).attr('alt', 'Ativar');
+						$('#status_video_' + video_id).attr('title', 'Ativar');
+						$('#status_video_' + video_id).html('<i class="fa fa-check"></i>');
+						$('#status-' + video_id).html('<span class="text-danger" alt="Inativo" title="Inativo"><i class="fa fa-times-circle"></i> Inativo</span>');
+					}
+					if (videoData.type == 'public') {
+						$('#private-' + video_id).html('');
+					} else {
+						$('#private-' + video_id).html('<div class="item-private">PRIVATE</div>');
+					}
+					$('#views-' + video_id).text(videoData.viewnumber);
+					if (reprocess) {
+						$.post(base_url + '/ajax.php?module=admin_reprocess_video',
+							{ video_id: video_id, mode: $('#edit-reprocess-mode').val() },
+							function (r) {
+								if (r.status) {
+									Messenger().post({
+										message: 'Video <b>ID ' + video_id + '</b>: ' + (r.message || 'Reprocessamento iniciado!'),
+										type: 'success'
+									});
+									if (r.mode === 'local') {
+										$('#status_video_' + video_id).attr({'data-status': 3, 'alt': 'Na Fila', 'title': 'Na Fila'}).html('<i class="fas fa-hourglass-half"></i>');
+										$('#status-' + video_id).html('<span class="text-info" alt="Na Fila" title="Na Fila"><i class="fas fa-circle-notch fa-spin"></i> Na Fila</span>');
+									} else {
+										$('#status_video_' + video_id).attr({'data-status': 2, 'alt': 'Baixando', 'title': 'Baixando'}).html('<i class="fas fa-download"></i>');
+										$('#status-' + video_id).html('<span class="text-warning" alt="Baixando" title="Baixando"><i class="fas fa-download"></i> Baixando</span>');
+									}
+								} else {
+									Messenger().post({
+										message: 'Video <b>ID ' + video_id + '</b>: ' + (r.error || 'Falha ao reprocessar!'),
+										type: 'error'
+									});
+								}
+							}, "json");
+					}
+				} else {
+					Messenger().post({
+						message: response.error || ('Video <b>ID ' + video_id + '</b>: Failed updating!'),
+						type: 'error'
+					});
+				}
+				$('#edit_video_' + video_id).html('<i class="fa fa-pencil"></i>');
+		}, "json");
+	}
+
+	$("body").on('click', "button[id='edit-save']", function(event) {
+		event.preventDefault();
+		saveEditVideo(false);
 	});
+
+	$("body").on('click', "button[id='edit-save-reprocess']", function(event) {
+		event.preventDefault();
+		saveEditVideo(true);
+	});
+
+	$("body").on('change', "#edit-cfg_source", function () {
+		editProcToggle();
+	});
+
+	$("body").on('click', "#edit-wm_add", function (event) {
+		event.preventDefault();
+		editWmAddRow('top-right', 0);
+	});
+
+	$("body").on('click', ".edit-wm-del", function (event) {
+		event.preventDefault();
+		$(this).closest('.edit-wm-row').remove();
+	});
+
+	// videos_edit.tpl (página cheia) — mesmo bloco de processamento do modal
+	function procWmCollect() {
+		var rows = [];
+		$('#proc-wm_rows .edit-wm-row').each(function () {
+			rows.push({
+				pos: $(this).find('.edit-wm-pos').val(),
+				dur: parseInt($(this).find('.edit-wm-dur').val(), 10) || 0
+			});
+		});
+		return JSON.stringify(rows);
+	}
+
+	function procToggle() {
+		var manual = $('#proc-cfg_source').val() === '1';
+		$('#proc-fields input, #proc-fields select, #proc-fields button').prop('disabled', !manual);
+		$('#proc-fields').toggleClass('text-muted', !manual);
+	}
+
+	function procLoad() {
+		var wm = {};
+		try { wm = $('#proc-watermark_cfg').val() ? JSON.parse($('#proc-watermark_cfg').val()) : {}; } catch (e) { wm = {}; }
+		$('#proc-wm_enabled').val(parseInt(wm.enabled, 10) === 1 ? '1' : '0');
+		$('#proc-wm_opacity').val(wm.opacity != null ? wm.opacity : 60);
+		$('#proc-wm_size').val(wm.size != null ? wm.size : 120);
+		$('#proc-wm_margin').val(wm.margin != null ? wm.margin : 12);
+		$('#proc-wm_rows').empty();
+		var rows = (wm.positions && wm.positions.length) ? wm.positions : [{ pos: 'top-right', dur: 0 }];
+		for (var i = 0; i < rows.length; i++) {
+			$('#proc-wm_rows').append(editWmRowHtml(rows[i].pos, rows[i].dur));
+		}
+		procToggle();
+	}
+
+	if ($('#proc-cfg_source').length) {
+		procLoad();
+		$("body").on('change', '#proc-cfg_source', procToggle);
+		$("body").on('click', '#proc-wm_add', function (event) {
+			event.preventDefault();
+			$('#proc-wm_rows').append(editWmRowHtml('top-right', 0));
+		});
+		$('form[name="edit_video"]').on('submit', function () {
+			$('#wm_positions').val(procWmCollect());
+		});
+	}
 
 	//Thumbnails
     $("body").on('click', "a[id*='thumbadv_video_']", function(event) {

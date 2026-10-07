@@ -4,7 +4,7 @@
  *
  * O propósito é eliminar tags órfãs (que não estão mais em uso) e recalcular
  * os contadores com base no que está realmente nos conteúdos:
- *   - video.keyword  (separado por vírgula)
+ *   - video.keyword  (separado por vírgula, só vídeos com active='1')
  *   - albums.tags    (separado por espaço)
  *   - game.tags      (separado por espaço)
  *
@@ -58,7 +58,8 @@ foreach ( $rs->getrows() as $row ) {
 }
 
 if ( in_array('video', $tables) ) {
-    $sql = "SELECT keyword FROM video WHERE keyword IS NOT NULL AND keyword != ''";
+    // só vídeos publicados: keyword de vídeos em fila/inativos não deve entrar no contador
+    $sql = "SELECT keyword FROM video WHERE keyword IS NOT NULL AND keyword != '' AND active = '1'";
     $rs  = $conn->execute($sql);
     if ( $conn->Affected_Rows() > 0 ) {
         foreach ( $rs->getrows() as $row ) {

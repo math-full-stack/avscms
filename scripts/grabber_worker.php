@@ -225,6 +225,10 @@ if (!empty($thumbUrl)) {
     try {
         $tmbDir = get_thumb_dir($vid);
         if (!is_dir($tmbDir)) @mkdir($tmbDir, 0777, true);
+        // O pipeline roda sob usuários diferentes (CLI manual e workers do
+        // Apache); sem isto, o dono do 1º mkdir trava o outro com umask 022.
+        // INCONDICIONAL (um `if (!is_writable)` não dispara para o dono).
+        @chmod($tmbDir, 0777);
         $tmpThumbFile = $tmpDir . '/thumb_' . $uniqId . '.jpg';
         if ($grabber->downloadThumbnail($thumbUrl, $tmpThumbFile)) {
             $dstThumb = $tmbDir . '/1.jpg';
@@ -241,6 +245,17 @@ if (!empty($thumbUrl)) {
                     @imagejpeg($im, $tmpThumbFile, 90);
                     @imagedestroy($im);
                 }
+            } elseif ($isWebp && !empty($config['ffmpeg'])) {
+                // GD do host sem suporte a WebP: re-encode via ffmpeg. Sem isto o
+                // binário WebP vai para tmb/{VID}/1.jpg e derruba o passo 2 da
+                // conversão (imagecreatefromjpeg retorna false em bytes WebP).
+                $webpConv = $tmpThumbFile . '.jpg';
+                @exec($config['ffmpeg'] . ' -i ' . escapeshellarg($tmpThumbFile)
+                    . ' -frames:v 1 -q:v 2 -y ' . escapeshellarg($webpConv));
+                if (is_file($webpConv) && filesize($webpConv) > 100) {
+                    @rename($webpConv, $tmpThumbFile);
+                }
+                @unlink($webpConv);
             }
             $image = new VImageConv();
             $width = (int)$config['img_max_width'];

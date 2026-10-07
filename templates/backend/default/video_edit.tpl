@@ -100,6 +100,60 @@
 						</div>
 					<div class="clearfix"></div>
 				{/if}
+				<div class="clearfix"></div>
+				<div class="m-t-10"></div>
+				<label class="col-lg-12 control-label" style="border-bottom:1px solid #eee;padding-bottom:6px"><i class="fa fa-cog"></i> Processamento <small class="text-muted">corte e watermark aplicados no próximo reprocessar</small></label>
+				<div class="clearfix"></div>
+				<label class="col-lg-3 control-label">Config</label>
+				<div class="col-lg-9">
+					<select id="edit-cfg_source" class="form-control">
+						<option value="1">Manual (este vídeo)</option>
+						<option value="0">Herdar da fonte (grabber)</option>
+					</select>
+				</div>
+				<div class="clearfix"></div>
+				<div id="edit-proc-fields">
+					<label class="col-lg-3 control-label">Cut start (sec)</label>
+					<div class="col-lg-9">
+						<input id="edit-cut" type="number" value="0" min="0" max="86400" class="form-control" title="Segundos removidos do início (ex.: 4s de vinheta)">
+					</div>
+					<div class="clearfix"></div>
+					<label class="col-lg-3 control-label">Cut end (sec)</label>
+					<div class="col-lg-9">
+						<input id="edit-cut_out" type="number" value="0" min="0" max="86400" class="form-control" title="Segundos removidos do fim (ex.: 2s de outro)">
+					</div>
+					<div class="clearfix"></div>
+					<label class="col-lg-3 control-label">Watermark</label>
+					<div class="col-lg-9">
+						<select id="edit-wm_enabled" class="form-control">
+							<option value="0">OFF</option>
+							<option value="1">ON</option>
+						</select>
+					</div>
+					<div class="clearfix"></div>
+					<label class="col-lg-3 control-label">Opacity %</label>
+					<div class="col-lg-9">
+						<input id="edit-wm_opacity" type="number" value="60" min="0" max="100" class="form-control">
+					</div>
+					<div class="clearfix"></div>
+					<label class="col-lg-3 control-label">Width (px)</label>
+					<div class="col-lg-9">
+						<input id="edit-wm_size" type="number" value="120" min="8" max="4096" class="form-control" title="Largura da logo em pixels — fixa, independente da resolução do vídeo">
+					</div>
+					<div class="clearfix"></div>
+					<label class="col-lg-3 control-label">Margin px</label>
+					<div class="col-lg-9">
+						<input id="edit-wm_margin" type="number" value="12" min="0" max="200" class="form-control">
+					</div>
+					<div class="clearfix"></div>
+					<label class="col-lg-3 control-label">Position schedule</label>
+					<div class="col-lg-9">
+						<div id="edit-wm_rows"></div>
+						<button type="button" class="btn btn-xs btn-default" id="edit-wm_add"><i class="fa fa-plus"></i> Add position</button>
+						<div class="text-muted" style="font-size:11px;margin-top:4px">1 linha = posição fixa; várias linhas com segundos = alterna em loop</div>
+					</div>
+					<div class="clearfix"></div>
+				</div>
 				<label class="col-lg-3 control-label">Likes</label>
 				<div class="col-lg-9">
 					<input id="edit-likes" name="edit-likes" type="text" value="" class="form-control {if $err.likes}error{/if}">
@@ -122,7 +176,13 @@
 		</div>
 		<div class="modal-footer">
 			<button type="button" class="btn btn-default pull-left" data-dismiss="modal">Close</button>
+			<select id="edit-reprocess-mode" class="form-control" style="width:auto;display:inline-block;height:34px;margin-right:6px" title="Como reprocessar ao salvar">
+				<option value="auto">Reprocessar: Auto</option>
+				<option value="local">Re-encode local (sem baixar)</option>
+				<option value="redownload">Re-baixar da origem</option>
+			</select>
 			<button type="button" id="edit-reset" class="btn btn-white btn-icon">Reset</button>
+			<button type="button" id="edit-save-reprocess" class="btn btn-warning"><i class="fa fa-refresh"></i> Save &amp; Reprocess</button>
 			<button type="button" id="edit-save" class="btn btn-success">Save</button>
 		</div>
 	</div>

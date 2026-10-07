@@ -482,6 +482,93 @@ function gcs_download_object_to_file($server, $object, $target)
 }
 
 /**
+ * Verifica se um objeto existe no bucket remoto SEM baixá-lo.
+ *
+ * URL pública (sem token, sem assinatura) → HEAD. URL com Bearer/assinada →
+ * GET com Range 0-0: HEAD pode ser recusado em endpoints de mídia, e o
+ * write-callback descarta o corpo para o request não baixar o vídeo inteiro
+ * quando o servidor ignora o Range.
+ *
+ * @param array  $server Linha da tabela servers
+ * @param string $object Caminho do objeto no bucket
+ * @return bool true em 200/206 (objeto existe)
+ */
+function gcs_object_exists($server, $object)
+{
+    if (!is_array($server) || trim((string)$object) === '') {
+        return false;
+    }
+    list($url, $headers) = storage_get_download_source($server, $object);
+    if ($url === '') {
+        return false;
+    }
+    $signed = (strpos($url, 'X-Goog-') !== false || strpos($url, 'X-Amz-') !== false);
+
+    $ch = curl_init($url);
+    $opts = array(
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT  => 10,
+        CURLOPT_TIMEOUT         => 20,
+        CURLOPT_FOLLOWLOCATION  => true,
+        // corpo descartado: não queremos o vídeo na memória
+        CURLOPT_WRITEFUNCTION   => function ($ch, $data) { return 0; },
+    );
+    if (!empty($headers) || $signed) {
+        $opts[CURLOPT_HTTPGET]    = true;
+        $opts[CURLOPT_RANGE]      = '0-0';
+        $opts[CURLOPT_HTTPHEADER] = $headers;
+    } else {
+        $opts[CURLOPT_NOBODY] = true;
+    }
+    curl_setopt_array($ch, $opts);
+    curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return ($code == 200 || $code == 206);
+}
+
+/**
+ * A fonte original de um vídeo ainda está acessível para re-encode local?
+ *
+ * Ordem: disco do host atual (VDO_DIR) → bucket src/{VID}/{vdoname} (mesmo
+ * server que storage_fetch_source usa). Servidor não-remoto (disco/FTP) não
+ * dá para sondar de longe → assume disponível (a fila resolve como sempre).
+ * Usado pelo reprocessamento local para não deixar active='3' preso quando a
+ * fonte sumiu (ex.: upload sem src/ publicado e sem URL de origem).
+ *
+ * @param int         $vid
+ * @param string      $vdoname
+ * @param string|null $vdoDir override do diretório de origem
+ * @return bool
+ */
+function video_source_available($vid, $vdoname, $vdoDir = null)
+{
+    global $config;
+
+    $vid     = intval($vid);
+    $vdoname = trim((string)$vdoname);
+    if ($vid <= 0 || $vdoname === '') {
+        return false;
+    }
+    if ($vdoDir === null) {
+        $vdoDir = !empty($config['VDO_DIR']) ? rtrim($config['VDO_DIR'], '/') : $config['BASE_DIR'] . '/media/videos/vid';
+    }
+    if (file_exists($vdoDir . '/' . $vdoname)) {
+        return true;
+    }
+
+    $server = get_server();
+    if (!$server || !server_is_remote_storage($server)) {
+        // Sem disco e sem bucket consultável: a fila não teria como resolver
+        // (storage_fetch_source rejeita servidor não-remoto) → indisponível.
+        return false;
+    }
+
+    return gcs_object_exists($server, 'src/' . $vid . '/' . $vdoname);
+}
+
+/**
  * Publica a fonte original de um upload no bucket remoto (src/{VID}/{arquivo}).
  *
  * Chamado no host de upload (Cloud Run) depois que a fila registra o vídeo:

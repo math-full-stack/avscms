@@ -280,9 +280,7 @@
 												<div class="clearfix"></div>
 												<div class="item-actions">																									
 													<div class="btn-group">
-														{if $videos[i].source_url != ''}
-														<a id="reprocess_video_{$videos[i].VID}" class="btn btn-warning" href="#" alt="Reprocessar" title="Reprocessar vídeo a partir da URL de origem" data-processing="0"><i class="fa fa-refresh"></i></a>
-														{/if}
+														<a id="reprocess_video_{$videos[i].VID}" class="btn btn-warning" href="#" alt="Reprocessar" title="{if $videos[i].source_url != ''}Reprocessar vídeo: re-download da origem com o corte/marca do vídeo{else}Reprocessar vídeo: re-encode local (sem baixar){/if}" data-processing="0"><i class="fa fa-refresh"></i></a>
 														<div class="btn-group">
 															<a id="delete__video_{$videos[i].VID}" class="btn btn-success" data-toggle="dropdown" href="#" alt="Delete" title="Delete"><i class="fa fa-trash-o"></i></a>
 															<ul class="dropdown-menu">

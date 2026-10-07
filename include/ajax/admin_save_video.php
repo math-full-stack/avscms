@@ -7,6 +7,7 @@ require_once $config['BASE_DIR']. '/include/adodb/adodb.inc.php';
 require_once $config['BASE_DIR']. '/include/dbconn.php';
 require_once $config['BASE_DIR']. '/include/function_global.php';
 require $config['BASE_DIR']. '/include/function_video.php';
+require_once $config['BASE_DIR']. '/include/function_watermark.php';
 require $config['BASE_DIR']. '/classes/auth.class.php';
 Auth::checkAdmin();
 
@@ -34,6 +35,14 @@ $dislikes       = trim($data['dislikes']);
 $viewnumber     = trim($data['viewnumber']);
 $active         = trim($data['active']);
 $server			= trim($data['server']);
+
+// Processamento (corte + watermark por vídeo)
+$proc = wm_parse_form($data);
+if ($proc['error'] !== '') {
+    $response['error'] = $proc['error'];
+    echo json_encode($response);
+    die();
+}
 
 settype($vid, 'integer');
 settype($viewnumber, 'integer');
@@ -66,11 +75,21 @@ $sql = "UPDATE video SET title = " .$conn->qStr($title). ", description = " .nl2
 						 be_rated = " .$conn->qStr($be_rated). ", embed = " .$conn->qStr($embed). ",
 						 likes = " .$conn->qStr($likes). ", dislikes = " .$conn->qStr($dislikes). ", 
 						 rate = " .$conn->qStr($rate). ", viewnumber = " .$conn->qStr($viewnumber). ",
-						 active  = " .$conn->qStr($active). ", server = ".$conn->qStr($server)."
+						 active  = " .$conn->qStr($active). ", server = ".$conn->qStr($server).",
+						 cfg_manual = " .intval($proc['cfg_manual']). ", watermark_cfg = " .$conn->qStr($proc['watermark_cfg']). ",
+						 cut = " .$conn->qStr($proc['cut']). ", cut_out = " .intval($proc['cut_out']). "
 		WHERE VID = " .$conn->qStr($vid). " LIMIT 1";
-$conn->execute($sql);
-if ( $conn->Affected_Rows() >= 0 ) {
+$saved = $conn->execute($sql);
+if ( $saved !== false ) {
     $response['status'] = 1;
+    // "Herdar da fonte" (cfg_manual=0): reaplica o snapshot da grabber_source
+    // agora, senão o cut da fonte só voltaria no próximo regrab.
+    if (!$proc['cfg_manual']) {
+        $srs = $conn->execute("SELECT source_url FROM video WHERE VID = " . intval($vid) . " LIMIT 1");
+        if ($srs && !$srs->EOF) {
+            wm_refresh_video_snapshot($vid, trim((string)$srs->fields['source_url']));
+        }
+    }
 } else {
     $response['status'] = 0;
     $response['error'] = $sql;

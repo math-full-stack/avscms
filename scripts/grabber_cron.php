@@ -27,6 +27,7 @@ require_once $basedir . '/classes/grabbers/GrabberManager.php';
 require_once $basedir . '/classes/grabbers/mass/MassGrabberManager.php';
 require_once $basedir . '/classes/grabbers/mass/MetadataMerger.php';
 require_once $basedir . '/classes/grabbers/mass/BlocklistManager.php';
+require_once $basedir . '/classes/grabbers/mass/CategoryResolver.php';
 
 @set_time_limit(0);
 @ini_set('max_execution_time', 0);
@@ -49,8 +50,18 @@ $pid = getmypid();
 // Use atomic mkdir for lock (works on all filesystems, unlike flock).
 $lockDir = $config['LOG_DIR'] . '/grabber_cron.lock';
 if (!@mkdir($lockDir, 0755)) {
-    echo "[" . date('Y-m-d H:i:s') . "] Another grabber_cron instance is already running - skipping.\n";
-    exit(0);
+    // Stale-lock recovery: register_shutdown_function's rmdir never runs when
+    // the process is SIGKILL'd (terminal closed, OOM, deploy restart), leaving
+    // an orphan dir that blocks the queue forever. The cron itself only holds
+    // the lock for ~15s (downloads run as detached grabber_worker.php), so any
+    // lock older than 10min is definitionally dead.
+    $staleAge = time() - (int)@filemtime($lockDir);
+    if ($staleAge > 600 && @rmdir($lockDir) && @mkdir($lockDir, 0755)) {
+        echo "[" . date('Y-m-d H:i:s') . "] Removed stale grabber_cron.lock (age {$staleAge}s) - taking over.\n";
+    } else {
+        echo "[" . date('Y-m-d H:i:s') . "] Another grabber_cron instance is already running - skipping.\n";
+        exit(0);
+    }
 }
 // Ensure lock dir is removed on exit (normal or error)
 register_shutdown_function(function() use ($lockDir) {
@@ -132,10 +143,6 @@ if ($available > 0) {
 
         // Determine user and category
         $uid = 1; // Default admin user
-        $categoryId = $source ? intval($source['category_id']) : 0;
-        if ($categoryId <= 0) {
-            $categoryId = 1; // Default category
-        }
 
         // Discovery and the re-fetch parse the same page with different code and
         // disagree (measured: every sampled pair differed), so the admin approved
@@ -146,21 +153,32 @@ if ($available > 0) {
                 'title'       => isset($job['disc_title']) ? $job['disc_title'] : '',
                 'description' => isset($job['disc_description']) ? $job['disc_description'] : '',
                 'tags'        => isset($job['disc_tags']) ? $job['disc_tags'] : '',
+                'category'    => isset($job['disc_category']) ? $job['disc_category'] : '',
                 'duration'    => isset($job['disc_duration']) ? $job['disc_duration'] : 0,
             ),
             array(
                 'title'       => $info['title'],
                 'description' => isset($info['description']) ? $info['description'] : '',
                 'tags'        => isset($info['tags']) ? $info['tags'] : '',
+                'category'    => isset($info['category']) ? $info['category'] : '',
                 'duration'    => isset($info['duration']) ? $info['duration'] : 0,
             )
         );
+
+        // Categoria: cascata CategoryResolver (mapping -> auto-match -> fonte ->
+        // fallback -> Caseiro). NUNCA mais CHID 1 ("Amador", pai) por default.
+        list($categoryId, $categoryOrigin) = CategoryResolver::resolve($source, $merged['category']);
+        if ($categoryId <= 0) {
+            $logger->warning(0, $jobId, $sourceId, 'CATEGORY_UNRESOLVED',
+                'No leaf category resolved for "' . $merged['category'] . '" - video will land with channel=0');
+        }
 
         $logger->info(0, $jobId, $sourceId, 'METADATA_MERGED',
             'title from ' . $merged['report']['title_origin'] . ', desc from ' . $merged['report']['desc_origin']
             . ' (' . $merged['report']['desc_chars'] . ' chars), tags ' . $merged['report']['tags_kept']
             . '/' . ($merged['report']['tags_disc'] + $merged['report']['tags_fetch'])
-            . ' kept, ' . $merged['report']['tags_deduped'] . ' deduped',
+            . ' kept, ' . $merged['report']['tags_deduped'] . ' deduped'
+            . ', category ' . $categoryId . ' from ' . $categoryOrigin,
             $merged['report']);
 
         if ($merged['needs_description']) {
@@ -197,6 +215,17 @@ if ($available > 0) {
         if ($existingVid > 0) {
             // Reuse existing video record — reset it for new download
             $vid = $existingVid;
+            // cfg_manual: config editada no siteadmin nao pode ser regravada
+            // com a da fonte (mesma guarda de wm_refresh_video_snapshot).
+            $manualCfg = false;
+            $mrs = $conn->Execute("SELECT cfg_manual FROM video WHERE VID = " . intval($vid) . " LIMIT 1");
+            if ($mrs && !$mrs->EOF) {
+                $manualCfg = !empty($mrs->fields['cfg_manual']);
+            }
+            $wmCols = $manualCfg ? "" : "
+                watermark_cfg = " . $conn->qStr(!empty($source['watermark_config']) ? $source['watermark_config'] : '') . ",
+                cut = " . $conn->qStr(intval(isset($source['cut_in']) ? $source['cut_in'] : 0)) . ",
+                cut_out = " . intval(isset($source['cut_out']) ? $source['cut_out'] : 0) . ",";
             $conn->Execute("UPDATE video SET
                 active = '2',
                 title = " . $conn->qStr($title) . ",
@@ -204,9 +233,7 @@ if ($available > 0) {
                 keyword = " . $conn->qStr($tags) . ",
                 description = " . $conn->qStr($description) . ",
                 duration = '" . $duration . "',
-                watermark_cfg = " . $conn->qStr(!empty($source['watermark_config']) ? $source['watermark_config'] : '') . ",
-                cut = " . $conn->qStr(intval(isset($source['cut_in']) ? $source['cut_in'] : 0)) . ",
-                cut_out = " . intval(isset($source['cut_out']) ? $source['cut_out'] : 0) . ",
+                " . $wmCols . "
                 last_update = " . time() . "
                 WHERE VID = " . intval($vid) . " LIMIT 1");
         } else {
@@ -265,6 +292,18 @@ if ($available > 0) {
 
             // Run in background
             $lg = $config['LOG_DIR'] . '/' . $vid . '.mass_grab.log';
+            // O log pode pertencer a outro usuário (Apache=daemon × CLI=math) com
+            // 644: o shell falha com "Permission denied" ao truncar, o REDIRECT
+            // morre e o worker NUNCA sobe — o job fica PROCESSING órfão. O dir é
+            // 777 sem sticky bit, então recriar/quebrar resolve; chmod 0666 deixa
+            // os dois usuários conseguirem gravar na próxima vez.
+            if (file_exists($lg) && !is_writable($lg)) {
+                @unlink($lg);
+            }
+            if (!file_exists($lg)) {
+                @touch($lg);
+                @chmod($lg, 0666);
+            }
             @shell_exec("$cmd > " . escapeshellarg($lg) . " 2>&1 &");
         } else {
             $jobMgr->fail($jobId, 'WORKER_NOT_FOUND', 'grabber_worker.php not found');

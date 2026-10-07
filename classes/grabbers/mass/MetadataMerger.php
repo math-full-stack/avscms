@@ -57,9 +57,14 @@ class MetadataMerger {
         $descInfo = self::sanitizeDescription($descRaw, $title);
         $description = $descInfo['text'];
 
+        $dCat = isset($disc['category']) ? trim(strip_tags($disc['category'])) : '';
+        $fCat = isset($fetch['category']) ? trim(strip_tags($fetch['category'])) : '';
+        $category = self::mergeCategory($dCat, $fCat);
+
         $tags = self::mergeTags(
             isset($disc['tags']) ? $disc['tags'] : '',
-            isset($fetch['tags']) ? $fetch['tags'] : ''
+            isset($fetch['tags']) ? $fetch['tags'] : '',
+            $category['text']
         );
 
         $duration = intval(isset($fetch['duration']) ? $fetch['duration'] : 0);
@@ -69,6 +74,7 @@ class MetadataMerger {
             'title'             => $title,
             'description'       => $description,
             'tags'              => $tags['text'],
+            'category'          => $category['text'],
             'duration'          => $duration,
             'needs_description' => ($description === ''),
             'report'            => array(
@@ -81,22 +87,73 @@ class MetadataMerger {
                 'tags_fetch'       => $tags['fetch_count'],
                 'tags_kept'        => $tags['kept'],
                 'tags_deduped'     => $tags['deduped'],
+                'tags_source_dropped' => $tags['source_dropped'],
+                'tags_category_dropped' => $tags['category_dropped'],
+                'category_origin'  => $category['origin'],
                 'needs_description' => ($description === ''),
             ),
         );
     }
 
     /**
+     * Categoria externa: o que o admin viu no Discover vence; o re-fetch só
+     * preenche quando o discovery veio vazio (mesma regra do título).
+     */
+    public static function mergeCategory($discCategory, $fetchCategory) {
+        $d = trim(strip_tags((string) $discCategory));
+        $f = trim(strip_tags((string) $fetchCategory));
+        $text = $d !== '' ? $d : $f;
+        return array(
+            'text'   => mb_substr($text, 0, 255),
+            'origin' => $d !== '' ? 'discovered' : ($f !== '' ? 'fetch' : 'none'),
+        );
+    }
+
+    /**
+     * Tags que revelam a FONTE (domínio, nome do site) nunca entram no `video`.
+     * Reforço central: os scrapers já têm stoplist própria, mas capções copiadas
+     * de post ("vídeo do buceteiro.com") passariam por elas.
+     */
+    public static function isSourceTag($tag) {
+        $raw = self::accentless((string) $tag);
+        // Domínio embutido: "buceteiro.com" (tagKey derrubaria o ponto)
+        if (preg_match('/\b[\w-]+\s*\.\s*(?:com|net|org|br|tv|cc|vip|xyz|io|app)\b/', $raw)) return true;
+        $k = self::tagKey($tag);
+        if ($k === '') return false;
+        $words = explode(' ', $k);
+        // Nomes de fonte conhecidas (ingleses/portugueses de conteúdo adulto)
+        static $names = array(
+            'buceteiro', 'cnnamador', 'mixvazadas', 'naoconto', 'pornobrasil',
+            'pornolandia', 'pornomineiro', 'sonovinhasbr', 'xfree', 'onlyfans',
+            'pornhub', 'xvideos', 'xnxx', 'redtube', 'youporn', 'telegram',
+            'whatsapp', 'linktree', 'nudo', 'tiktok', 'youtube', 'instagram',
+        );
+        foreach ($names as $n) {
+            // tagKey singulariza a última palavra ("xvideos" -> "xvideo"): compara
+            // nos DOIS formatos. Match por PALAVRA em qualquer posição — "vídeo do
+            // xvideos brasileiro" também revela a fonte, não só prefixo/sufixo.
+            foreach (array($n, self::tagKey($n)) as $m) {
+                if ($m === '') continue;
+                if (in_array($m, $words, true)) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Union of both tag sets, interleaved so each source gets slots, deduped by
      * a folded key (accent-free, plural-folded) and lowercased for storage.
      */
-    public static function mergeTags($discTags, $fetchTags) {
+    public static function mergeTags($discTags, $fetchTags, $category = '') {
         $disc  = self::splitTags($discTags);
         $fetch = self::splitTags($fetchTags);
 
+        $catKey = self::tagKey($category);
         $kept = array();
         $seen = array();
         $deduped = 0;
+        $sourceDropped = 0;
+        $categoryDropped = 0;
         $max = max(count($disc), count($fetch));
         for ($i = 0; $i < $max && count($kept) < self::MAX_TAGS; $i++) {
             foreach (array($disc, $fetch) as $set) {
@@ -105,17 +162,22 @@ class MetadataMerger {
                 $tag = $set[$i];
                 $key = self::tagKey($tag);
                 if ($key === '' || isset($seen[$key])) { $deduped++; continue; }
+                // Tag repetindo a categoria do próprio vídeo: categoria não é tag.
+                if ($catKey !== '' && $key === $catKey) { $categoryDropped++; continue; }
+                if (self::isSourceTag($tag)) { $sourceDropped++; continue; }
                 $seen[$key] = true;
                 $kept[] = $tag;
             }
         }
 
         return array(
-            'text'        => implode(', ', $kept),
-            'kept'        => count($kept),
-            'deduped'     => $deduped,
-            'disc_count'  => count($disc),
-            'fetch_count' => count($fetch),
+            'text'            => implode(', ', $kept),
+            'kept'            => count($kept),
+            'deduped'         => $deduped,
+            'source_dropped'  => $sourceDropped,
+            'category_dropped' => $categoryDropped,
+            'disc_count'      => count($disc),
+            'fetch_count'     => count($fetch),
         );
     }
 

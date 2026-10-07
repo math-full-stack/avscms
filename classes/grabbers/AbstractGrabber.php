@@ -96,11 +96,19 @@ abstract class AbstractGrabber implements GrabberInterface {
             }
 
             if (time() - $start >= $timeoutSeconds) {
-                // Timeout — kill process
+                // Timeout — kill process.
+                // Os pipes são fechados ANTES do proc_close e com guard:
+                // proc_close() já encerra os descritores, e um fclose() em
+                // resource já fechado lança TypeError em PHP 8 — fatal não
+                // capturado que derrubava o worker no meio do download e deixava
+                // o job preso em PROCESSING (downloadWithYtdlp usa 300s).
+                foreach (array(1, 2) as $pipeIdx) {
+                    if (is_resource($pipes[$pipeIdx])) {
+                        fclose($pipes[$pipeIdx]);
+                    }
+                }
                 proc_terminate($process, 9);
                 proc_close($process);
-                fclose($pipes[1]);
-                fclose($pipes[2]);
                 return false;
             }
 
@@ -285,6 +293,50 @@ abstract class AbstractGrabber implements GrabberInterface {
         $text = preg_replace('/[\x{20000}-\x{2FFFF}]/u', '', $text);
         $text = preg_replace('/[\x{FE00}-\x{FE0F}\x{200D}\x{20E3}]/u', '', $text);
         return trim($text);
+    }
+
+    /**
+     * Categoria do vídeo na página (campo separado das tags — categoria NUNCA
+     * vira tag). Padrões genéricos na ordem: JSON-LD articleSection, link WP
+     * rel="category tag", breadcrumb /categoria(s)?/ e /category/, e por fim o
+     * path /videos/{categoria}/... dos sites estilo WordPress.
+     *
+     * @return string '' quando a página não expõe categoria.
+     */
+    protected function extractCategory($html, $url = '') {
+        if (!empty($html)) {
+            if (preg_match_all('/<script[^>]*type="application\/ld\+json"[^>]*>(.*?)<\/script>/si', $html, $ldAll)) {
+                foreach ($ldAll[1] as $ldBlock) {
+                    $ld = json_decode(trim($ldBlock), true);
+                    if (!$ld || !isset($ld['@type'])) continue;
+                    $types = isset($ld['@type']) ? (array) $ld['@type'] : array();
+                    if (isset($ld['articleSection']) && (in_array('Article', $types) || in_array('WebPage', $types))) {
+                        $cat = is_array($ld['articleSection']) ? (isset($ld['articleSection'][0]) ? $ld['articleSection'][0] : '') : $ld['articleSection'];
+                        $cat = trim(strip_tags((string) $cat));
+                        if ($cat !== '') return $this->sanitizeText(mb_substr($cat, 0, 255));
+                    }
+                }
+            }
+            if (preg_match('/<a[^>]+rel="(?:category\s+tag|tag\s+category)"[^>]*>([^<]+)<\/a>/i', $html, $m)) {
+                $cat = trim(html_entity_decode(strip_tags($m[1]), ENT_QUOTES));
+                if ($cat !== '') return $this->sanitizeText(mb_substr($cat, 0, 255));
+            }
+            if (preg_match('/<a[^>]+href="[^"]*\/(?:categoria|categorias|category)\/([^\/"?]+)"[^>]*>([^<]+)<\/a>/i', $html, $m)) {
+                $cat = trim(html_entity_decode(strip_tags($m[2]), ENT_QUOTES));
+                if ($cat !== '' && !in_array(mb_strtolower($m[1]), array('categoria', 'categorias', 'category'))) {
+                    return $this->sanitizeText(mb_substr($cat, 0, 255));
+                }
+            }
+        }
+        // Path do próprio URL: /videos/{categoria}/... ou /category/{slug}
+        $path = !empty($url) ? (string) parse_url($url, PHP_URL_PATH) : '';
+        if ($path !== '' && preg_match('#/(?:videos|category|categoria)/([^/?]+)(?:/[^/?]+)*/?$#i', $path, $m)) {
+            $cat = rawurldecode($m[1]);
+            if (!preg_match('/^\d+$/', $cat) && !in_array(mb_strtolower($cat), array('page', 'videos', 'categoria', 'categorias', 'category', 'tag'))) {
+                return $this->sanitizeText(mb_substr($cat, 0, 255));
+            }
+        }
+        return '';
     }
 
     /**

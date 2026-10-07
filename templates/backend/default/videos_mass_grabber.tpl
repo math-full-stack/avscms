@@ -216,8 +216,18 @@
                     <div class="form-group"><label class="control-label">Provider</label><select class="form-control" id="mg_src_provider">{section name=i loop=$providers}<option value="{$providers[i].name|escape:'html'}">{$providers[i].name|escape:'html'}</option>{/section}</select></div>
                     <div class="form-group"><label class="control-label">Discovery URL</label><input type="url" class="form-control" id="mg_src_url" placeholder="https://www.youtube.com/@channel or listing page URL"><span class="help">The page URL to scan for videos.</span></div>
                     <div class="row">
-                        <div class="col-sm-6"><div class="form-group"><label class="control-label">Category</label><select class="form-control" id="mg_src_category"><option value="0">-- Default --</option>{section name=i loop=$categories}<option value="{$categories[i].CHID}">{$categories[i].name|escape:'html'}</option>{/section}</select></div></div>
-                        <div class="col-sm-6"><div class="form-group"><label class="control-label">Quality</label><select class="form-control" id="mg_src_quality"><option value="best">Best Available</option><option value="1080">1080p</option><option value="720">720p</option><option value="480">480p</option><option value="360">360p</option></select></div></div>
+                        <div class="col-sm-4"><div class="form-group"><label class="control-label">Category (leaf)</label><select class="form-control" id="mg_src_category"><option value="0">-- By cascade --</option>{section name=i loop=$categories}<option value="{$categories[i].CHID}">{$categories[i].name|escape:'html'}</option>{/section}</select><span class="help">Only used when the site reports no category.</span></div></div>
+                        <div class="col-sm-4"><div class="form-group"><label class="control-label">Fallback (leaf)</label><select class="form-control" id="mg_src_fallback"><option value="0">-- Site default (Caseiro) --</option>{section name=i loop=$categories}<option value="{$categories[i].CHID}">{$categories[i].name|escape:'html'}</option>{/section}</select><span class="help">Used when mapping/auto-match also fail.</span></div></div>
+                        <div class="col-sm-4"><div class="form-group"><label class="control-label">Quality</label><select class="form-control" id="mg_src_quality"><option value="best">Best Available</option><option value="1080">1080p</option><option value="720">720p</option><option value="480">480p</option><option value="360">360p</option></select></div></div>
+                    </div>
+                    <div id="mg_map_block" style="display:none">
+                        <h5 style="margin-top:0"><i class="fa fa-sitemap"></i> Category mapping <small class="text-muted">external category (from the site) &rarr; leaf</small></h5>
+                        <div id="mg_map_rows"></div>
+                        <div class="row" style="margin-top:6px">
+                            <div class="col-sm-5"><input type="text" class="form-control" id="mg_map_external" placeholder="e.g. Novinhas"></div>
+                            <div class="col-sm-5"><select class="form-control" id="mg_map_chid"><option value="0">-- Leaf category --</option>{section name=i loop=$categories}<option value="{$categories[i].CHID}">{$categories[i].name|escape:'html'}</option>{/section}</select></div>
+                            <div class="col-sm-2"><button type="button" class="btn btn-primary btn-block" id="btn_map_add" onclick="mgMapAdd()"><i class="fa fa-plus"></i> Add</button></div>
+                        </div>
                     </div>
                     <hr>
                     <div class="row">
@@ -786,12 +796,15 @@ var mgProviderDefaults = {
     'PornoMineiro': { name: 'PornoMineiro',    url: 'https://www.pornomineiro.com' },
     'NaoConto':     { name: 'NaoConto',        url: 'https://www.naoconto.com' },
     'PornoBrasil':  { name: 'PornoBrasil',     url: 'https://pornobrasil.com' },
+    'Cnnamador':    { name: 'CNN Amador',       url: 'https://cnnamador.com' },
 };
 function mgShowSourceForm(id) {
     id = id || 0; document.getElementById('mg_src_id').value = id;
     document.getElementById('mg_source_modal_title').textContent = id > 0 ? 'Edit Source' : 'Add Source';
     document.getElementById('mg_source_alert').style.display = 'none'; document.getElementById('mg_source_form').reset();
     document.getElementById('mg_wm_rows').innerHTML = ''; mgWmAddRow('top-right', 0);
+    document.getElementById('mg_map_block').style.display = id > 0 ? '' : 'none';
+    document.getElementById('mg_map_rows').innerHTML = '';
     if (typeof jQuery !== 'undefined') jQuery('#mg_source_modal').modal('show');
 }
 function mgEditSource(id) {
@@ -799,7 +812,10 @@ function mgEditSource(id) {
         if (err || !data || !data.source) return; var s = data.source; mgShowSourceForm(id);
         document.getElementById('mg_src_id').value = s.id; document.getElementById('mg_src_name').value = s.name;
         document.getElementById('mg_src_provider').value = s.provider; document.getElementById('mg_src_url').value = s.discovery_url;
-        document.getElementById('mg_src_category').value = s.category_id; document.getElementById('mg_src_quality').value = s.quality;
+        document.getElementById('mg_src_category').value = s.category_id;
+        document.getElementById('mg_src_fallback').value = s.fallback_category_id != null ? s.fallback_category_id : 0;
+        mgLoadMap(id);
+        document.getElementById('mg_src_quality').value = s.quality;
         document.getElementById('mg_src_auto').value = s.automatic_enabled; document.getElementById('mg_src_schedule_type').value = s.schedule_type;
         document.getElementById('mg_src_schedule_value').value = s.schedule_value; document.getElementById('mg_src_max_per_run').value = s.max_per_run;
         document.getElementById('mg_src_max_pages').value = s.max_pages; document.getElementById('mg_src_delay').value = s.delay_seconds;
@@ -826,7 +842,9 @@ function mgSaveSource() {
     var fd = new FormData();
     fd.append('id', document.getElementById('mg_src_id').value); fd.append('name', document.getElementById('mg_src_name').value);
     fd.append('provider', document.getElementById('mg_src_provider').value); fd.append('discovery_url', document.getElementById('mg_src_url').value);
-    fd.append('category_id', document.getElementById('mg_src_category').value); fd.append('quality', document.getElementById('mg_src_quality').value);
+    fd.append('category_id', document.getElementById('mg_src_category').value);
+    fd.append('fallback_category_id', document.getElementById('mg_src_fallback').value);
+    fd.append('quality', document.getElementById('mg_src_quality').value);
     fd.append('automatic_enabled', document.getElementById('mg_src_auto').value); fd.append('schedule_type', document.getElementById('mg_src_schedule_type').value);
     fd.append('schedule_value', document.getElementById('mg_src_schedule_value').value); fd.append('max_per_run', document.getElementById('mg_src_max_per_run').value);
     fd.append('max_pages', document.getElementById('mg_src_max_pages').value); fd.append('delay_seconds', document.getElementById('mg_src_delay').value);
@@ -852,6 +870,49 @@ function mgSaveSource() {
 }
 function mgToggleSource(id) { var fd = new FormData(); fd.append('id', id); mgAjax('videos.php?m=mass_grabber&a=toggle_source', fd, function(e,d){ if(!e&&d&&d.status) window.location.reload(); }); }
 function mgDeleteSource(id, name) { if (!confirm('Delete source "'+name+'"?')) return; var fd = new FormData(); fd.append('id', id); mgAjax('videos.php?m=mass_grabber&a=delete_source', fd, function(e,d){ if(!e&&d&&d.status) window.location.reload(); }); }
+
+// CATEGORY MAPPING (external_category -> leaf CHID)
+function mgLoadMap(sourceId) {
+    var box = document.getElementById('mg_map_rows');
+    box.innerHTML = '<div class="text-muted">Loading...</div>';
+    mgAjaxGet('videos.php?m=mass_grabber&a=get_category_map&source_id=' + sourceId, function(err, data) {
+        if (err || !data || !data.status) { box.innerHTML = '<div class="text-danger">Failed to load mappings</div>'; return; }
+        var rows = data.rows || [];
+        if (!rows.length) { box.innerHTML = '<div class="help text-muted">No manual mappings yet. Cascade order: mapping &rarr; auto-match &rarr; category &rarr; fallback.</div>'; return; }
+        var html = '';
+        for (var i = 0; i < rows.length; i++) {
+            var r = rows[i];
+            html += '<div class="mg-map-row" style="display:flex;gap:8px;align-items:center;margin-bottom:4px;padding:5px 8px;background:#f5f5f5;border-radius:3px">'
+                  + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>' + mgEsc(r.external_category) + '</strong> &rarr; ' + mgEsc(r.chid_name) + ' <span class="text-muted">(CHID ' + mgEsc(r.chid) + ')</span></span>'
+                  + '<button type="button" class="btn btn-xs btn-danger" title="Remove" onclick="mgMapDel(' + r.id + ', this)"><i class="fa fa-times"></i></button>'
+                  + '</div>';
+        }
+        box.innerHTML = html;
+    });
+}
+function mgMapAdd() {
+    var sid = parseInt(document.getElementById('mg_src_id').value, 10);
+    if (!sid) { alert('Save the source first, then add mappings.'); return; }
+    var fd = new FormData();
+    fd.append('source_id', sid);
+    fd.append('external_category', document.getElementById('mg_map_external').value);
+    fd.append('chid', document.getElementById('mg_map_chid').value);
+    mgAjax('videos.php?m=mass_grabber&a=save_category_map', fd, function(err, data) {
+        if (err || !data || !data.status) { alert((data && data.error) || (err && err.message) || 'Failed to save mapping'); return; }
+        document.getElementById('mg_map_external').value = '';
+        document.getElementById('mg_map_chid').value = '0';
+        mgLoadMap(sid);
+    });
+}
+function mgMapDel(id, btn) {
+    if (!confirm('Remove this mapping?')) return;
+    if (btn) btn.disabled = true;
+    var fd = new FormData(); fd.append('id', id);
+    mgAjax('videos.php?m=mass_grabber&a=delete_category_map', fd, function(err, data) {
+        if (err || !data || !data.status) { if (btn) btn.disabled = false; alert((data && data.error) || 'Failed to remove mapping'); return; }
+        mgLoadMap(parseInt(document.getElementById('mg_src_id').value, 10) || 0);
+    });
+}
 function mgGoToDiscover(sourceId) { window.location.href = 'videos.php?m=mass_grabber&v=discover&source_id=' + sourceId; }
 
 // DISCOVER

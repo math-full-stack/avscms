@@ -2,6 +2,7 @@
 defined('_VALID') or die('Restricted Access!');
 
 Auth::checkAdmin();
+require_once $config['BASE_DIR']. '/include/function_watermark.php';
 
 $video  = array();
 $VID    = ( isset($_GET['VID']) && is_numeric($_GET['VID']) ) ? trim($_GET['VID']) : NULL;
@@ -26,6 +27,7 @@ if ( !$errors ) {
         $viewnumber     = trim($_POST['viewnumber']);
         $active         = trim($_POST['active']);
 		$server			= trim($_POST['server']);
+        $proc           = wm_parse_form($_POST);
         
         if ( strlen($title) < 3 ) {
             $errors[] = 'Video title field cannot be blank!';
@@ -38,6 +40,10 @@ if ( !$errors ) {
 		if ( $channel == '' ) {
             $errors[] = 'Please select a category!';
 			$err['channel'] = 1;
+		}
+		if ( $proc['error'] !== '' ) {
+            $errors[] = $proc['error'];
+			$err['proc'] = 1;
 		}
         
         if ( !$errors ) {
@@ -60,9 +66,19 @@ if ( !$errors ) {
                                      thumb = " .$conn->qStr($thumb). ", likes = " .$conn->qStr($likes). ",
                                      dislikes = " .$conn->qStr($dislikes). ", rate = " .$conn->qStr($rate). ", 
 									 viewnumber = " .$conn->qStr($viewnumber). ",                                     
-                                     active  = " .$conn->qStr($active). ", server = " .$conn->qStr($server). "
+                                     active  = " .$conn->qStr($active). ", server = " .$conn->qStr($server). ",
+                                     cfg_manual = " .intval($proc['cfg_manual']). ", watermark_cfg = " .$conn->qStr($proc['watermark_cfg']). ",
+                                     cut = " .$conn->qStr($proc['cut']). ", cut_out = " .intval($proc['cut_out']). "
 					WHERE VID = " .$conn->qStr($VID). " LIMIT 1";
             $conn->execute($sql);
+            // "Herdar da fonte": reaplica o snapshot da grabber_source agora,
+            // senão o cut da fonte só voltaria no próximo regrab.
+            if ( !$proc['cfg_manual'] ) {
+                $srs = $conn->execute("SELECT source_url FROM video WHERE VID = " . intval($VID) . " LIMIT 1");
+                if ( $srs && !$srs->EOF ) {
+                    wm_refresh_video_snapshot($VID, trim((string)$srs->fields['source_url']));
+                }
+            }
             $messages[] = 'Video information updated successfuly!';
         } else {
 			$submit = 1;
@@ -91,7 +107,11 @@ if ( !$errors ) {
 			$video['0']['dislikes']    = $dislikes;
 			$video['0']['viewnumber']  = $viewnumber;
 			$video['0']['active']      = $active;
-			$video['0']['server']      = $server;		
+			$video['0']['server']      = $server;
+			$video['0']['cfg_manual']  = $proc['cfg_manual'];
+			$video['0']['cut']         = $proc['cut'];
+			$video['0']['cut_out']     = $proc['cut_out'];
+			$video['0']['watermark_cfg'] = $proc['watermark_cfg'];
 	}
 }
 

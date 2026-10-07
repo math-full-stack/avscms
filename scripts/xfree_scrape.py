@@ -42,6 +42,8 @@ TAG_STOPLIST = set([
     'amateur', 'amateurs', 'onlyfans', 'of', 'fyp', 'sexy', 'beautiful',
     'photos', 'photo', 'vertical porn', 'leaks', 'xxx', 'porn', 'tiktok',
     'xfree', 'tease', 'teasing', 'hot', 'babe', 'girl', 'new', 'brazil',
+    # fontes/domínios das fontes (espelha MetadataMerger::isSourceTag)
+    'buceteiro', 'buceteiro.com', 'cnnamador', 'cnnamador.com', 'mixvazadas', 'mixvazadas.com', 'naoconto', 'naoconto.com', 'pornobrasil', 'pornobrasil.com', 'pornolandia', 'pornolandia.xxx', 'pornomineiro', 'pornomineiro.com', 'sonovinhasbr', 'sonovinhasbr.com', 'xfree.com', 'pornhub', 'xvideos', 'xnxx', 'redtube', 'youporn', 'nudo', 'telegram', 'whatsapp', 'linktree', 'youtube', 'instagram',
 ])
 
 
@@ -49,7 +51,12 @@ def clean_tags(tag_text):
     """Turn '#Tag1 #Tag2' text into a comma/space separated tags string."""
     if not tag_text:
         return ''
-    tags = [t.strip() for t in re.split(r'[\s,]+', tag_text) if t.strip()]
+    tags = []
+    for t in re.split(r'[\s,]+', tag_text):
+        t = t.strip()
+        if not t or t.strip('#').lower().replace('_', ' ') in TAG_STOPLIST:
+            continue
+        tags.append(t)
     return ' '.join(tags)
 
 

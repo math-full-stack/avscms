@@ -71,15 +71,11 @@ if (isset($_POST['reprocess_selected_videos'])) {
         if ( $key != 'check_all_videos' && substr($key, 0, 18) == 'video_id_checkbox_') {        
             if ( $value == 'on' ) {
                 $vid = intval(str_replace('video_id_checkbox_', '', $key));
-                $sql = "SELECT VID, source_url FROM video WHERE VID = " .$vid. " LIMIT 1";
+                $sql = "SELECT VID, source_url, vdoname FROM video WHERE VID = " .$vid. " LIMIT 1";
                 $rs  = $conn->execute($sql);
                 if ($rs && $conn->Affected_Rows() == 1) {
                     $row       = $rs->fields;
                     $sourceUrl = trim($row['source_url'] ?? '');
-                    if (empty($sourceUrl)) {
-                        ++$skipped;
-                        continue;
-                    }
                     // Skip if in conversion queue
                     $qfp = $conn->execute("SELECT status FROM conversion_queue_fp WHERE VID = " .$vid. " LIMIT 1");
                     if ($qfp && $conn->Affected_Rows() == 1) {
@@ -89,6 +85,21 @@ if (isset($_POST['reprocess_selected_videos'])) {
                     $qsp = $conn->execute("SELECT status FROM conversion_queue_sp WHERE VID = " .$vid. " LIMIT 1");
                     if ($qsp && $conn->Affected_Rows() == 1) {
                         ++$skipped;
+                        continue;
+                    }
+                    if (empty($sourceUrl)) {
+                        // Sem URL de origem (uploads): re-encode local a partir
+                        // da fonte já adquirida (disco do converter ou bucket src/).
+                        // Pré-checagem p/ não deixar active='3' preso na fila.
+                        $vdoname = trim($row['vdoname'] ?? '');
+                        if (empty($vdoname) || !video_source_available($vid, $vdoname)) {
+                            ++$skipped;
+                            continue;
+                        }
+                        $conn->execute("UPDATE video SET active = '3', formats = NULL, lformats = NULL, last_update = " .time(). " WHERE VID = " .$vid. " LIMIT 1");
+                        $vdoDir = !empty($config['VDO_DIR']) ? rtrim($config['VDO_DIR'], '/') : $config['BASE_DIR'] . '/media/videos/vid';
+                        insert_into_q_fp($vid, $vdoname, $vdoDir . '/' . $vdoname);
+                        ++$index;
                         continue;
                     }
                     // Set active=2 (downloading), reset formats, and launch worker
@@ -129,7 +140,7 @@ if (isset($_POST['reprocess_selected_videos'])) {
     } else {
         $msg = 'Successfully queued ' .$index. ' (selected) videos for reprocessing!';
         if ($skipped > 0) {
-            $msg .= ' ' .$skipped. ' video(s) skipped (no source URL or already in conversion queue).';
+            $msg .= ' ' .$skipped. ' video(s) skipped (source unavailable or already in conversion queue).';
         }
         $messages[] = $msg;
     }

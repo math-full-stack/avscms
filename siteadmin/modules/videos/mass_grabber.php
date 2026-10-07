@@ -5,6 +5,7 @@ Auth::checkAdmin();
 require_once $config['BASE_DIR'] . '/include/function_video.php';
 require_once $config['BASE_DIR'] . '/include/function_queue.php';
 require_once $config['BASE_DIR'] . '/include/function_thumbs.php';
+require_once $config['BASE_DIR'] . '/include/function_watermark.php';
 require_once $config['BASE_DIR'] . '/classes/filter.class.php';
 require_once $config['BASE_DIR'] . '/classes/grabbers/mass/MassGrabberManager.php';
 
@@ -189,6 +190,7 @@ if ($action === 'update_discovered') {
     if (isset($_POST['title']))       $meta['title']       = $_POST['title'];
     if (isset($_POST['tags']))        $meta['tags']        = $_POST['tags'];
     if (isset($_POST['description'])) $meta['description'] = $_POST['description'];
+    if (isset($_POST['category']))    $meta['category']    = $_POST['category'];
     $ok = MassGrabberManager::discovery()->updateMeta($id, $meta);
     echo json_encode(array('status' => $ok, 'message' => $ok ? 'Metadata updated' : 'Nothing to update'));
     exit();
@@ -209,6 +211,7 @@ if ($action === 'grab_with_meta') {
     if (isset($_POST['title']))       $meta['title']       = $_POST['title'];
     if (isset($_POST['tags']))        $meta['tags']        = $_POST['tags'];
     if (isset($_POST['description'])) $meta['description'] = $_POST['description'];
+    if (isset($_POST['category']))    $meta['category']    = $_POST['category'];
     if (!empty($meta)) {
         MassGrabberManager::discovery()->updateMeta($id, $meta);
     }
@@ -502,6 +505,45 @@ if ($action === 'get_source') {
     exit();
 }
 
+// --- AJAX: Category mappings of a source (external_category -> leaf CHID) ---
+if ($action === 'get_category_map') {
+    header('Content-Type: application/json; charset=utf-8');
+    $sourceId = isset($_GET['source_id']) ? intval($_GET['source_id']) : 0;
+    if ($sourceId <= 0) {
+        echo json_encode(array('status' => false, 'error' => 'Invalid source'));
+        exit();
+    }
+    $sourceMgrMap = new SourceManager();
+    echo json_encode(array('status' => true, 'rows' => $sourceMgrMap->getCategoryMap($sourceId)));
+    exit();
+}
+
+// --- AJAX: Create/update a category mapping ---
+if ($action === 'save_category_map') {
+    header('Content-Type: application/json; charset=utf-8');
+    $sourceMgrMap = new SourceManager();
+    $result = $sourceMgrMap->saveCategoryMap(
+        isset($_POST['source_id']) ? intval($_POST['source_id']) : 0,
+        isset($_POST['external_category']) ? $_POST['external_category'] : '',
+        isset($_POST['chid']) ? intval($_POST['chid']) : 0
+    );
+    if (empty($result['status'])) {
+        echo json_encode(array('status' => false, 'error' => isset($result['error']) ? $result['error'] : 'Failed'));
+        exit();
+    }
+    echo json_encode(array('status' => true, 'message' => 'Mapping saved'));
+    exit();
+}
+
+// --- AJAX: Delete a category mapping ---
+if ($action === 'delete_category_map') {
+    header('Content-Type: application/json; charset=utf-8');
+    $sourceMgrMap = new SourceManager();
+    $ok = $sourceMgrMap->deleteCategoryMap(isset($_POST['id']) ? intval($_POST['id']) : 0);
+    echo json_encode(array('status' => $ok, 'message' => $ok ? 'Mapping removed' : 'Nothing removed'));
+    exit();
+}
+
 // --- AJAX: Save source ---
 if ($action === 'save_source') {
     header('Content-Type: application/json; charset=utf-8');
@@ -513,6 +555,7 @@ if ($action === 'save_source') {
         'provider'            => isset($_POST['provider']) ? trim($_POST['provider']) : '',
         'discovery_url'       => isset($_POST['discovery_url']) ? trim($_POST['discovery_url']) : '',
         'category_id'         => isset($_POST['category_id']) ? intval($_POST['category_id']) : 0,
+        'fallback_category_id' => isset($_POST['fallback_category_id']) ? intval($_POST['fallback_category_id']) : 0,
         'quality'             => isset($_POST['quality']) ? trim($_POST['quality']) : 'best',
         'automatic_enabled'   => isset($_POST['automatic_enabled']) ? intval($_POST['automatic_enabled']) : 0,
         'discovery_enabled'   => isset($_POST['discovery_enabled']) ? intval($_POST['discovery_enabled']) : 1,
@@ -564,7 +607,13 @@ if ($action === 'save_source') {
         $sourceMgr->updateNextRun($id);
     }
 
-    echo json_encode(array('status' => true, 'id' => $id, 'message' => $msg));
+    // cfg_manual=0 videos follow the source: push the config just saved onto
+    // every video already grabbed from this domain (they would otherwise keep
+    // the old snapshot until someone reprocessed them one by one).
+    $refreshed = wm_propagate_source_config($id);
+
+    echo json_encode(array('status' => true, 'id' => $id, 'message' => $msg,
+                           'refreshed' => $refreshed));
     exit();
 }
 
@@ -817,7 +866,9 @@ if ($view === 'sources') {
     }
     unset($src);
     $providers = MassGrabberManager::getSupportedSites();
-    $categories = get_categories();
+    // Só folhas: o CategoryResolver recusa categorias PAI na cascata, então um
+    // select com pais aqui só geraria valor que nunca seria usado.
+    $categories = get_leaf_categories();
     $smarty->assign('sources', $sources);
     $smarty->assign('providers', $providers);
     $smarty->assign('categories', $categories);

@@ -181,9 +181,9 @@ function get_thumb_dir($vid)
 	}
 	// 0777 efetivo (o mkdir acima é mascarado pelo umask -> 755): o pipeline
 	// roda como usuários diferentes (CLI manual vs workers do Apache).
-	if (!is_writable($path)) {
-		@chmod($path, 0777);
-	}
+	// INCONDICIONAL — `if (!is_writable)` não dispara para o dono do dir, que
+	// é justamente quem cria com 0755 e trava o outro usuário.
+	@chmod($path, 0777);
 	
 	$output = $path.'/'.$vid;
 

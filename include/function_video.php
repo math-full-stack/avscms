@@ -149,6 +149,11 @@ function detect_black_bars($src, $coef) {
 	$image_path = $src;
 
 	$jpg = imagecreatefromjpeg($image_path);
+	// Arquivo existe mas não é JPEG legível (ex.: bytes WebP com extensão .jpg)
+	// — mesmo motivo do guard acima: não derrubar o run com fatal de GD.
+	if ($jpg === false) {
+		return array('left' => 0, 'right' => 0, 'top' => 0, 'bottom' => 0);
+	}
 	$black = array("red" => 0, "green" => 0, "blue" => 0, "alpha" => 0);
 
 	$removeLeft = 0;
@@ -213,6 +218,10 @@ function remove_black_bars($src, $removeLeft, $removeRight, $removeTop, $removeB
 	}
 	$image_path = $src;
 	$jpg = imagecreatefromjpeg($image_path);
+	// Não-JPEG legível (ex.: bytes WebP) — nada a remover.
+	if ($jpg === false) {
+		return;
+	}
 	$cropped = imagecreatetruecolor(imagesx($jpg) - ($removeLeft + $removeRight), imagesy($jpg) - ($removeTop + $removeBottom));
 	imagecopy($cropped, $jpg, 0, 0, $removeLeft, $removeTop, imagesx($cropped), imagesy($cropped));
 
@@ -400,16 +409,14 @@ function extract_video_thumbs ($video_path, $video_id, $target = 'all', $black_b
 		// O pipeline roda sob usuários diferentes (CLI manual e workers do
 		// Apache); garante 0777 mesmo com umask, senão o dono do 1º processamento
 		// trava a extração do outro (Permission denied em tmp/thumbs/{VID}).
-		if (!is_writable($temp_thumbs_folder)) {
-			@chmod($temp_thumbs_folder, 0777);
-		}
+		// INCONDICIONAL: um `if (!is_writable)` nunca dispara para o próprio
+		// dono (ele tem rwx), então o chmod não-corria e o dir ficava 0755.
+		@chmod($temp_thumbs_folder, 0777);
 		
 		if (!file_exists($final_thumbs_folder)) {		
 			@mkdir($final_thumbs_folder, 0777);
 		}
-		if (!is_writable($final_thumbs_folder)) {
-			@chmod($final_thumbs_folder, 0777);
-		}
+		@chmod($final_thumbs_folder, 0777);
 		// Duration - set se = start/end
 		if ($duration > 5) {
 			$se = 2;

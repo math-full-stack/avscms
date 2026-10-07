@@ -33,6 +33,11 @@ HEADERS = {
 }
 
 
+TAG_STOPLIST = set([
+    'gratis', 'hd', 'sexo', 'gratis', 'videos porno', 'mais videos', 'porno', 'xxx', 'putaria', 'buceteiro', 'buceteiro.com', 'cnnamador', 'cnnamador.com', 'mixvazadas', 'mixvazadas.com', 'naoconto', 'naoconto.com', 'pornobrasil', 'pornobrasil.com', 'pornolandia', 'pornolandia.xxx', 'pornomineiro', 'pornomineiro.com', 'sonovinhasbr', 'sonovinhasbr.com', 'xfree', 'xfree.com', 'onlyfans', 'pornhub', 'xvideos', 'xnxx', 'redtube', 'youporn', 'nudo', 'telegram', 'whatsapp', 'linktree', 'tiktok', 'youtube', 'instagram',
+])
+
+
 def parse_video_object(html):
     """Extract video metadata from VideoObject JSON-LD script tag."""
     # Try standalone VideoObject script first (preferred)
@@ -188,6 +193,7 @@ def scrape_listing_page(url):
                 'title': title,
                 'description': '',
                 'tags': '',
+                'category': '',
                 'duration': 0,
                 'duration_formatted': '',
                 'thumbnail_url': thumbnail,
@@ -229,6 +235,7 @@ def scrape_listing_page(url):
                 'title': title,
                 'description': '',
                 'tags': '',
+                'category': '',
                 'duration': 0,
                 'duration_formatted': '',
                 'thumbnail_url': thumbnail,
@@ -284,7 +291,12 @@ def scrape_video_page(url):
 
     # Tags
     tag_matches = re.findall(r'<a[^>]+rel="tag"[^>]*>([^<]+)</a>', html)
-    result['tags'] = ', '.join(t.strip() for t in tag_matches)
+    result['tags'] = ', '.join(t.strip() for t in tag_matches
+                               if t.strip().lower() not in TAG_STOPLIST)
+
+    # Categoria (WP rel="category tag") — campo separado, nunca tag.
+    cat_matches = re.findall(r'<a[^>]+rel="(?:category\s+tag|tag\s+category)"[^>]*>([^<]+)</a>', html, re.I)
+    result['category'] = cat_matches[0].strip() if cat_matches else ''
 
     return result
 
@@ -323,6 +335,8 @@ def scrape_profile(url, page=1, max_pages=1):
                     video['description'] = detail['description']
                 if not video.get('tags') and detail.get('tags'):
                     video['tags'] = detail['tags']
+                if not video.get('category') and detail.get('category'):
+                    video['category'] = detail['category']
                 if not video.get('duration') and detail.get('duration'):
                     video['duration'] = detail['duration']
                     video['duration_formatted'] = detail.get('duration_formatted', '')

@@ -42,6 +42,8 @@ HEADERS = {
 TAG_STOPLIST = set([
     'mixvazadas', 'porno', 'xxx', 'mais videos', 'videos porno',
     'sexo', 'gratis', 'novinhas', 'mulheres nuas',
+    # fontes/domínios das fontes (espelha MetadataMerger::isSourceTag)
+    'buceteiro', 'buceteiro.com', 'cnnamador', 'cnnamador.com', 'mixvazadas.com', 'naoconto', 'naoconto.com', 'pornobrasil', 'pornobrasil.com', 'pornolandia', 'pornolandia.xxx', 'pornomineiro', 'pornomineiro.com', 'sonovinhasbr', 'sonovinhasbr.com', 'xfree', 'xfree.com', 'onlyfans', 'pornhub', 'xvideos', 'xnxx', 'redtube', 'youporn', 'nudo', 'telegram', 'whatsapp', 'linktree', 'tiktok', 'youtube', 'instagram',
 ])
 
 BASE_URL = 'https://mixvazadas.com'
@@ -94,6 +96,22 @@ def clean_tags(tag_list):
     return ', '.join(out[:15])
 
 
+def extract_category(html, source_url=""):
+    """Categoria do vídeo: link WP rel="category tag", breadcrumb /categoria/ ou articleSection."""
+    for m in re.finditer(r'<a[^>]+rel="(?:category\s+tag|tag\s+category)"[^>]*>([^<]+)</a>', html, re.I):
+        label = m.group(1).strip()
+        if label:
+            return label
+    for m in re.finditer(r'<a[^>]+href="[^"]*/(?:category|categoria)/([^/"]+)"[^>]*>([^<]+)</a>', html, re.I):
+        label = m.group(2).strip()
+        if label:
+            return label
+    m = re.search(r'"articleSection"\s*:\s*"([^"]+)"', html)
+    if m:
+        return m.group(1).strip()
+    return ''
+
+
 def parse_listing(html):
     """Extrai os vídeos da grade de uma página de listagem."""
     videos = []
@@ -141,6 +159,7 @@ def parse_listing(html):
             'title': title,
             'description': '',
             'tags': clean_tags(tags),
+            'category': '',
             'duration': 0,
             'duration_formatted': '',
             'thumbnail_url': thumbnail,
@@ -268,6 +287,11 @@ def enrich_video(video):
                 tags.append(tag_text)
         if tags:
             video['tags'] = clean_tags(tags)
+
+    if not video.get('category'):
+        category = extract_category(html, video.get('source_url', ''))
+        if category:
+            video['category'] = category
 
 
 def build_page_url(url, page):

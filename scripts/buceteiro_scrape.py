@@ -43,6 +43,8 @@ HEADERS = {
 TAG_STOPLIST = set([
     'porno', 'xxx', 'mais videos', 'videos porno', 'sexo', 'gratis',
     'novinhas', 'mulheres nuas', 'buceteiro',
+    # fontes/domínios das fontes (espelha MetadataMerger::isSourceTag)
+    'buceteiro.com', 'cnnamador', 'cnnamador.com', 'mixvazadas', 'mixvazadas.com', 'naoconto', 'naoconto.com', 'pornobrasil', 'pornobrasil.com', 'pornolandia', 'pornolandia.xxx', 'pornomineiro', 'pornomineiro.com', 'sonovinhasbr', 'sonovinhasbr.com', 'xfree', 'xfree.com', 'onlyfans', 'pornhub', 'xvideos', 'xnxx', 'redtube', 'youporn', 'nudo', 'telegram', 'whatsapp', 'linktree', 'tiktok', 'youtube', 'instagram',
 ])
 
 BASE_URL = 'https://buceteiro.com'
@@ -214,6 +216,7 @@ def parse_listing_page(html):
             'title': title,
             'description': '',
             'tags': '',
+            'category': '',
             'duration': 0,
             'duration_formatted': '',
             'thumbnail_url': thumbnail,
@@ -238,6 +241,7 @@ def parse_listing_page(html):
                 'title': '',
                 'description': '',
                 'tags': '',
+                'category': '',
                 'duration': 0,
                 'duration_formatted': '',
                 'thumbnail_url': '',
@@ -283,6 +287,13 @@ def enrich_video(video):
         if data.get('@type') in ('Article', 'WebPage'):
             if not video['tags'] and isinstance(data.get('keywords'), list):
                 video['tags'] = clean_tags(data['keywords'])
+            if not video.get('category') and data.get('articleSection'):
+                section = data['articleSection']
+                if isinstance(section, list):
+                    section = section[0] if section else ''
+                section = str(section).strip()
+                if section:
+                    video['category'] = section
 
     # Tags: <section class="trends"> com links /tag-porno/
     if not video['tags']:
@@ -293,6 +304,14 @@ def enrich_video(video):
                 tags.append(tag_text)
         if tags:
             video['tags'] = clean_tags(tags)
+
+    # Categoria: fallback por breadcrumb /categorias/{slug}/
+    if not video.get('category'):
+        for cm in re.finditer(r'<a[^>]+href="[^"]*/categorias?/([^/"]+)"[^>]*>([^<]+)</a>', html, re.I):
+            label = cm.group(2).strip()
+            if label and label.lower() not in ('categorias', 'categoria'):
+                video['category'] = label
+                break
 
     # Thumbnail fallback via og:image
     if not video['thumbnail_url']:
@@ -350,6 +369,7 @@ def scrape_listing(url, page=1, max_pages=1):
                     'title': '',
                     'description': '',
                     'tags': '',
+                    'category': '',
                     'duration': 0,
                     'duration_formatted': '',
                     'thumbnail_url': '',

@@ -162,6 +162,10 @@ class DiscoveryManager {
                         if (!empty($video['thumbnail_url'])) {
                             $sets[] = 'thumbnail_url = ' . $this->db->qStr($video['thumbnail_url']);
                         }
+                        if (!empty($video['category'])) {
+                            $qCat = $this->db->qStr(mb_substr($video['category'], 0, 255));
+                            $sets[] = "external_category = IF(external_category = '' OR external_category IS NULL, $qCat, external_category)";
+                        }
                         $this->safeExec("UPDATE grabber_discovered_videos
                                             SET " . implode(', ', $sets) . "
                                             WHERE id = " . $did . " LIMIT 1");
@@ -314,6 +318,7 @@ class DiscoveryManager {
             'title'         => $video['title'],
             'description'   => $video['description'],
             'tags'          => $video['tags'],
+            'category'      => isset($video['category']) ? $video['category'] : '',
             'duration'      => $video['duration'],
             'thumbnail_url' => $video['thumbnail_url'],
         ));
@@ -326,6 +331,7 @@ class DiscoveryManager {
                 title = " . $this->db->qStr($video['title']) . ",
                 description = " . $this->db->qStr($video['description']) . ",
                 tags = " . $this->db->qStr($video['tags']) . ",
+                external_category = " . $this->db->qStr(isset($video['category']) ? mb_substr($video['category'], 0, 255) : '') . ",
                 duration = " . intval($video['duration']) . ",
                 thumbnail_url = " . $this->db->qStr($video['thumbnail_url']) . ",
                 metadata_json = " . $this->db->qStr($metadata) . ",
@@ -527,6 +533,9 @@ class DiscoveryManager {
         if (array_key_exists('tags', $meta)) {
             $sets[] = 'tags = ' . $this->db->qStr($this->stripEmoji(trim($meta['tags'])));
         }
+        if (array_key_exists('category', $meta)) {
+            $sets[] = 'external_category = ' . $this->db->qStr($this->stripEmoji(mb_substr(trim($meta['category']), 0, 255)));
+        }
         if (array_key_exists('description', $meta)) {
             $sets[] = 'description = ' . $this->db->qStr($this->stripEmoji(trim($meta['description'])));
         }
@@ -589,6 +598,7 @@ class DiscoveryManager {
             'title'         => $this->stripEmoji(isset($video['title']) ? trim($video['title']) : ''),
             'description'   => $this->stripEmoji(isset($video['description']) ? trim($video['description']) : ''),
             'tags'          => $this->stripEmoji(isset($video['tags']) ? trim($video['tags']) : ''),
+            'category'      => $this->stripEmoji(isset($video['category']) ? trim($video['category']) : ''),
             'duration'      => isset($video['duration']) ? intval($video['duration']) : 0,
             'thumbnail_url' => isset($video['thumbnail_url']) ? trim($video['thumbnail_url']) : '',
         );

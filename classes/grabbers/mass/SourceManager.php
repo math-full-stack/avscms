@@ -47,6 +47,7 @@ class SourceManager {
                 discovery_enabled = " . intval(isset($data['discovery_enabled']) ? $data['discovery_enabled'] : 1) . ",
                 discovery_url = " . $this->db->qStr($data['discovery_url']) . ",
                 category_id = " . intval(isset($data['category_id']) ? $data['category_id'] : 0) . ",
+                fallback_category_id = " . intval(isset($data['fallback_category_id']) ? $data['fallback_category_id'] : 0) . ",
                 quality = " . $this->db->qStr(isset($data['quality']) ? $data['quality'] : 'best') . ",
                 max_per_run = " . intval(isset($data['max_per_run']) ? $data['max_per_run'] : 5) . ",
                 max_pages = " . intval(isset($data['max_pages']) ? $data['max_pages'] : 3) . ",
@@ -88,7 +89,7 @@ class SourceManager {
         }
 
         $intFields = array('enabled', 'automatic_enabled', 'discovery_enabled',
-                           'category_id', 'next_run_at');
+                           'category_id', 'fallback_category_id', 'next_run_at');
         foreach ($intFields as $f) {
             if (array_key_exists($f, $data)) {
                 $sets[] = $f . " = " . intval($data[$f]);
@@ -116,6 +117,7 @@ class SourceManager {
         $this->safeExec("DELETE FROM grabber_jobs WHERE source_id = $id");
         $this->safeExec("DELETE FROM grabber_logs WHERE source_id = $id");
         $this->safeExec("DELETE FROM grabber_runs WHERE source_id = $id");
+        $this->safeExec("DELETE FROM grabber_category_mappings WHERE source_id = $id");
         return true;
     }
 
@@ -284,6 +286,71 @@ class SourceManager {
         $newState = $source['enabled'] ? 0 : 1;
         $this->update($id, array('enabled' => $newState));
         return (bool)$newState;
+    }
+
+    // -------------------------------------------------------
+    // Category mappings: external_category (site-fonte) -> CHID folha
+    // -------------------------------------------------------
+
+    /**
+     * Mappings cadastrados para uma fonte.
+     * @param int $sourceId
+     * @return array
+     */
+    public function getCategoryMap($sourceId) {
+        $rs = $this->safeExec("SELECT m.id, m.source_id, m.external_category, m.chid, m.enabled,
+                                       c.name AS chid_name
+                                FROM grabber_category_mappings m
+                                LEFT JOIN channel c ON c.CHID = m.chid
+                                WHERE m.source_id = " . intval($sourceId) . "
+                                ORDER BY m.external_category ASC");
+        $rows = array();
+        if ($rs) {
+            while (!$rs->EOF) {
+                $rows[] = $rs->fields;
+                $rs->MoveNext();
+            }
+        }
+        return $rows;
+    }
+
+    /**
+     * Cria/atualiza um mapping (upsert pela chave única source_id+external_category).
+     * Só aceita CHID folha — igual ao resolver.
+     *
+     * @return array ['status' => bool, 'error' => string?]
+     */
+    public function saveCategoryMap($sourceId, $externalCategory, $chid) {
+        require_once dirname(__FILE__) . '/CategoryResolver.php';
+        $sourceId = intval($sourceId);
+        $externalCategory = trim(strip_tags((string) $externalCategory));
+        $chid = intval($chid);
+        if ($sourceId <= 0 || $externalCategory === '' || $chid <= 0) {
+            return array('status' => false, 'error' => 'Source, external category and target category are required');
+        }
+        if (mb_strlen($externalCategory) > 255) {
+            return array('status' => false, 'error' => 'External category too long (max 255)');
+        }
+        if (!CategoryResolver::isLeafCategory($chid)) {
+            return array('status' => false, 'error' => 'Target must be a LEAF category (parent categories like "Amador" are not allowed)');
+        }
+        $this->safeExec("INSERT INTO grabber_category_mappings
+                            (source_id, external_category, chid, enabled, created_at)
+                          VALUES (" . $sourceId . ", " . $this->db->qStr($externalCategory) . ",
+                                  " . $chid . ", 1, " . time() . ")
+                          ON DUPLICATE KEY UPDATE chid = VALUES(chid), enabled = 1");
+        return array('status' => true);
+    }
+
+    /**
+     * Remove um mapping.
+     * @return bool
+     */
+    public function deleteCategoryMap($id) {
+        $id = intval($id);
+        if ($id <= 0) return false;
+        $this->safeExec("DELETE FROM grabber_category_mappings WHERE id = " . $id . " LIMIT 1");
+        return $this->db->Affected_Rows() > 0;
     }
 
     /**

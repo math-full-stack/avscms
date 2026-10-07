@@ -68,13 +68,73 @@ function wm_normalize($dec) {
 }
 
 /**
+ * Parse the siteadmin "Processamento" form fields (modal edit + full-page edit)
+ * into DB-ready values. Both save paths share this contract.
+ *
+ * Expected input keys (all optional):
+ *   cfg_manual (0|1), cut (sec), cut_out (sec),
+ *   wm_enabled (0|1), wm_opacity, wm_size, wm_margin,
+ *   wm_positions (JSON string or array of [{pos,dur}])
+ *
+ * @param array $src raw input ($_POST or the modal's data array)
+ * @return array{cfg_manual:int, cut:float, cut_out:int, watermark_cfg:string, error:string}
+ */
+function wm_parse_form($src) {
+    $out = array(
+        'cfg_manual'    => empty($src['cfg_manual']) ? 0 : 1,
+        'cut'           => min(86400, max(0, floatval(isset($src['cut']) ? $src['cut'] : 0))),
+        'cut_out'       => min(86400, max(0, intval(isset($src['cut_out']) ? $src['cut_out'] : 0))),
+        'watermark_cfg' => '',
+        'error'         => '',
+    );
+    if (!$out['cfg_manual']) {
+        // Herda da fonte: watermark_cfg vazio (wm_video_config cai no fallback)
+        // e o cut postado é mantido — quem regrava cut/cut_out por cima é o
+        // wm_refresh_video_snapshot chamado logo após o UPDATE no save.
+        return $out;
+    }
+
+    $positions = array();
+    $rawPos = isset($src['wm_positions']) ? $src['wm_positions'] : '';
+    if (is_array($rawPos)) {
+        $positions = $rawPos;
+    } elseif (is_string($rawPos) && trim($rawPos) !== '') {
+        $dec = json_decode($rawPos, true);
+        if (is_array($dec)) $positions = $dec;
+    }
+
+    $cfg = array(
+        'enabled'   => empty($src['wm_enabled']) ? 0 : 1,
+        'opacity'   => intval(isset($src['wm_opacity']) ? $src['wm_opacity'] : 60),
+        'size'      => intval(isset($src['wm_size']) ? $src['wm_size'] : 120),
+        'margin'    => intval(isset($src['wm_margin']) ? $src['wm_margin'] : 12),
+        'positions' => $positions,
+    );
+
+    if (!empty($cfg['enabled']) && wm_normalize($cfg) === null) {
+        // Mantém o JSON tentado no retorno para o form repopular as linhas de
+        // posição na falha de validação (o error bloqueia o save).
+        $out['watermark_cfg'] = json_encode($cfg);
+        $out['error'] = 'Watermark inválido: informe ao menos uma posição válida (com duração quando houver mais de uma).';
+        return $out;
+    }
+    // Guarda o JSON com a chave "enabled" — wm_normalize a exige na leitura.
+    $out['watermark_cfg'] = json_encode($cfg);
+    return $out;
+}
+
+/**
  * Per-video watermark config (cached per process).
  *
  * Resolution order:
- *   1. video.watermark_cfg — the profile frozen into the row when the mass
+ *   1. video.cfg_manual = 1 — the admin edited this video's profile in the
+ *      siteadmin edit form: the row's own watermark_cfg is final (enabled=0
+ *      means NO logo for this video) and the grabber-source fallback is
+ *      skipped.
+ *   2. video.watermark_cfg — the profile frozen into the row when the mass
  *      grabber created it (source edits never retro-change already-grabbed
  *      videos that carry a snapshot).
- *   2. grabber source by source_url domain — fallback so ANY process that
+ *   3. grabber source by source_url domain — fallback so ANY process that
  *      converts a video tied to a watermark-configured grabber source burns
  *      the logo: single-URL grabs, videos grabbed before the snapshot existed,
  *      and admin reprocesses all resolve the source here.
@@ -91,14 +151,30 @@ function wm_video_config($vid) {
 
     $cfg = null;
     try {
-        $rs = $conn->Execute("SELECT source_url, watermark_cfg FROM video WHERE VID = " . $vid . " LIMIT 1");
+        // A coluna cfg_manual vem de migration (20261007000001); se ainda nao
+        // aplicada, cai para a query antiga em vez de neutralizar a marca.
+        static $hasManual = null;
+        if ($hasManual === null) {
+            try {
+                $probe = $conn->Execute("SELECT cfg_manual FROM video LIMIT 1");
+                $hasManual = ($probe !== false && $probe !== null);
+            } catch (Exception $e) {
+                $hasManual = false;
+            } catch (Throwable $e) {
+                $hasManual = false;
+            }
+        }
+        $rs = $conn->Execute("SELECT source_url, watermark_cfg"
+            . ($hasManual ? ", cfg_manual" : "")
+            . " FROM video WHERE VID = " . $vid . " LIMIT 1");
         if ($rs && !$rs->EOF) {
+            $manual = $hasManual && !empty($rs->fields['cfg_manual']);
             $raw = trim((string)$rs->fields['watermark_cfg']);
             if ($raw !== '') {
                 $dec = json_decode($raw, true);
                 $cfg = wm_normalize($dec);
             }
-            if ($cfg === null) {
+            if ($cfg === null && !$manual) {
                 $cfg = wm_source_config_for_url(isset($rs->fields['source_url']) ? (string)$rs->fields['source_url'] : '');
             }
         }
@@ -184,6 +260,13 @@ function wm_refresh_video_snapshot($vid, $sourceUrl)
         return false;
     }
 
+    // Override manual (siteadmin edit): a config gravada pelo admin e dona do
+    // video — reaplicar a da fonte aqui apagaria a edicao no 1o reprocess.
+    $mrs = $conn->Execute("SELECT cfg_manual FROM video WHERE VID = " . $vid . " LIMIT 1");
+    if ($mrs && !$mrs->EOF && !empty($mrs->fields['cfg_manual'])) {
+        return false;
+    }
+
     $host = strtolower(trim((string)parse_url(trim((string)$sourceUrl), PHP_URL_HOST)));
     if ($host === '') {
         return false;
@@ -218,6 +301,69 @@ function wm_refresh_video_snapshot($vid, $sourceUrl)
     } catch (Throwable $e) {
         return false;
     }
+}
+
+/**
+ * Push the CURRENT config of a mass-grabber source onto every video already
+ * grabbed from it (cut_in/cut_out + watermark_config).
+ *
+ * wm_refresh_video_snapshot only runs at grab/reprocess time, so editing a
+ * source AFTER its videos were imported left them frozen on the old snapshot
+ * until someone reprocessed them one by one. Videos with cfg_manual = 1 are
+ * never touched (wm_refresh_video_snapshot enforces that guard), so a video
+ * with a manual override keeps its own config — everything else follows the
+ * source, which is the contract of the snapshot columns.
+ *
+ * @param int $sourceId grabber_sources.id just saved
+ * @return int videos refreshed
+ */
+function wm_propagate_source_config($sourceId)
+{
+    global $conn;
+    $sourceId = intval($sourceId);
+    if ($sourceId <= 0) {
+        return 0;
+    }
+
+    $rs = $conn->Execute(
+        "SELECT domain FROM grabber_sources WHERE id = " . $sourceId . " LIMIT 1"
+    );
+    if (!$rs || $rs->EOF) {
+        return 0;
+    }
+    $domain = strtolower(trim((string)$rs->fields['domain']));
+    $plain = preg_replace('/^www\./', '', $domain);
+    if ($plain === '') {
+        return 0;
+    }
+
+    $vs = $conn->Execute(
+        "SELECT VID, source_url FROM video
+          WHERE cfg_manual = 0
+            AND source_url <> ''
+            AND (source_url LIKE " . $conn->qStr('%://' . $plain . '/%')
+               . " OR source_url LIKE " . $conn->qStr('%://' . $plain)
+               . " OR source_url LIKE " . $conn->qStr('%://www.' . $plain . '/%')
+               . " OR source_url LIKE " . $conn->qStr('%://www.' . $plain) . ")"
+    );
+    if (!$vs || $vs->EOF) {
+        return 0;
+    }
+
+    $refreshed = 0;
+    while (!$vs->EOF) {
+        $vid = intval($vs->fields['VID']);
+        $url = (string)$vs->fields['source_url'];
+        // Exact host match (LIKE above is only a prefilter: it also catches
+        // cnnamador.com.br) + re-reads the source, picking the newest match.
+        $host = strtolower(trim((string)parse_url(trim($url), PHP_URL_HOST)));
+        if ($host !== '' && preg_replace('/^www\./', '', $host) === $plain
+            && wm_refresh_video_snapshot($vid, $url)) {
+            $refreshed++;
+        }
+        $vs->MoveNext();
+    }
+    return $refreshed;
 }
 
 /**

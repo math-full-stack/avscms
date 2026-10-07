@@ -42,6 +42,8 @@ HEADERS = {
 TAG_STOPLIST = set([
     'porno', 'xxx', 'videos porno', 'sexo', 'gratis',
     'novinhas', 'mulheres nuas', 'putaria',
+    # fontes/domínios das fontes (espelha MetadataMerger::isSourceTag)
+    'buceteiro', 'buceteiro.com', 'cnnamador', 'cnnamador.com', 'mixvazadas', 'mixvazadas.com', 'naoconto', 'naoconto.com', 'pornobrasil', 'pornobrasil.com', 'pornolandia', 'pornolandia.xxx', 'pornomineiro', 'pornomineiro.com', 'sonovinhasbr', 'sonovinhasbr.com', 'xfree', 'xfree.com', 'onlyfans', 'pornhub', 'xvideos', 'xnxx', 'redtube', 'youporn', 'nudo', 'telegram', 'whatsapp', 'linktree', 'tiktok', 'youtube', 'instagram',
 ])
 
 
@@ -122,17 +124,23 @@ def parse_video_object(html):
 
 def extract_tags(html):
     tags = []
-    # Yoast SEO: article:tag meta or category links
+    # Yoast SEO: article:tag meta (categorias ficam em extract_category)
     for m in re.finditer(r'<meta[^>]+property="article:tag"[^>]+content="([^"]+)"', html, re.I):
         tag = m.group(1).strip()
         if tag and tag not in tags:
             tags.append(tag)
-    # Category from breadcrumb or category links
-    for m in re.finditer(r'<a[^>]+href="https?://www\.pornomineiro\.com/videos/([^/]+)/"[^>]*>([^<]+)</a>', html, re.I):
-        tag = m.group(2).strip()
-        if tag and tag not in tags:
-            tags.append(tag)
     return tags
+
+
+def extract_category(html, source_url=""):
+    """Categoria do vídeo: slug do path (/videos/{categoria}/{slug}/) ou breadcrumb."""
+    m = re.search(r'/videos/([^/]+)/[^/]+/?$', source_url or '')
+    if m and m.group(1) not in ('page', 'categoria'):
+        return m.group(1)
+    for cm in re.finditer(r'<a[^>]+href="https?://www\.pornomineiro\.com/videos/([^/]+)/"[^>]*>([^<]+)</a>', html, re.I):
+        if cm.group(1) not in ('page',):
+            return cm.group(2).strip()
+    return ''
 
 
 def clean_tags(tag_list):
@@ -191,6 +199,7 @@ def parse_listing(html, page_url):
             'title': title,
             'description': '',
             'tags': '',
+            'category': '',
             'duration': duration,
             'duration_formatted': fmt_duration(duration),
             'thumbnail_url': thumbnail,
@@ -232,6 +241,11 @@ def enrich_video(video):
         tags = clean_tags(extract_tags(html))
         if tags:
             video['tags'] = tags
+
+    if not video.get('category'):
+        category = extract_category(html, video.get('source_url', ''))
+        if category:
+            video['category'] = category
 
 
 def build_page_url(url, page):

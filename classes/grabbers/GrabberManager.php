@@ -3,6 +3,7 @@ defined('_VALID') or die('Restricted Access!');
 
 require_once dirname(__FILE__) . '/GrabberInterface.php';
 require_once dirname(__FILE__) . '/YoutubeGrabber.php';
+require_once dirname(__FILE__) . '/XnxxGrabber.php';
 require_once dirname(__FILE__) . '/TikTokGrabber.php';
 require_once dirname(__FILE__) . '/XfreeGrabber.php';
 require_once dirname(__FILE__) . '/SonovinhasbrGrabber.php';
@@ -12,6 +13,7 @@ require_once dirname(__FILE__) . '/BuceteiroGrabber.php';
 require_once dirname(__FILE__) . '/PornoMineiroGrabber.php';
 require_once dirname(__FILE__) . '/NaocontoGrabber.php';
 require_once dirname(__FILE__) . '/PornoBrasilGrabber.php';
+require_once dirname(__FILE__) . '/CnnamadorGrabber.php';
 
 class GrabberManager {
 
@@ -30,6 +32,7 @@ class GrabberManager {
                 new PornoMineiroGrabber(),
                 new NaocontoGrabber(),
                 new PornoBrasilGrabber(),
+                new CnnamadorGrabber(),
             );
         }
     }
