@@ -259,6 +259,9 @@ console.log('[AVS Mediabunny] MODULE LOADED');
         // setupFallbackControls(), so the player keeps its own UI (and the
         // timeline/sprite preview) even in fallback mode.
         fallbackVideo.controls = false;
+        // Egress: sem preload o browser baixa o arquivo inteiro no load() do
+        // boot mesmo sem play; 'metadata' limita ao cabeçalho até o play real.
+        fallbackVideo.preload = 'metadata';
         fallbackVideo.playsInline = true;
         fallbackVideo.muted = true;
         fallbackVideo.loop = repeat;

@@ -75,3 +75,11 @@ Disallow: /
 
 User-agent: Scrapy
 Disallow: /
+
+# Medido em 14/10 (logs do LB, ~5k req): SERankingBacklinksBot e
+# Reflectionbot dominavam o HTML (bots de SEO/IA, sem visita).
+User-agent: SERankingBacklinksBot
+Disallow: /
+
+User-agent: Reflectionbot
+Disallow: /
